@@ -1,4 +1,4 @@
-﻿import { useState } from "react";
+﻿import { useState, useSyncExternalStore } from "react";
 import { useParams, Link } from "react-router";
 import {
   ArrowLeft,
@@ -25,20 +25,21 @@ import {
   DialogTitle,
 } from "../components/ui/dialog";
 import { Label } from "../components/ui/label";
+import { esteiraDefault, type HistoricoEtapa, type Solicitacao } from "../data/mockData";
 import {
-  solicitacoes,
-  esteiraDefault,
-  type HistoricoEtapa,
-  type Solicitacao,
-} from "../data/mockData";
+  getSolicitacaoById,
+  subscribeSolicitacoes,
+  updateSolicitacao,
+} from "../data/solicitacoesStore";
 import { cn } from "../components/ui/utils";
 import { toast } from "sonner";
 
 export function SolicitacaoDetailPage() {
   const { id } = useParams();
-  const solicitacaoInicial = solicitacoes.find((s) => s.id === id) ?? null;
-  const [solicitacao, setSolicitacao] = useState<Solicitacao | null>(
-    solicitacaoInicial
+  const solicitacao = useSyncExternalStore(
+    subscribeSolicitacoes,
+    () => (id ? getSolicitacaoById(id) : undefined),
+    () => (id ? getSolicitacaoById(id) : undefined)
   );
   const [comentario, setComentario] = useState("");
   const [isRejectDialogOpen, setIsRejectDialogOpen] = useState(false);
@@ -114,11 +115,10 @@ export function SolicitacaoDetailPage() {
   };
 
   const handleAprovar = () => {
+    if (!id) return;
     const dataAgora = new Date().toISOString();
 
-    setSolicitacao((prev) => {
-      if (!prev) return prev;
-
+    updateSolicitacao(id, (prev: Solicitacao) => {
       const etapaIndex = esteiraDefault.findIndex(
         (e) => e.id === prev.etapaAtual
       );
@@ -163,6 +163,7 @@ export function SolicitacaoDetailPage() {
   };
 
   const handleConfirmarRejeicao = () => {
+    if (!id) return;
     if (!motivoRejeicao.trim()) {
       toast.error("Informe o motivo da rejeição");
       return;
@@ -170,9 +171,7 @@ export function SolicitacaoDetailPage() {
 
     const dataAgora = new Date().toISOString();
 
-    setSolicitacao((prev) => {
-      if (!prev) return prev;
-
+    updateSolicitacao(id, (prev: Solicitacao) => {
       const etapaIndex = esteiraDefault.findIndex(
         (e) => e.id === prev.etapaAtual
       );
@@ -272,7 +271,7 @@ export function SolicitacaoDetailPage() {
             <div className="absolute top-6 left-0 right-0 h-0.5 bg-slate-200" />
 
             {/* Etapas */}
-            <div className="relative grid grid-cols-7 gap-2">
+            <div className="relative grid grid-cols-6 gap-2">
               {esteiraDefault.map((etapa) => {
                 const status = getEtapaStatus(etapa.id);
                 const isAtual = etapa.id === solicitacao.etapaAtual;

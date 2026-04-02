@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Link } from "react-router";
+﻿import { useMemo, useState, useSyncExternalStore } from "react";
+import { Link, useNavigate } from "react-router";
 import { Plus, Filter, Search, Clock, CheckCircle2, XCircle } from "lucide-react";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
@@ -12,24 +12,53 @@ import {
   SelectValue,
 } from "../components/ui/select";
 import { Card, CardContent } from "../components/ui/card";
-import { solicitacoes, esteiraDefault } from "../data/mockData";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "../components/ui/dialog";
+import { Label } from "../components/ui/label";
+import { Textarea } from "../components/ui/textarea";
+import { esteiraDefault } from "../data/mockData";
+import {
+  addSolicitacao,
+  getSolicitacoes,
+  subscribeSolicitacoes,
+} from "../data/solicitacoesStore";
 import { cn } from "../components/ui/utils";
+import { toast } from "sonner";
 
 export function DashboardPage() {
+  const navigate = useNavigate();
+  const solicitacoes = useSyncExternalStore(
+    subscribeSolicitacoes,
+    getSolicitacoes,
+    getSolicitacoes
+  );
   const [filtroStatus, setFiltroStatus] = useState<string>("todos");
   const [busca, setBusca] = useState("");
+  const [isNovaOpen, setIsNovaOpen] = useState(false);
+  const [titulo, setTitulo] = useState("");
+  const [tipo, setTipo] = useState("");
+  const [descricao, setDescricao] = useState("");
+  const [documentosTexto, setDocumentosTexto] = useState("");
+  const [comentarioInicial, setComentarioInicial] = useState("");
 
-  const solicitacoesFiltradas = solicitacoes.filter((sol) => {
-    const matchBusca =
-      busca === "" ||
-      sol.codigo.toLowerCase().includes(busca.toLowerCase()) ||
-      sol.titulo.toLowerCase().includes(busca.toLowerCase());
+  const solicitacoesFiltradas = useMemo(() => {
+    return solicitacoes.filter((sol) => {
+      const matchBusca =
+        busca === "" ||
+        sol.codigo.toLowerCase().includes(busca.toLowerCase()) ||
+        sol.titulo.toLowerCase().includes(busca.toLowerCase());
 
-    const matchStatus =
-      filtroStatus === "todos" || sol.statusGeral === filtroStatus;
+      const matchStatus =
+        filtroStatus === "todos" || sol.statusGeral === filtroStatus;
 
-    return matchBusca && matchStatus;
-  });
+      return matchBusca && matchStatus;
+    });
+  }, [busca, filtroStatus, solicitacoes]);
 
   const getEtapaAtual = (etapaId: string) => {
     return esteiraDefault.find((e) => e.id === etapaId);
@@ -74,14 +103,55 @@ export function DashboardPage() {
     }
   };
 
-  // Estatísticas
-  const stats = {
-    total: solicitacoes.length,
-    emAndamento: solicitacoes.filter((s) => s.statusGeral === "em_andamento")
-      .length,
-    aprovados: solicitacoes.filter((s) => s.statusGeral === "aprovado").length,
-    rejeitados: solicitacoes.filter((s) => s.statusGeral === "rejeitado")
-      .length,
+  const stats = useMemo(
+    () => ({
+      total: solicitacoes.length,
+      emAndamento: solicitacoes.filter((s) => s.statusGeral === "em_andamento")
+        .length,
+      aprovados: solicitacoes.filter((s) => s.statusGeral === "aprovado").length,
+      rejeitados: solicitacoes.filter((s) => s.statusGeral === "rejeitado")
+        .length,
+    }),
+    [solicitacoes]
+  );
+
+  const handleNovaSolicitacao = () => {
+    if (!titulo.trim()) {
+      toast.error("Informe o título da solicitação");
+      return;
+    }
+
+    if (!tipo) {
+      toast.error("Selecione o tipo da solicitação");
+      return;
+    }
+
+    if (!descricao.trim()) {
+      toast.error("Informe a descrição da solicitação");
+      return;
+    }
+
+    const documentos = documentosTexto
+      .split(/\n|,/)
+      .map((doc) => doc.trim())
+      .filter(Boolean);
+
+    const nova = addSolicitacao({
+      titulo,
+      tipo,
+      descricao,
+      documentos,
+      comentario: comentarioInicial,
+    });
+
+    setIsNovaOpen(false);
+    setTitulo("");
+    setTipo("");
+    setDescricao("");
+    setDocumentosTexto("");
+    setComentarioInicial("");
+
+    navigate(`/solicitacao/${nova.id}`);
   };
 
   return (
@@ -94,7 +164,10 @@ export function DashboardPage() {
             Acompanhe todas as solicitações de rubricas
           </p>
         </div>
-        <Button className="bg-[#0c4a6e] hover:bg-[#0a3d5a]">
+        <Button
+          className="bg-[#0c4a6e] hover:bg-[#0a3d5a]"
+          onClick={() => setIsNovaOpen(true)}
+        >
           <Plus className="w-4 h-4 mr-2" />
           Nova Solicitação
         </Button>
@@ -200,8 +273,7 @@ export function DashboardPage() {
         {solicitacoesFiltradas.map((solicitacao) => {
           const etapaAtual = getEtapaAtual(solicitacao.etapaAtual);
           const progressoPercentual =
-            (solicitacao.historico.filter((h) => h.status === "aprovado")
-              .length /
+            (solicitacao.historico.filter((h) => h.status === "aprovado").length /
               esteiraDefault.length) *
             100;
 
@@ -233,9 +305,7 @@ export function DashboardPage() {
                         {solicitacao.descricao}
                       </p>
                       <div className="flex items-center gap-4 text-sm text-slate-500">
-                        <span>
-                          Solicitante: {solicitacao.solicitante.nome}
-                        </span>
+                        <span>Solicitante: {solicitacao.solicitante.nome}</span>
                         <span>•</span>
                         <span>
                           {new Date(
@@ -284,13 +354,93 @@ export function DashboardPage() {
             <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
               <Search className="w-8 h-8 text-slate-400" />
             </div>
-            <h3 className="text-slate-900 mb-2">Nenhuma solicitação encontrada</h3>
+            <h3 className="text-slate-900 mb-2">
+              Nenhuma solicitação encontrada
+            </h3>
             <p className="text-slate-600">
               Tente ajustar os filtros ou criar uma nova solicitação
             </p>
           </CardContent>
         </Card>
       )}
+
+      <Dialog open={isNovaOpen} onOpenChange={setIsNovaOpen}>
+        <DialogContent className="sm:max-w-[620px]">
+          <DialogHeader>
+            <DialogTitle>Nova Solicitação</DialogTitle>
+          </DialogHeader>
+          <div className="grid grid-cols-2 gap-4 py-2">
+            <div className="col-span-2">
+              <Label htmlFor="titulo">Título</Label>
+              <Input
+                id="titulo"
+                value={titulo}
+                onChange={(e) => setTitulo(e.target.value)}
+                placeholder="Ex: Auxílio Home Office"
+                className="mt-2"
+              />
+            </div>
+            <div>
+              <Label htmlFor="tipo">Tipo</Label>
+              <Select value={tipo} onValueChange={setTipo}>
+                <SelectTrigger className="mt-2">
+                  <SelectValue placeholder="Selecione o tipo" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Nova Rubrica">Nova Rubrica</SelectItem>
+                  <SelectItem value="Atualização de Rubrica">
+                    Atualização de Rubrica
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label htmlFor="documentos">Documentos (opcional)</Label>
+              <Textarea
+                id="documentos"
+                value={documentosTexto}
+                onChange={(e) => setDocumentosTexto(e.target.value)}
+                placeholder="Um documento por linha"
+                rows={3}
+                className="mt-2"
+              />
+            </div>
+            <div className="col-span-2">
+              <Label htmlFor="descricao">Descrição</Label>
+              <Textarea
+                id="descricao"
+                value={descricao}
+                onChange={(e) => setDescricao(e.target.value)}
+                placeholder="Descreva o objetivo da solicitação..."
+                rows={4}
+                className="mt-2"
+              />
+            </div>
+            <div className="col-span-2">
+              <Label htmlFor="comentario">Comentário inicial (opcional)</Label>
+              <Textarea
+                id="comentario"
+                value={comentarioInicial}
+                onChange={(e) => setComentarioInicial(e.target.value)}
+                placeholder="Observações iniciais para o histórico..."
+                rows={3}
+                className="mt-2"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsNovaOpen(false)}>
+              Cancelar
+            </Button>
+            <Button
+              className="bg-[#0c4a6e] hover:bg-[#0a3d5a]"
+              onClick={handleNovaSolicitacao}
+            >
+              Criar Solicitação
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
