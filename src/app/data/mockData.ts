@@ -1,4 +1,4 @@
-export interface Usuario {
+﻿export interface Usuario {
   id: string;
   nome: string;
   avatar?: string;
@@ -131,25 +131,17 @@ export const esteiraDefault: Etapa[] = [
   },
   {
     id: "etapa-5",
-    nome: "Definição de Parâmetros",
-    descricao: "Configuração dos parâmetros e regras da rubrica",
-    ordem: 5,
-    grupoResponsavel: gruposUsuarios[2],
-    cor: "#10b981",
-  },
-  {
-    id: "etapa-6",
     nome: "Testes",
     descricao: "Validação e testes de funcionamento",
-    ordem: 6,
+    ordem: 5,
     grupoResponsavel: gruposUsuarios[4],
     cor: "#6366f1",
   },
   {
-    id: "etapa-7",
+    id: "etapa-6",
     nome: "Aprovação Final",
     descricao: "Aprovação final da diretoria",
-    ordem: 7,
+    ordem: 6,
     grupoResponsavel: gruposUsuarios[5],
     cor: "#059669",
   },
@@ -240,7 +232,7 @@ export const solicitacoes: Solicitacao[] = [
     solicitante: { id: "u6", nome: "Roberto Lima" },
     dataSolicitacao: "2026-03-20",
     statusGeral: "em_andamento",
-    etapaAtual: "etapa-6",
+    etapaAtual: "etapa-5",
     descricao:
       "Criação de rubrica para bônus variável baseado em metas de performance individual e coletiva.",
     documentos: [
@@ -275,12 +267,6 @@ export const solicitacoes: Solicitacao[] = [
       },
       {
         etapaId: "etapa-5",
-        status: "aprovado",
-        usuario: { id: "u7", nome: "Juliana Martins" },
-        data: "2026-03-25",
-      },
-      {
-        etapaId: "etapa-6",
         status: "em_analise",
         usuario: { id: "u11", nome: "Lucas Fernandes" },
         data: "2026-03-27",
@@ -295,7 +281,7 @@ export const solicitacoes: Solicitacao[] = [
     solicitante: { id: "u1", nome: "Maria Silva" },
     dataSolicitacao: "2026-03-15",
     statusGeral: "aprovado",
-    etapaAtual: "etapa-7",
+    etapaAtual: "etapa-6",
     descricao:
       "Atualização do cálculo de hora extra 50% para adequação à nova convenção coletiva.",
     documentos: ["Convencao_Coletiva_2026.pdf"],
@@ -323,15 +309,10 @@ export const solicitacoes: Solicitacao[] = [
       {
         etapaId: "etapa-5",
         status: "aprovado",
-        data: "2026-03-19",
-      },
-      {
-        etapaId: "etapa-6",
-        status: "aprovado",
         data: "2026-03-22",
       },
       {
-        etapaId: "etapa-7",
+        etapaId: "etapa-6",
         status: "aprovado",
         usuario: { id: "u13", nome: "Eduardo Mendes" },
         data: "2026-03-23",

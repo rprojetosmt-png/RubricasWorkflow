@@ -49,6 +49,8 @@ const nextCodigo = () => {
   return `${prefix}${nextSeq}`;
 };
 
+export const getNextCodigo = () => nextCodigo();
+
 export const addSolicitacao = (params: {
   titulo: string;
   tipo: string;
@@ -88,6 +90,12 @@ export const addSolicitacao = (params: {
   data = [nova, ...data];
   emit();
   return nova;
+};
+
+export const addSolicitacaoCompleta = (solicitacao: Solicitacao) => {
+  data = [solicitacao, ...data];
+  emit();
+  return solicitacao;
 };
 
 export const updateSolicitacao = (

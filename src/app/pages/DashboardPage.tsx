@@ -1,5 +1,5 @@
 ﻿import { useMemo, useState, useSyncExternalStore } from "react";
-import { Link, useNavigate } from "react-router";
+import { Link } from "react-router";
 import { Plus, Filter, Search, Clock, CheckCircle2, XCircle } from "lucide-react";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
@@ -12,26 +12,11 @@ import {
   SelectValue,
 } from "../components/ui/select";
 import { Card, CardContent } from "../components/ui/card";
-import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "../components/ui/dialog";
-import { Label } from "../components/ui/label";
-import { Textarea } from "../components/ui/textarea";
 import { esteiraDefault } from "../data/mockData";
-import {
-  addSolicitacao,
-  getSolicitacoes,
-  subscribeSolicitacoes,
-} from "../data/solicitacoesStore";
+import { getSolicitacoes, subscribeSolicitacoes } from "../data/solicitacoesStore";
 import { cn } from "../components/ui/utils";
-import { toast } from "sonner";
 
 export function DashboardPage() {
-  const navigate = useNavigate();
   const solicitacoes = useSyncExternalStore(
     subscribeSolicitacoes,
     getSolicitacoes,
@@ -39,12 +24,6 @@ export function DashboardPage() {
   );
   const [filtroStatus, setFiltroStatus] = useState<string>("todos");
   const [busca, setBusca] = useState("");
-  const [isNovaOpen, setIsNovaOpen] = useState(false);
-  const [titulo, setTitulo] = useState("");
-  const [tipo, setTipo] = useState("");
-  const [descricao, setDescricao] = useState("");
-  const [documentosTexto, setDocumentosTexto] = useState("");
-  const [comentarioInicial, setComentarioInicial] = useState("");
 
   const solicitacoesFiltradas = useMemo(() => {
     return solicitacoes.filter((sol) => {
@@ -115,45 +94,6 @@ export function DashboardPage() {
     [solicitacoes]
   );
 
-  const handleNovaSolicitacao = () => {
-    if (!titulo.trim()) {
-      toast.error("Informe o título da solicitação");
-      return;
-    }
-
-    if (!tipo) {
-      toast.error("Selecione o tipo da solicitação");
-      return;
-    }
-
-    if (!descricao.trim()) {
-      toast.error("Informe a descrição da solicitação");
-      return;
-    }
-
-    const documentos = documentosTexto
-      .split(/\n|,/)
-      .map((doc) => doc.trim())
-      .filter(Boolean);
-
-    const nova = addSolicitacao({
-      titulo,
-      tipo,
-      descricao,
-      documentos,
-      comentario: comentarioInicial,
-    });
-
-    setIsNovaOpen(false);
-    setTitulo("");
-    setTipo("");
-    setDescricao("");
-    setDocumentosTexto("");
-    setComentarioInicial("");
-
-    navigate(`/solicitacao/${nova.id}`);
-  };
-
   return (
     <div className="space-y-6 max-w-screen-2xl mx-auto">
       {/* Header */}
@@ -164,13 +104,12 @@ export function DashboardPage() {
             Acompanhe todas as solicitações de rubricas
           </p>
         </div>
-        <Button
-          className="bg-[#0c4a6e] hover:bg-[#0a3d5a]"
-          onClick={() => setIsNovaOpen(true)}
-        >
-          <Plus className="w-4 h-4 mr-2" />
-          Nova Solicitação
-        </Button>
+        <Link to="/nova-solicitacao">
+          <Button className="bg-[#0c4a6e] hover:bg-[#0a3d5a]">
+            <Plus className="w-4 h-4 mr-2" />
+            Nova Solicitação
+          </Button>
+        </Link>
       </div>
 
       {/* Stats */}
@@ -363,84 +302,6 @@ export function DashboardPage() {
           </CardContent>
         </Card>
       )}
-
-      <Dialog open={isNovaOpen} onOpenChange={setIsNovaOpen}>
-        <DialogContent className="sm:max-w-[620px]">
-          <DialogHeader>
-            <DialogTitle>Nova Solicitação</DialogTitle>
-          </DialogHeader>
-          <div className="grid grid-cols-2 gap-4 py-2">
-            <div className="col-span-2">
-              <Label htmlFor="titulo">Título</Label>
-              <Input
-                id="titulo"
-                value={titulo}
-                onChange={(e) => setTitulo(e.target.value)}
-                placeholder="Ex: Auxílio Home Office"
-                className="mt-2"
-              />
-            </div>
-            <div>
-              <Label htmlFor="tipo">Tipo</Label>
-              <Select value={tipo} onValueChange={setTipo}>
-                <SelectTrigger className="mt-2">
-                  <SelectValue placeholder="Selecione o tipo" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Nova Rubrica">Nova Rubrica</SelectItem>
-                  <SelectItem value="Atualização de Rubrica">
-                    Atualização de Rubrica
-                  </SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Label htmlFor="documentos">Documentos (opcional)</Label>
-              <Textarea
-                id="documentos"
-                value={documentosTexto}
-                onChange={(e) => setDocumentosTexto(e.target.value)}
-                placeholder="Um documento por linha"
-                rows={3}
-                className="mt-2"
-              />
-            </div>
-            <div className="col-span-2">
-              <Label htmlFor="descricao">Descrição</Label>
-              <Textarea
-                id="descricao"
-                value={descricao}
-                onChange={(e) => setDescricao(e.target.value)}
-                placeholder="Descreva o objetivo da solicitação..."
-                rows={4}
-                className="mt-2"
-              />
-            </div>
-            <div className="col-span-2">
-              <Label htmlFor="comentario">Comentário inicial (opcional)</Label>
-              <Textarea
-                id="comentario"
-                value={comentarioInicial}
-                onChange={(e) => setComentarioInicial(e.target.value)}
-                placeholder="Observações iniciais para o histórico..."
-                rows={3}
-                className="mt-2"
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsNovaOpen(false)}>
-              Cancelar
-            </Button>
-            <Button
-              className="bg-[#0c4a6e] hover:bg-[#0a3d5a]"
-              onClick={handleNovaSolicitacao}
-            >
-              Criar Solicitação
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }

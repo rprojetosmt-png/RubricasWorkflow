@@ -15,7 +15,6 @@ import { Button } from "../components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
 import { Badge } from "../components/ui/badge";
 import { Textarea } from "../components/ui/textarea";
-import { Separator } from "../components/ui/separator";
 import { Avatar, AvatarFallback } from "../components/ui/avatar";
 import {
   Dialog,
@@ -25,7 +24,7 @@ import {
   DialogTitle,
 } from "../components/ui/dialog";
 import { Label } from "../components/ui/label";
-import { esteiraDefault, type HistoricoEtapa, type Solicitacao } from "../data/mockData";
+import { esteiraDefault, type HistoricoEtapa } from "../data/mockData";
 import {
   getSolicitacaoById,
   subscribeSolicitacoes,
@@ -38,8 +37,8 @@ export function SolicitacaoDetailPage() {
   const { id } = useParams();
   const solicitacao = useSyncExternalStore(
     subscribeSolicitacoes,
-    () => (id ? getSolicitacaoById(id) : undefined),
-    () => (id ? getSolicitacaoById(id) : undefined)
+    () => (id ? getSolicitacaoById(id) : null),
+    () => (id ? getSolicitacaoById(id) : null)
   );
   const [comentario, setComentario] = useState("");
   const [isRejectDialogOpen, setIsRejectDialogOpen] = useState(false);
@@ -90,22 +89,22 @@ export function SolicitacaoDetailPage() {
   };
 
   const upsertHistorico = (
-    historico: HistoricoEtapa[],
+    lista: HistoricoEtapa[],
     etapaId: string,
     patch: Partial<HistoricoEtapa>
   ) => {
-    const index = historico.findIndex((h) => h.etapaId === etapaId);
+    const index = lista.findIndex((h) => h.etapaId === etapaId);
     if (index >= 0) {
-      const atualizado = { ...historico[index], ...patch } as HistoricoEtapa;
+      const atualizado = { ...lista[index], ...patch } as HistoricoEtapa;
       return [
-        ...historico.slice(0, index),
+        ...lista.slice(0, index),
         atualizado,
-        ...historico.slice(index + 1),
+        ...lista.slice(index + 1),
       ];
     }
 
     return [
-      ...historico,
+      ...lista,
       {
         etapaId,
         status: patch.status ?? "pendente",
@@ -115,13 +114,10 @@ export function SolicitacaoDetailPage() {
   };
 
   const handleAprovar = () => {
-    if (!id) return;
     const dataAgora = new Date().toISOString();
 
-    updateSolicitacao(id, (prev: Solicitacao) => {
-      const etapaIndex = esteiraDefault.findIndex(
-        (e) => e.id === prev.etapaAtual
-      );
+    updateSolicitacao(solicitacao.id, (prev) => {
+      const etapaIndex = esteiraDefault.findIndex((e) => e.id === prev.etapaAtual);
       const etapaAtualId = prev.etapaAtual;
       const proximaEtapa = esteiraDefault[etapaIndex + 1] ?? null;
 
@@ -163,7 +159,6 @@ export function SolicitacaoDetailPage() {
   };
 
   const handleConfirmarRejeicao = () => {
-    if (!id) return;
     if (!motivoRejeicao.trim()) {
       toast.error("Informe o motivo da rejeição");
       return;
@@ -171,10 +166,8 @@ export function SolicitacaoDetailPage() {
 
     const dataAgora = new Date().toISOString();
 
-    updateSolicitacao(id, (prev: Solicitacao) => {
-      const etapaIndex = esteiraDefault.findIndex(
-        (e) => e.id === prev.etapaAtual
-      );
+    updateSolicitacao(solicitacao.id, (prev) => {
+      const etapaIndex = esteiraDefault.findIndex((e) => e.id === prev.etapaAtual);
       const etapaAtualId = prev.etapaAtual;
       const etapaAnterior = etapaIndex > 0 ? esteiraDefault[etapaIndex - 1] : null;
 
@@ -238,10 +231,7 @@ export function SolicitacaoDetailPage() {
               <span className="font-mono text-sm text-slate-600">
                 {solicitacao.codigo}
               </span>
-              <Badge
-                variant="outline"
-                className="bg-blue-50 text-blue-700 border-blue-200"
-              >
+              <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
                 {solicitacao.tipo}
               </Badge>
             </div>
@@ -547,3 +537,4 @@ export function SolicitacaoDetailPage() {
     </div>
   );
 }
+
