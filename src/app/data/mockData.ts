@@ -139,25 +139,17 @@ export const esteiraDefault: Etapa[] = [
   },
   {
     id: "etapa-6",
-    nome: "Configuração de Cálculo",
-    descricao: "Definição das fórmulas e métodos de cálculo",
-    ordem: 6,
-    grupoResponsavel: gruposUsuarios[3],
-    cor: "#06b6d4",
-  },
-  {
-    id: "etapa-7",
     nome: "Testes",
     descricao: "Validação e testes de funcionamento",
-    ordem: 7,
+    ordem: 6,
     grupoResponsavel: gruposUsuarios[4],
     cor: "#6366f1",
   },
   {
-    id: "etapa-8",
+    id: "etapa-7",
     nome: "Aprovação Final",
     descricao: "Aprovação final da diretoria",
-    ordem: 8,
+    ordem: 7,
     grupoResponsavel: gruposUsuarios[5],
     cor: "#059669",
   },
@@ -248,7 +240,7 @@ export const solicitacoes: Solicitacao[] = [
     solicitante: { id: "u6", nome: "Roberto Lima" },
     dataSolicitacao: "2026-03-20",
     statusGeral: "em_andamento",
-    etapaAtual: "etapa-7",
+    etapaAtual: "etapa-6",
     descricao:
       "Criação de rubrica para bônus variável baseado em metas de performance individual e coletiva.",
     documentos: [
@@ -289,12 +281,6 @@ export const solicitacoes: Solicitacao[] = [
       },
       {
         etapaId: "etapa-6",
-        status: "aprovado",
-        usuario: { id: "u9", nome: "Ricardo Pereira" },
-        data: "2026-03-26",
-      },
-      {
-        etapaId: "etapa-7",
         status: "em_analise",
         usuario: { id: "u11", nome: "Lucas Fernandes" },
         data: "2026-03-27",
@@ -309,7 +295,7 @@ export const solicitacoes: Solicitacao[] = [
     solicitante: { id: "u1", nome: "Maria Silva" },
     dataSolicitacao: "2026-03-15",
     statusGeral: "aprovado",
-    etapaAtual: "etapa-8",
+    etapaAtual: "etapa-7",
     descricao:
       "Atualização do cálculo de hora extra 50% para adequação à nova convenção coletiva.",
     documentos: ["Convencao_Coletiva_2026.pdf"],
@@ -342,15 +328,10 @@ export const solicitacoes: Solicitacao[] = [
       {
         etapaId: "etapa-6",
         status: "aprovado",
-        data: "2026-03-20",
-      },
-      {
-        etapaId: "etapa-7",
-        status: "aprovado",
         data: "2026-03-22",
       },
       {
-        etapaId: "etapa-8",
+        etapaId: "etapa-7",
         status: "aprovado",
         usuario: { id: "u13", nome: "Eduardo Mendes" },
         data: "2026-03-23",
