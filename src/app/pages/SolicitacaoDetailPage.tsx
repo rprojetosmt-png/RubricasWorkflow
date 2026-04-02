@@ -1,4 +1,4 @@
-import { useState } from "react";
+﻿import { useState } from "react";
 import { useParams, Link } from "react-router";
 import {
   ArrowLeft,
@@ -17,14 +17,32 @@ import { Badge } from "../components/ui/badge";
 import { Textarea } from "../components/ui/textarea";
 import { Separator } from "../components/ui/separator";
 import { Avatar, AvatarFallback } from "../components/ui/avatar";
-import { solicitacoes, esteiraDefault, type Etapa } from "../data/mockData";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "../components/ui/dialog";
+import { Label } from "../components/ui/label";
+import {
+  solicitacoes,
+  esteiraDefault,
+  type HistoricoEtapa,
+  type Solicitacao,
+} from "../data/mockData";
 import { cn } from "../components/ui/utils";
 import { toast } from "sonner";
 
 export function SolicitacaoDetailPage() {
   const { id } = useParams();
-  const solicitacao = solicitacoes.find((s) => s.id === id);
+  const solicitacaoInicial = solicitacoes.find((s) => s.id === id) ?? null;
+  const [solicitacao, setSolicitacao] = useState<Solicitacao | null>(
+    solicitacaoInicial
+  );
   const [comentario, setComentario] = useState("");
+  const [isRejectDialogOpen, setIsRejectDialogOpen] = useState(false);
+  const [motivoRejeicao, setMotivoRejeicao] = useState("");
 
   if (!solicitacao) {
     return (
@@ -70,16 +88,126 @@ export function SolicitacaoDetailPage() {
     }
   };
 
+  const upsertHistorico = (
+    historico: HistoricoEtapa[],
+    etapaId: string,
+    patch: Partial<HistoricoEtapa>
+  ) => {
+    const index = historico.findIndex((h) => h.etapaId === etapaId);
+    if (index >= 0) {
+      const atualizado = { ...historico[index], ...patch } as HistoricoEtapa;
+      return [
+        ...historico.slice(0, index),
+        atualizado,
+        ...historico.slice(index + 1),
+      ];
+    }
+
+    return [
+      ...historico,
+      {
+        etapaId,
+        status: patch.status ?? "pendente",
+        ...patch,
+      } as HistoricoEtapa,
+    ];
+  };
+
   const handleAprovar = () => {
+    const dataAgora = new Date().toISOString();
+
+    setSolicitacao((prev) => {
+      if (!prev) return prev;
+
+      const etapaIndex = esteiraDefault.findIndex(
+        (e) => e.id === prev.etapaAtual
+      );
+      const etapaAtualId = prev.etapaAtual;
+      const proximaEtapa = esteiraDefault[etapaIndex + 1] ?? null;
+
+      let historico = upsertHistorico(prev.historico, etapaAtualId, {
+        status: "aprovado",
+        data: dataAgora,
+        comentario: comentario.trim() || undefined,
+      });
+
+      let novoStatusGeral = prev.statusGeral;
+      let novaEtapaAtual = prev.etapaAtual;
+
+      if (proximaEtapa) {
+        novaEtapaAtual = proximaEtapa.id;
+        historico = upsertHistorico(historico, proximaEtapa.id, {
+          status: "em_analise",
+          data: dataAgora,
+        });
+      } else {
+        novoStatusGeral = "aprovado";
+      }
+
+      return {
+        ...prev,
+        etapaAtual: novaEtapaAtual,
+        statusGeral: novoStatusGeral,
+        historico,
+      };
+    });
+
+    setComentario("");
     toast.success("Etapa aprovada com sucesso!", {
       description: "A solicitação foi movida para a próxima etapa.",
     });
   };
 
   const handleRejeitar = () => {
-    toast.error("Etapa rejeitada", {
-      description: "A solicitação foi rejeitada e o solicitante foi notificado.",
+    setIsRejectDialogOpen(true);
+  };
+
+  const handleConfirmarRejeicao = () => {
+    if (!motivoRejeicao.trim()) {
+      toast.error("Informe o motivo da rejeição");
+      return;
+    }
+
+    const dataAgora = new Date().toISOString();
+
+    setSolicitacao((prev) => {
+      if (!prev) return prev;
+
+      const etapaIndex = esteiraDefault.findIndex(
+        (e) => e.id === prev.etapaAtual
+      );
+      const etapaAtualId = prev.etapaAtual;
+      const etapaAnterior = etapaIndex > 0 ? esteiraDefault[etapaIndex - 1] : null;
+
+      let historico = upsertHistorico(prev.historico, etapaAtualId, {
+        status: "rejeitado",
+        data: dataAgora,
+        comentario: motivoRejeicao.trim(),
+      });
+
+      let novaEtapaAtual = etapaAtualId;
+      if (etapaAnterior) {
+        novaEtapaAtual = etapaAnterior.id;
+        historico = upsertHistorico(historico, etapaAnterior.id, {
+          status: "em_analise",
+          data: dataAgora,
+        });
+      }
+
+      return {
+        ...prev,
+        etapaAtual: novaEtapaAtual,
+        statusGeral: "em_andamento",
+        historico,
+      };
     });
+
+    toast.error("Etapa rejeitada", {
+      description: `Motivo: ${motivoRejeicao.trim()}`,
+    });
+
+    setIsRejectDialogOpen(false);
+    setMotivoRejeicao("");
   };
 
   const getInitials = (nome: string) => {
@@ -111,7 +239,10 @@ export function SolicitacaoDetailPage() {
               <span className="font-mono text-sm text-slate-600">
                 {solicitacao.codigo}
               </span>
-              <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
+              <Badge
+                variant="outline"
+                className="bg-blue-50 text-blue-700 border-blue-200"
+              >
                 {solicitacao.tipo}
               </Badge>
             </div>
@@ -139,10 +270,10 @@ export function SolicitacaoDetailPage() {
           <div className="relative">
             {/* Linha conectora */}
             <div className="absolute top-6 left-0 right-0 h-0.5 bg-slate-200" />
-            
+
             {/* Etapas */}
             <div className="relative grid grid-cols-7 gap-2">
-              {esteiraDefault.map((etapa, index) => {
+              {esteiraDefault.map((etapa) => {
                 const status = getEtapaStatus(etapa.id);
                 const isAtual = etapa.id === solicitacao.etapaAtual;
                 const isCompleto = status === "aprovado";
@@ -159,8 +290,13 @@ export function SolicitacaoDetailPage() {
                         "w-12 h-12 rounded-full border-4 bg-white flex items-center justify-center relative z-10 transition-all",
                         isCompleto && "bg-green-50 border-green-500",
                         isRejeitado && "bg-red-50 border-red-500",
-                        isAtual && !isCompleto && "bg-blue-50 border-blue-500 ring-4 ring-blue-100",
-                        !isCompleto && !isRejeitado && !isAtual && "border-slate-300"
+                        isAtual &&
+                          !isCompleto &&
+                          "bg-blue-50 border-blue-500 ring-4 ring-blue-100",
+                        !isCompleto &&
+                          !isRejeitado &&
+                          !isAtual &&
+                          "border-slate-300"
                       )}
                     >
                       {getStatusIcon(status)}
@@ -174,7 +310,10 @@ export function SolicitacaoDetailPage() {
                           isAtual && "text-blue-700",
                           isCompleto && "text-green-700",
                           isRejeitado && "text-red-700",
-                          !isCompleto && !isRejeitado && !isAtual && "text-slate-600"
+                          !isCompleto &&
+                            !isRejeitado &&
+                            !isAtual &&
+                            "text-slate-600"
                         )}
                       >
                         {etapa.nome}
@@ -207,9 +346,7 @@ export function SolicitacaoDetailPage() {
                   </p>
                   <div className="flex items-center gap-2 text-sm text-blue-800">
                     <User className="w-4 h-4" />
-                    <span>
-                      Responsável: {etapaAtual.grupoResponsavel.nome}
-                    </span>
+                    <span>Responsável: {etapaAtual.grupoResponsavel.nome}</span>
                   </div>
                 </div>
                 <Badge className="bg-blue-600 text-white">
@@ -320,9 +457,7 @@ export function SolicitacaoDetailPage() {
                     return new Date(b.data).getTime() - new Date(a.data).getTime();
                   })
                   .map((hist, index) => {
-                    const etapa = esteiraDefault.find(
-                      (e) => e.id === hist.etapaId
-                    );
+                    const etapa = esteiraDefault.find((e) => e.id === hist.etapaId);
                     if (!etapa) return null;
 
                     return (
@@ -336,9 +471,7 @@ export function SolicitacaoDetailPage() {
                               className="text-xs"
                               style={{ backgroundColor: etapa.cor + "20" }}
                             >
-                              {hist.usuario
-                                ? getInitials(hist.usuario.nome)
-                                : "SYS"}
+                              {hist.usuario ? getInitials(hist.usuario.nome) : "SYS"}
                             </AvatarFallback>
                           </Avatar>
                           <div className="flex-1 pb-4">
@@ -380,6 +513,38 @@ export function SolicitacaoDetailPage() {
           </Card>
         </div>
       </div>
+
+      <Dialog open={isRejectDialogOpen} onOpenChange={setIsRejectDialogOpen}>
+        <DialogContent className="sm:max-w-[520px]">
+          <DialogHeader>
+            <DialogTitle>Rejeitar etapa</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3 py-2">
+            <Label htmlFor="motivo-rejeicao">Motivo da rejeição</Label>
+            <Textarea
+              id="motivo-rejeicao"
+              placeholder="Descreva o motivo da rejeição..."
+              value={motivoRejeicao}
+              onChange={(e) => setMotivoRejeicao(e.target.value)}
+              rows={4}
+            />
+            <p className="text-xs text-slate-500">
+              Esse motivo será informado ao solicitante.
+            </p>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsRejectDialogOpen(false)}>
+              Cancelar
+            </Button>
+            <Button
+              className="bg-red-600 hover:bg-red-700"
+              onClick={handleConfirmarRejeicao}
+            >
+              Confirmar rejeição
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
