@@ -1,7 +1,7 @@
 ﻿# Dependências
 node_modules/
 .pnpm-store/
-
+node_modules/
 # Builds e saídas
 dist/
 build/
