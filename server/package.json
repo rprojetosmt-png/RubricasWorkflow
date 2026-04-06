@@ -1,21 +1,15 @@
-{
+﻿{
   "name": "rubricas-server",
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "node index.js",
-    "prisma:generate": "prisma generate",
-    "prisma:migrate": "prisma migrate dev",
-    "prisma:studio": "prisma studio",
-    "seed": "node seed.js"
+    "dev": "node index.js"
   },
   "dependencies": {
     "cors": "2.8.5",
     "dotenv": "16.6.1",
-    "express": "4.21.2",
-    "@prisma/client": "6.16.1"
-  },
+    "express": "4.21.2" },
   "devDependencies": {
-    "prisma": "6.16.1"
-  }
+    }
 }
+
