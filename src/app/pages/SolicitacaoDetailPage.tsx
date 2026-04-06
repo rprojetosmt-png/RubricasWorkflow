@@ -429,7 +429,7 @@ export function SolicitacaoDetailPage() {
                     className="flex-1 bg-green-600 hover:bg-green-700"
                   >
                     <CheckCircle2 className="w-4 h-4 mr-2" />
-                    Aprovar Etapa
+                    {etapaAtualIndex === esteiraDefault.length ? "Aprovar" : "Aprovar Etapa"}
                   </Button>
                   <Button
                     onClick={handleRejeitar}
@@ -551,6 +551,7 @@ export function SolicitacaoDetailPage() {
     </div>
   );
 }
+
 
 
 

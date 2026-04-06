@@ -35,10 +35,9 @@ import { Avatar, AvatarFallback } from "../components/ui/avatar";
 import {
   esteiraDefault,
   type HistoricoEtapa,
-  type Solicitacao,
-  type Usuario,
+    type Usuario,
 } from "../data/mockData";
-import { addSolicitacaoCompleta, getNextCodigo } from "../data/solicitacoesStore";
+import { addSolicitacao, getNextCodigo, updateSolicitacao } from "../data/solicitacoesStore";
 import { cn } from "../components/ui/utils";
 import { toast } from "sonner";
 
@@ -56,6 +55,7 @@ export function NovaSolicitacaoPage() {
   const [motivoRejeicao, setMotivoRejeicao] = useState("");
   const [isRejectDialogOpen, setIsRejectDialogOpen] = useState(false);
   const [historico, setHistorico] = useState<HistoricoEtapa[]>([]);
+  const [solicitacaoId, setSolicitacaoId] = useState<string | null>(null);
   const [codigoPreview, setCodigoPreview] = useState("RUB-YYYY-000");
 
   const etapaAtual = esteiraDefault[etapaIndex];
@@ -129,8 +129,53 @@ export function NovaSolicitacaoPage() {
     setNovoDocumento("");
   };
 
-  const handleAprovar = async () => {
+const handleAprovar = async () => {
     const dataAgora = new Date().toISOString();
+
+    if (!solicitacaoId) {
+      if (!titulo.trim()) {
+        toast.error("Informe o título da solicitação");
+        return;
+      }
+      if (!descricao.trim()) {
+        toast.error("Informe a descrição da solicitação");
+        return;
+      }
+
+      const inicialHistorico = upsertHistorico(historico, etapaAtual.id, {
+        status: "em_analise",
+        data: dataAgora,
+        comentario: comentario.trim() || undefined,
+        usuario: usuarioAtual,
+      });
+
+      const payloadInicial = {
+        codigo: codigoPreview,
+        titulo: titulo.trim(),
+        tipo,
+        solicitante: usuarioAtual,
+        dataSolicitacao: new Date().toISOString().slice(0, 10),
+        statusGeral: "em_andamento",
+        etapaAtual: etapaAtual.id,
+        descricao: descricao.trim(),
+        documentos: documentos.length > 0 ? documentos : undefined,
+        historico: inicialHistorico,
+      };
+
+      try {
+        const created = await addSolicitacao(payloadInicial);
+        setSolicitacaoId(created.id);
+        setCodigoPreview(created.codigo);
+        setHistorico(inicialHistorico);
+        toast.success("Solicitação criada", {
+          description: "A solicitação foi iniciada na primeira etapa.",
+        });
+      } catch (err) {
+        console.error(err);
+        toast.error("Não foi possível criar a solicitação");
+      }
+      return;
+    }
 
     let atualizado = upsertHistorico(historico, etapaAtual.id, {
       status: "aprovado",
@@ -140,38 +185,51 @@ export function NovaSolicitacaoPage() {
     });
 
     const proximaEtapa = esteiraDefault[etapaIndex + 1];
+    const etapaFinalizada = !proximaEtapa;
+
     if (proximaEtapa) {
       atualizado = upsertHistorico(atualizado, proximaEtapa.id, {
         status: "em_analise",
         data: dataAgora,
         usuario: usuarioAtual,
       });
-      setHistorico(atualizado);
-      setEtapaIndex((prevIndex) => prevIndex + 1);
-      setComentario("");
-      return;
     }
 
-    const novaSolicitacao: Solicitacao = {
-      id: `sol-${Date.now()}`,
+    setHistorico(atualizado);
+    setComentario("");
+
+    const payloadBase = {
       codigo: codigoPreview,
       titulo: titulo || "Nova Solicitação",
       tipo,
       solicitante: usuarioAtual,
       dataSolicitacao: new Date().toISOString().slice(0, 10),
-      statusGeral: "aprovado",
-      etapaAtual: etapaAtual.id,
+      statusGeral: etapaFinalizada ? "aprovado" : "em_andamento",
+      etapaAtual: etapaFinalizada ? etapaAtual.id : proximaEtapa!.id,
       descricao: descricao || "Sem descrição",
       documentos: documentos.length > 0 ? documentos : undefined,
       historico: atualizado,
     };
 
     try {
-      const created = await addSolicitacaoCompleta(novaSolicitacao);
-      toast.success("Solicitação concluída", {
-        description: "A solicitação passou por todas as etapas.",
-      });
-      navigate(`/solicitacao/${created.id}`);
+      await updateSolicitacao(solicitacaoId, (prev) => ({
+        ...prev,
+        ...payloadBase,
+        id: prev.id,
+        codigo: prev.codigo,
+      }));
+
+      if (etapaFinalizada) {
+        toast.success("Solicitação concluída", {
+          description: "A solicitação passou por todas as etapas.",
+        });
+        navigate(`/solicitacao/${solicitacaoId}`);
+        return;
+      }
+
+      if (proximaEtapa) {
+        setEtapaIndex((prevIndex) => prevIndex + 1);
+      }
     } catch (err) {
       console.error(err);
       toast.error("Não foi possível salvar a solicitação");
@@ -460,7 +518,7 @@ export function NovaSolicitacaoPage() {
                   className="flex-1 bg-green-600 hover:bg-green-700"
                 >
                   <CheckCircle2 className="w-4 h-4 mr-2" />
-                  Avançar Etapa
+                  {!solicitacaoId ? "Criar Solicitação" : (etapaIndex === esteiraDefault.length - 1 ? "Aprovar" : "Avançar Etapa")}
                 </Button>
                 <Button
                   onClick={handleRejeitar}
@@ -586,4 +644,11 @@ export function NovaSolicitacaoPage() {
     </div>
   );
 }
+
+
+
+
+
+
+
 
