@@ -6,6 +6,7 @@ import {
   Save,
   Users,
   Edit,
+  Trash2,
   ChevronDown,
   ChevronRight,
 } from "lucide-react";
@@ -14,13 +15,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card"
 import { Input } from "../components/ui/input";
 import { Label } from "../components/ui/label";
 import { Textarea } from "../components/ui/textarea";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "../components/ui/select";
 import {
   Dialog,
   DialogContent,
@@ -122,29 +116,38 @@ function DraggableEtapa({ etapa, index, moveEtapa, onEdit }: DraggableEtapaProps
             <div className="ml-11 space-y-3">
               <div>
                 <p className="text-sm font-medium text-slate-700 mb-2">
-                  Grupo Responsável
+                  Grupos Responsáveis
                 </p>
-                <div className="flex items-center gap-2 p-3 bg-slate-50 rounded-lg border border-slate-200">
+                <div className="flex flex-wrap items-center gap-2 p-3 bg-slate-50 rounded-lg border border-slate-200">
                   <Users className="w-4 h-4 text-slate-600" />
-                  <span className="text-sm font-medium text-slate-900">
-                    {etapa.grupoResponsavel.nome}
-                  </span>
-                  <Badge variant="outline" className="ml-auto">
-                    {etapa.grupoResponsavel.usuarios.length} usuários
-                  </Badge>
+                  {etapa.gruposResponsaveis.length === 0 ? (
+                    <span className="text-sm text-slate-600">Nenhum grupo definido</span>
+                  ) : (
+                    etapa.gruposResponsaveis.map((grupo) => (
+                      <Badge key={grupo.id} variant="secondary">
+                        {grupo.nome}
+                      </Badge>
+                    ))
+                  )}
                 </div>
               </div>
 
               <div>
                 <p className="text-sm font-medium text-slate-700 mb-2">
-                  Membros do Grupo
+                  Membros dos Grupos
                 </p>
                 <div className="flex flex-wrap gap-2">
-                  {etapa.grupoResponsavel.usuarios.map((usuario) => (
-                    <Badge key={usuario.id} variant="secondary">
-                      {usuario.nome}
-                    </Badge>
-                  ))}
+                  {etapa.gruposResponsaveis
+                    .flatMap((grupo) => grupo.usuarios)
+                    .filter(
+                      (usuario, index, array) =>
+                        array.findIndex((item) => item.id === usuario.id) === index
+                    )
+                    .map((usuario) => (
+                      <Badge key={usuario.id} variant="secondary">
+                        {usuario.nome}
+                      </Badge>
+                    ))}
                 </div>
               </div>
             </div>
@@ -165,7 +168,7 @@ export function ConfiguracaoEsteiraPage() {
   // Form state
   const [formNome, setFormNome] = useState("");
   const [formDescricao, setFormDescricao] = useState("");
-  const [formGrupoId, setFormGrupoId] = useState("");
+  const [formGrupoIds, setFormGrupoIds] = useState<string[]>([]);
   const [formCor, setFormCor] = useState("#3b82f6");
 
   const [novoGrupoNome, setNovoGrupoNome] = useState("");
@@ -189,7 +192,7 @@ export function ConfiguracaoEsteiraPage() {
     setEditingEtapa(etapa);
     setFormNome(etapa.nome);
     setFormDescricao(etapa.descricao);
-    setFormGrupoId(etapa.grupoResponsavel.id);
+    setFormGrupoIds(etapa.gruposResponsaveis.map((g) => g.id));
     setFormCor(etapa.cor);
     setIsDialogOpen(true);
   };
@@ -197,9 +200,9 @@ export function ConfiguracaoEsteiraPage() {
   const handleSaveEtapa = () => {
     if (!editingEtapa) return;
 
-    const grupo = grupos.find((g) => g.id === formGrupoId);
-    if (!grupo) {
-      toast.error("Selecione um grupo responsável");
+    const gruposSelecionados = grupos.filter((g) => formGrupoIds.includes(g.id));
+    if (gruposSelecionados.length === 0) {
+      toast.error("Selecione ao menos um grupo responsável");
       return;
     }
 
@@ -214,7 +217,7 @@ export function ConfiguracaoEsteiraPage() {
             ...e,
             nome: formNome,
             descricao: formDescricao,
-            grupoResponsavel: grupo,
+            gruposResponsaveis: gruposSelecionados,
             cor: formCor,
           }
         : e
@@ -266,6 +269,23 @@ export function ConfiguracaoEsteiraPage() {
     setNovoGrupoMembros("");
     setIsGroupDialogOpen(false);
     toast.success("Grupo adicionado com sucesso");
+  };
+
+  const handleDeleteGrupo = (grupoId: string) => {
+    const grupoEmUso = etapas.some((etapa) =>
+      etapa.gruposResponsaveis.some((grupo) => grupo.id === grupoId)
+    );
+
+    if (grupoEmUso) {
+      toast.error("Não é possível remover: grupo vinculado a uma etapa");
+      return;
+    }
+
+    const grupo = grupos.find((g) => g.id === grupoId);
+    setGrupos((prev) => prev.filter((g) => g.id !== grupoId));
+    if (grupo) {
+      toast.success(`Grupo "${grupo.nome}" removido`);
+    }
   };
 
   const cores = [
@@ -345,7 +365,15 @@ export function ConfiguracaoEsteiraPage() {
                       <Users className="w-4 h-4 text-slate-600" />
                       <p className="font-medium text-slate-900">{grupo.nome}</p>
                     </div>
-                    <Badge variant="outline">{grupo.usuarios.length}</Badge>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => handleDeleteGrupo(grupo.id)}
+                      className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                      aria-label={`Remover grupo ${grupo.nome}`}
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
                   </div>
                   <div className="text-xs text-slate-600 space-y-1">
                     {grupo.usuarios.slice(0, 3).map((usuario) => (
@@ -421,24 +449,40 @@ export function ConfiguracaoEsteiraPage() {
             </div>
 
             <div>
-              <Label htmlFor="grupo">Grupo Responsável</Label>
-              <Select value={formGrupoId} onValueChange={setFormGrupoId}>
-                <SelectTrigger className="mt-2">
-                  <SelectValue placeholder="Selecione um grupo" />
-                </SelectTrigger>
-                <SelectContent>
-                  {grupos.map((grupo) => (
-                    <SelectItem key={grupo.id} value={grupo.id}>
-                      <div className="flex items-center justify-between w-full">
-                        <span>{grupo.nome}</span>
-                        <span className="text-xs text-slate-500 ml-2">
-                          ({grupo.usuarios.length} usuários)
-                        </span>
-                      </div>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Label>Grupos Responsáveis</Label>
+              <div className="mt-2 space-y-2">
+                {grupos.map((grupo) => {
+                  const checked = formGrupoIds.includes(grupo.id);
+                  return (
+                    <label
+                      key={grupo.id}
+                      className={cn(
+                        "flex items-center gap-2 p-2 rounded-lg border cursor-pointer",
+                        checked
+                          ? "border-slate-300 bg-slate-50"
+                          : "border-slate-200"
+                      )}
+                    >
+                      <input
+                        type="checkbox"
+                        className="h-4 w-4"
+                        checked={checked}
+                        onChange={() => {
+                          setFormGrupoIds((prev) =>
+                            checked
+                              ? prev.filter((id) => id !== grupo.id)
+                              : [...prev, grupo.id]
+                          );
+                        }}
+                      />
+                      <span className="text-sm text-slate-900">{grupo.nome}</span>
+                      <span className="text-xs text-slate-500 ml-auto">
+                        ({grupo.usuarios.length} usuários)
+                      </span>
+                    </label>
+                  );
+                })}
+              </div>
             </div>
 
             <div>
@@ -517,3 +561,24 @@ export function ConfiguracaoEsteiraPage() {
     </div>
   );
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -15,7 +15,7 @@ export interface Etapa {
   nome: string;
   descricao: string;
   ordem: number;
-  grupoResponsavel: GrupoUsuarios;
+  gruposResponsaveis: GrupoUsuarios[];
   cor: string;
 }
 
@@ -102,7 +102,7 @@ export const esteiraDefault: Etapa[] = [
     nome: "Solicitação",
     descricao: "Abertura e registro da solicitação de nova rubrica",
     ordem: 1,
-    grupoResponsavel: gruposUsuarios[0],
+    gruposResponsaveis: [gruposUsuarios[0]],
     cor: "#3b82f6",
   },
   {
@@ -110,7 +110,7 @@ export const esteiraDefault: Etapa[] = [
     nome: "Análise Documental",
     descricao: "Verificação e validação da documentação apresentada",
     ordem: 2,
-    grupoResponsavel: gruposUsuarios[0],
+    gruposResponsaveis: [gruposUsuarios[0]],
     cor: "#8b5cf6",
   },
   {
@@ -118,7 +118,7 @@ export const esteiraDefault: Etapa[] = [
     nome: "Criação",
     descricao: "Criação da rubrica no sistema",
     ordem: 3,
-    grupoResponsavel: gruposUsuarios[3],
+    gruposResponsaveis: [gruposUsuarios[3]],
     cor: "#f59e0b",
   },
   {
@@ -126,7 +126,7 @@ export const esteiraDefault: Etapa[] = [
     nome: "Testes",
     descricao: "Validação e testes de funcionamento",
     ordem: 4,
-    grupoResponsavel: gruposUsuarios[4],
+    gruposResponsaveis: [gruposUsuarios[4]],
     cor: "#6366f1",
   },
   {
@@ -134,7 +134,7 @@ export const esteiraDefault: Etapa[] = [
     nome: "Aprovação Final",
     descricao: "Aprovação final da diretoria",
     ordem: 5,
-    grupoResponsavel: gruposUsuarios[5],
+    gruposResponsaveis: [gruposUsuarios[5]],
     cor: "#059669",
   },
 ];
@@ -313,3 +313,4 @@ export const solicitacoes: Solicitacao[] = [
     ],
   },
 ];
+

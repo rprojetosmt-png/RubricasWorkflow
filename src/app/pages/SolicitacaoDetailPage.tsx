@@ -349,7 +349,7 @@ export function SolicitacaoDetailPage() {
                   </p>
                   <div className="flex items-center gap-2 text-sm text-blue-800">
                     <User className="w-4 h-4" />
-                    <span>Responsável: {etapaAtual.grupoResponsavel.nome}</span>
+                    <span>Responsáveis: {etapaAtual.gruposResponsaveis.map((g) => g.nome).join(", ")}</span>
                   </div>
                 </div>
                 <Badge className="bg-blue-600 text-white">
@@ -551,6 +551,7 @@ export function SolicitacaoDetailPage() {
     </div>
   );
 }
+
 
 
 
