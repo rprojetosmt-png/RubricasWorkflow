@@ -1,3 +1,26 @@
-﻿node_modules
-server/dev.db
-server/.env
+﻿# Dependências
+node_modules/
+.pnpm-store/
+node_modules/
+# Builds e saídas
+dist/
+build/
+
+# Variáveis de ambiente (Segurança!)
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Editor (Opcional)
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
