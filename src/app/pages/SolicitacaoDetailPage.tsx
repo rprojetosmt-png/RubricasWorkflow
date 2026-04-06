@@ -113,52 +113,59 @@ export function SolicitacaoDetailPage() {
     ];
   };
 
-  const handleAprovar = () => {
+  const handleAprovar = async () => {
     const dataAgora = new Date().toISOString();
 
-    updateSolicitacao(solicitacao.id, (prev) => {
-      const etapaIndex = esteiraDefault.findIndex((e) => e.id === prev.etapaAtual);
-      const etapaAtualId = prev.etapaAtual;
-      const proximaEtapa = esteiraDefault[etapaIndex + 1] ?? null;
+    try {
+      await updateSolicitacao(solicitacao.id, (prev) => {
+        const etapaIndex = esteiraDefault.findIndex(
+          (e) => e.id === prev.etapaAtual
+        );
+        const etapaAtualId = prev.etapaAtual;
+        const proximaEtapa = esteiraDefault[etapaIndex + 1] ?? null;
 
-      let historico = upsertHistorico(prev.historico, etapaAtualId, {
-        status: "aprovado",
-        data: dataAgora,
-        comentario: comentario.trim() || undefined,
+        let historico = upsertHistorico(prev.historico, etapaAtualId, {
+          status: "aprovado",
+          data: dataAgora,
+          comentario: comentario.trim() || undefined,
+        });
+
+        let novoStatusGeral = prev.statusGeral;
+        let novaEtapaAtual = prev.etapaAtual;
+
+        if (proximaEtapa) {
+          novaEtapaAtual = proximaEtapa.id;
+          historico = upsertHistorico(historico, proximaEtapa.id, {
+            status: "em_analise",
+            data: dataAgora,
+          });
+        } else {
+          novoStatusGeral = "aprovado";
+        }
+
+        return {
+          ...prev,
+          etapaAtual: novaEtapaAtual,
+          statusGeral: novoStatusGeral,
+          historico,
+        };
       });
 
-      let novoStatusGeral = prev.statusGeral;
-      let novaEtapaAtual = prev.etapaAtual;
-
-      if (proximaEtapa) {
-        novaEtapaAtual = proximaEtapa.id;
-        historico = upsertHistorico(historico, proximaEtapa.id, {
-          status: "em_analise",
-          data: dataAgora,
-        });
-      } else {
-        novoStatusGeral = "aprovado";
-      }
-
-      return {
-        ...prev,
-        etapaAtual: novaEtapaAtual,
-        statusGeral: novoStatusGeral,
-        historico,
-      };
-    });
-
-    setComentario("");
-    toast.success("Etapa aprovada com sucesso!", {
-      description: "A solicitação foi movida para a próxima etapa.",
-    });
+      setComentario("");
+      toast.success("Etapa aprovada com sucesso!", {
+        description: "A solicitação foi movida para a próxima etapa.",
+      });
+    } catch (err) {
+      console.error(err);
+      toast.error("Não foi possível aprovar a etapa");
+    }
   };
 
   const handleRejeitar = () => {
     setIsRejectDialogOpen(true);
   };
 
-  const handleConfirmarRejeicao = () => {
+  const handleConfirmarRejeicao = async () => {
     if (!motivoRejeicao.trim()) {
       toast.error("Informe o motivo da rejeição");
       return;
@@ -166,40 +173,47 @@ export function SolicitacaoDetailPage() {
 
     const dataAgora = new Date().toISOString();
 
-    updateSolicitacao(solicitacao.id, (prev) => {
-      const etapaIndex = esteiraDefault.findIndex((e) => e.id === prev.etapaAtual);
-      const etapaAtualId = prev.etapaAtual;
-      const etapaAnterior = etapaIndex > 0 ? esteiraDefault[etapaIndex - 1] : null;
+    try {
+      await updateSolicitacao(solicitacao.id, (prev) => {
+        const etapaIndex = esteiraDefault.findIndex(
+          (e) => e.id === prev.etapaAtual
+        );
+        const etapaAtualId = prev.etapaAtual;
+        const etapaAnterior = etapaIndex > 0 ? esteiraDefault[etapaIndex - 1] : null;
 
-      let historico = upsertHistorico(prev.historico, etapaAtualId, {
-        status: "rejeitado",
-        data: dataAgora,
-        comentario: motivoRejeicao.trim(),
+        let historico = upsertHistorico(prev.historico, etapaAtualId, {
+          status: "rejeitado",
+          data: dataAgora,
+          comentario: motivoRejeicao.trim(),
+        });
+
+        let novaEtapaAtual = etapaAtualId;
+        if (etapaAnterior) {
+          novaEtapaAtual = etapaAnterior.id;
+          historico = upsertHistorico(historico, etapaAnterior.id, {
+            status: "em_analise",
+            data: dataAgora,
+          });
+        }
+
+        return {
+          ...prev,
+          etapaAtual: novaEtapaAtual,
+          statusGeral: "em_andamento",
+          historico,
+        };
       });
 
-      let novaEtapaAtual = etapaAtualId;
-      if (etapaAnterior) {
-        novaEtapaAtual = etapaAnterior.id;
-        historico = upsertHistorico(historico, etapaAnterior.id, {
-          status: "em_analise",
-          data: dataAgora,
-        });
-      }
+      toast.error("Etapa rejeitada", {
+        description: `Motivo: ${motivoRejeicao.trim()}`,
+      });
 
-      return {
-        ...prev,
-        etapaAtual: novaEtapaAtual,
-        statusGeral: "em_andamento",
-        historico,
-      };
-    });
-
-    toast.error("Etapa rejeitada", {
-      description: `Motivo: ${motivoRejeicao.trim()}`,
-    });
-
-    setIsRejectDialogOpen(false);
-    setMotivoRejeicao("");
+      setIsRejectDialogOpen(false);
+      setMotivoRejeicao("");
+    } catch (err) {
+      console.error(err);
+      toast.error("Não foi possível rejeitar a etapa");
+    }
   };
 
   const getInitials = (nome: string) => {
@@ -537,4 +551,6 @@ export function SolicitacaoDetailPage() {
     </div>
   );
 }
+
+
 

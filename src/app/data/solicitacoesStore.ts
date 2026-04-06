@@ -1,112 +1,106 @@
-﻿import { solicitacoes as initialSolicitacoes, esteiraDefault } from "./mockData";
-import type { HistoricoEtapa, Solicitacao, Usuario } from "./mockData";
+﻿import type { Solicitacao } from "./mockData";
+
+const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3001";
 
 const listeners = new Set<() => void>();
-let data: Solicitacao[] = initialSolicitacoes.map((s) => ({
-  ...s,
-  solicitante: { ...s.solicitante },
-  historico: s.historico.map((h) => ({
-    ...h,
-    usuario: h.usuario ? { ...h.usuario } : undefined,
-  })),
-  documentos: s.documentos ? [...s.documentos] : undefined,
-}));
-
-const usuarioAtual: Usuario = {
-  id: "u99",
-  nome: "Renan Araujo",
-};
+let data: Solicitacao[] = [];
+let loaded = false;
+let loadingPromise: Promise<void> | null = null;
 
 const emit = () => {
   listeners.forEach((listener) => listener());
 };
 
-export const getSolicitacoes = () => data;
+const fetchJson = async <T>(input: RequestInfo, init?: RequestInit) => {
+  const res = await fetch(input, init);
+  if (!res.ok) {
+    const message = await res.text();
+    throw new Error(message || "Erro na API");
+  }
+  return (await res.json()) as T;
+};
+
+export const refreshSolicitacoes = async () => {
+  data = await fetchJson<Solicitacao[]>(`${API_URL}/api/solicitacoes`);
+  emit();
+};
+
+const ensureLoaded = () => {
+  if (loaded) return;
+  loaded = true;
+  loadingPromise = refreshSolicitacoes().catch((err) => {
+    console.error(err);
+  });
+};
+
+export const getSolicitacoes = () => {
+  ensureLoaded();
+  return data;
+};
 
 export const getSolicitacaoById = (id: string) => {
+  ensureLoaded();
   return data.find((s) => s.id === id);
 };
 
 export const subscribeSolicitacoes = (listener: () => void) => {
+  ensureLoaded();
   listeners.add(listener);
   return () => {
     listeners.delete(listener);
   };
 };
 
-const nextCodigo = () => {
-  const now = new Date();
-  const ano = now.getFullYear();
-  const prefix = `RUB-${ano}-`;
-  const seq = data
-    .map((s) => s.codigo)
-    .filter((codigo) => codigo.startsWith(prefix))
-    .map((codigo) => Number(codigo.slice(prefix.length)))
-    .filter((n) => Number.isFinite(n));
-
-  const maxSeq = seq.length > 0 ? Math.max(...seq) : 0;
-  const nextSeq = String(maxSeq + 1).padStart(3, "0");
-  return `${prefix}${nextSeq}`;
+export const getNextCodigo = async () => {
+  const result = await fetchJson<{ codigo: string }>(
+    `${API_URL}/api/solicitacoes/next-codigo`
+  );
+  return result.codigo;
 };
 
-export const getNextCodigo = () => nextCodigo();
-
-export const addSolicitacao = (params: {
-  titulo: string;
-  tipo: string;
-  descricao: string;
-  documentos?: string[];
-  comentario?: string;
-}) => {
-  const now = new Date();
-  const dataISO = now.toISOString();
-  const dataSolicitacao = dataISO.slice(0, 10);
-  const primeiraEtapa = esteiraDefault[0];
-
-  const historico: HistoricoEtapa[] = [
-    {
-      etapaId: primeiraEtapa.id,
-      status: "em_analise",
-      usuario: usuarioAtual,
-      data: dataISO,
-      comentario: params.comentario?.trim() || undefined,
-    },
-  ];
-
-  const nova: Solicitacao = {
-    id: `sol-${Date.now()}`,
-    codigo: nextCodigo(),
-    titulo: params.titulo.trim(),
-    tipo: params.tipo,
-    solicitante: usuarioAtual,
-    dataSolicitacao,
-    statusGeral: "em_andamento",
-    etapaAtual: primeiraEtapa.id,
-    historico,
-    descricao: params.descricao.trim(),
-    documentos: params.documentos && params.documentos.length > 0 ? params.documentos : undefined,
-  };
-
-  data = [nova, ...data];
-  emit();
-  return nova;
+export const addSolicitacao = async (payload: Omit<Solicitacao, "id">) => {
+  const created = await fetchJson<Solicitacao>(`${API_URL}/api/solicitacoes`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  await refreshSolicitacoes();
+  return created;
 };
 
-export const addSolicitacaoCompleta = (solicitacao: Solicitacao) => {
-  data = [solicitacao, ...data];
-  emit();
-  return solicitacao;
+export const addSolicitacaoCompleta = async (solicitacao: Solicitacao) => {
+  const created = await fetchJson<Solicitacao>(`${API_URL}/api/solicitacoes`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(solicitacao),
+  });
+  await refreshSolicitacoes();
+  return created;
 };
 
-export const updateSolicitacao = (
+export const updateSolicitacao = async (
   id: string,
   updater: (current: Solicitacao) => Solicitacao
 ) => {
-  const index = data.findIndex((s) => s.id === id);
-  if (index === -1) return null;
+  const current = data.find((s) => s.id === id);
+  if (!current) return null;
 
-  const updated = updater(data[index]);
-  data = [...data.slice(0, index), updated, ...data.slice(index + 1)];
-  emit();
+  const updatedPayload = updater(current);
+  const updated = await fetchJson<Solicitacao>(
+    `${API_URL}/api/solicitacoes/${id}`,
+    {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(updatedPayload),
+    }
+  );
+  await refreshSolicitacoes();
   return updated;
+};
+
+export const waitForInitialLoad = async () => {
+  ensureLoaded();
+  if (loadingPromise) {
+    await loadingPromise;
+  }
 };

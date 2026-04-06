@@ -1,4 +1,4 @@
-﻿import { useMemo, useState } from "react";
+﻿import { useEffect, useState } from "react";
 import { useNavigate, Link } from "react-router";
 import {
   ArrowLeft,
@@ -56,11 +56,24 @@ export function NovaSolicitacaoPage() {
   const [motivoRejeicao, setMotivoRejeicao] = useState("");
   const [isRejectDialogOpen, setIsRejectDialogOpen] = useState(false);
   const [historico, setHistorico] = useState<HistoricoEtapa[]>([]);
+  const [codigoPreview, setCodigoPreview] = useState("RUB-YYYY-000");
 
   const etapaAtual = esteiraDefault[etapaIndex];
   const etapaAtualIndex = etapaIndex + 1;
 
-  const codigoPreview = useMemo(() => getNextCodigo(), []);
+  useEffect(() => {
+    let isActive = true;
+    getNextCodigo()
+      .then((codigo) => {
+        if (isActive) setCodigoPreview(codigo);
+      })
+      .catch((err) => {
+        console.error(err);
+      });
+    return () => {
+      isActive = false;
+    };
+  }, []);
 
   const getStatusIcon = (status: string, size: string = "w-5 h-5") => {
     switch (status) {
@@ -116,52 +129,53 @@ export function NovaSolicitacaoPage() {
     setNovoDocumento("");
   };
 
-  const handleAprovar = () => {
+  const handleAprovar = async () => {
     const dataAgora = new Date().toISOString();
 
-    setHistorico((prev) => {
-      let atualizado = upsertHistorico(prev, etapaAtual.id, {
-        status: "aprovado",
-        data: dataAgora,
-        comentario: comentario.trim() || undefined,
-        usuario: usuarioAtual,
-      });
-
-      const proximaEtapa = esteiraDefault[etapaIndex + 1];
-      if (proximaEtapa) {
-        atualizado = upsertHistorico(atualizado, proximaEtapa.id, {
-          status: "em_analise",
-          data: dataAgora,
-          usuario: usuarioAtual,
-        });
-        setEtapaIndex((prevIndex) => prevIndex + 1);
-      } else {
-        // Concluir solicitação
-        const novaSolicitacao: Solicitacao = {
-          id: `sol-${Date.now()}`,
-          codigo: codigoPreview,
-          titulo: titulo || "Nova Solicitação",
-          tipo,
-          solicitante: usuarioAtual,
-          dataSolicitacao: new Date().toISOString().slice(0, 10),
-          statusGeral: "aprovado",
-          etapaAtual: etapaAtual.id,
-          descricao: descricao || "Sem descrição",
-          documentos: documentos.length > 0 ? documentos : undefined,
-          historico: atualizado,
-        };
-
-        addSolicitacaoCompleta(novaSolicitacao);
-        toast.success("Solicitação concluída", {
-          description: "A solicitação passou por todas as etapas.",
-        });
-        navigate(`/solicitacao/${novaSolicitacao.id}`);
-      }
-
-      return atualizado;
+    let atualizado = upsertHistorico(historico, etapaAtual.id, {
+      status: "aprovado",
+      data: dataAgora,
+      comentario: comentario.trim() || undefined,
+      usuario: usuarioAtual,
     });
 
-    setComentario("");
+    const proximaEtapa = esteiraDefault[etapaIndex + 1];
+    if (proximaEtapa) {
+      atualizado = upsertHistorico(atualizado, proximaEtapa.id, {
+        status: "em_analise",
+        data: dataAgora,
+        usuario: usuarioAtual,
+      });
+      setHistorico(atualizado);
+      setEtapaIndex((prevIndex) => prevIndex + 1);
+      setComentario("");
+      return;
+    }
+
+    const novaSolicitacao: Solicitacao = {
+      id: `sol-${Date.now()}`,
+      codigo: codigoPreview,
+      titulo: titulo || "Nova Solicitação",
+      tipo,
+      solicitante: usuarioAtual,
+      dataSolicitacao: new Date().toISOString().slice(0, 10),
+      statusGeral: "aprovado",
+      etapaAtual: etapaAtual.id,
+      descricao: descricao || "Sem descrição",
+      documentos: documentos.length > 0 ? documentos : undefined,
+      historico: atualizado,
+    };
+
+    try {
+      const created = await addSolicitacaoCompleta(novaSolicitacao);
+      toast.success("Solicitação concluída", {
+        description: "A solicitação passou por todas as etapas.",
+      });
+      navigate(`/solicitacao/${created.id}`);
+    } catch (err) {
+      console.error(err);
+      toast.error("Não foi possível salvar a solicitação");
+    }
   };
 
   const handleRejeitar = () => {
@@ -176,27 +190,24 @@ export function NovaSolicitacaoPage() {
 
     const dataAgora = new Date().toISOString();
 
-    setHistorico((prev) => {
-      let atualizado = upsertHistorico(prev, etapaAtual.id, {
-        status: "rejeitado",
-        data: dataAgora,
-        comentario: motivoRejeicao.trim(),
-        usuario: usuarioAtual,
-      });
-
-      if (etapaIndex > 0) {
-        const etapaAnterior = esteiraDefault[etapaIndex - 1];
-        atualizado = upsertHistorico(atualizado, etapaAnterior.id, {
-          status: "em_analise",
-          data: dataAgora,
-          usuario: usuarioAtual,
-        });
-        setEtapaIndex((prevIndex) => Math.max(prevIndex - 1, 0));
-      }
-
-      return atualizado;
+    let atualizado = upsertHistorico(historico, etapaAtual.id, {
+      status: "rejeitado",
+      data: dataAgora,
+      comentario: motivoRejeicao.trim(),
+      usuario: usuarioAtual,
     });
 
+    if (etapaIndex > 0) {
+      const etapaAnterior = esteiraDefault[etapaIndex - 1];
+      atualizado = upsertHistorico(atualizado, etapaAnterior.id, {
+        status: "em_analise",
+        data: dataAgora,
+        usuario: usuarioAtual,
+      });
+      setEtapaIndex((prevIndex) => Math.max(prevIndex - 1, 0));
+    }
+
+    setHistorico(atualizado);
     setIsRejectDialogOpen(false);
     setMotivoRejeicao("");
     toast.error("Etapa rejeitada", {
@@ -228,7 +239,10 @@ export function NovaSolicitacaoPage() {
               <span className="font-mono text-sm text-slate-600">
                 {codigoPreview}
               </span>
-              <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
+              <Badge
+                variant="outline"
+                className="bg-blue-50 text-blue-700 border-blue-200"
+              >
                 {tipo}
               </Badge>
             </div>
@@ -259,7 +273,8 @@ export function NovaSolicitacaoPage() {
             <div className="absolute top-6 left-0 right-0 h-0.5 bg-slate-200" />
             <div className="relative grid grid-cols-6 gap-2">
               {esteiraDefault.map((etapa, index) => {
-                const status = historico.find((h) => h.etapaId === etapa.id)?.status ??
+                const status =
+                  historico.find((h) => h.etapaId === etapa.id)?.status ??
                   (index === etapaIndex ? "em_analise" : "pendente");
                 const isAtual = index === etapaIndex;
                 const isCompleto = status === "aprovado";
@@ -291,7 +306,10 @@ export function NovaSolicitacaoPage() {
                           isAtual && "text-blue-700",
                           isCompleto && "text-green-700",
                           isRejeitado && "text-red-700",
-                          !isCompleto && !isRejeitado && !isAtual && "text-slate-600"
+                          !isCompleto &&
+                            !isRejeitado &&
+                            !isAtual &&
+                            "text-slate-600"
                         )}
                       >
                         {etapa.nome}
@@ -568,8 +586,3 @@ export function NovaSolicitacaoPage() {
     </div>
   );
 }
-
-
-
-
-
