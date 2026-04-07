@@ -1,5 +1,67 @@
 [
   {
+    "codigo": "RUB-2026-008",
+    "titulo": "TESTE FLUXO 3",
+    "tipo": "Nova Rubrica",
+    "solicitante": {
+      "id": "u99",
+      "nome": "Usuário Atual"
+    },
+    "dataSolicitacao": "2026-04-07",
+    "statusGeral": "aprovado",
+    "etapaAtual": "etapa-5",
+    "descricao": "asd",
+    "historico": [
+      {
+        "etapaId": "etapa-1",
+        "status": "aprovado",
+        "data": "2026-04-07T12:20:39.319Z",
+        "comentario": "asd",
+        "usuario": {
+          "id": "u99",
+          "nome": "Usuário Atual"
+        }
+      },
+      {
+        "etapaId": "etapa-2",
+        "status": "aprovado",
+        "data": "2026-04-07T12:20:39.975Z",
+        "usuario": {
+          "id": "u99",
+          "nome": "Usuário Atual"
+        }
+      },
+      {
+        "etapaId": "etapa-3",
+        "status": "aprovado",
+        "data": "2026-04-07T12:20:40.447Z",
+        "usuario": {
+          "id": "u99",
+          "nome": "Usuário Atual"
+        }
+      },
+      {
+        "etapaId": "etapa-4",
+        "status": "aprovado",
+        "data": "2026-04-07T12:20:40.720Z",
+        "usuario": {
+          "id": "u99",
+          "nome": "Usuário Atual"
+        }
+      },
+      {
+        "etapaId": "etapa-5",
+        "status": "aprovado",
+        "data": "2026-04-07T12:20:41.055Z",
+        "usuario": {
+          "id": "u99",
+          "nome": "Usuário Atual"
+        }
+      }
+    ],
+    "id": "sol-1775564434691"
+  },
+  {
     "codigo": "RUB-2026-007",
     "titulo": "TESTE FLUXO 2",
     "tipo": "Nova Rubrica",

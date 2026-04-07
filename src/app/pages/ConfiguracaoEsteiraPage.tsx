@@ -6,7 +6,7 @@ import {
   Save,
   Users,
   Edit,
-  Trash2,
+  MoreVertical,
   ChevronDown,
   ChevronRight,
 } from "lucide-react";
@@ -164,8 +164,12 @@ export function ConfiguracaoEsteiraPage() {
   const [editingEtapa, setEditingEtapa] = useState<Etapa | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isGroupDialogOpen, setIsGroupDialogOpen] = useState(false);
+  const [groupDialogMode, setGroupDialogMode] = useState<"add" | "edit">("add");
+  const [editingGrupoId, setEditingGrupoId] = useState<string | null>(null);
+  const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
+  const [viewGrupo, setViewGrupo] = useState<GrupoUsuarios | null>(null);
+  const [activeGrupoMenuId, setActiveGrupoMenuId] = useState<string | null>(null);
 
-  // Form state
   const [formNome, setFormNome] = useState("");
   const [formDescricao, setFormDescricao] = useState("");
   const [formGrupoIds, setFormGrupoIds] = useState<string[]>([]);
@@ -234,7 +238,28 @@ export function ConfiguracaoEsteiraPage() {
     });
   };
 
-  const handleAddGrupo = () => {
+  const openAddGrupo = () => {
+    setGroupDialogMode("add");
+    setEditingGrupoId(null);
+    setNovoGrupoNome("");
+    setNovoGrupoMembros("");
+    setIsGroupDialogOpen(true);
+  };
+
+  const openEditGrupo = (grupo: GrupoUsuarios) => {
+    setGroupDialogMode("edit");
+    setEditingGrupoId(grupo.id);
+    setNovoGrupoNome(grupo.nome);
+    setNovoGrupoMembros(grupo.usuarios.map((usuario) => usuario.nome).join("\n"));
+    setIsGroupDialogOpen(true);
+  };
+
+  const openViewGrupo = (grupo: GrupoUsuarios) => {
+    setViewGrupo(grupo);
+    setIsViewDialogOpen(true);
+  };
+
+  const handleSaveGrupo = () => {
     if (!novoGrupoNome.trim()) {
       toast.error("Informe o nome do grupo");
       return;
@@ -250,25 +275,46 @@ export function ConfiguracaoEsteiraPage() {
       return;
     }
 
-    const grupoId = `grupo-${Date.now()}`;
-    const usuarios = membros.map((nome, index) => ({
-      id: `${grupoId}-u${index + 1}`,
-      nome,
-    }));
+    if (groupDialogMode === "edit" && editingGrupoId) {
+      const usuarios = membros.map((nome, index) => ({
+        id: `${editingGrupoId}-u${index + 1}`,
+        nome,
+      }));
 
-    setGrupos((prev) => [
-      ...prev,
-      {
-        id: grupoId,
-        nome: novoGrupoNome.trim(),
-        usuarios,
-      },
-    ]);
+      setGrupos((prev) =>
+        prev.map((grupo) =>
+          grupo.id === editingGrupoId
+            ? {
+                ...grupo,
+                nome: novoGrupoNome.trim(),
+                usuarios,
+              }
+            : grupo
+        )
+      );
+      toast.success("Grupo atualizado com sucesso");
+    } else {
+      const grupoId = `grupo-${Date.now()}`;
+      const usuarios = membros.map((nome, index) => ({
+        id: `${grupoId}-u${index + 1}`,
+        nome,
+      }));
+
+      setGrupos((prev) => [
+        ...prev,
+        {
+          id: grupoId,
+          nome: novoGrupoNome.trim(),
+          usuarios,
+        },
+      ]);
+      toast.success("Grupo adicionado com sucesso");
+    }
 
     setNovoGrupoNome("");
     setNovoGrupoMembros("");
     setIsGroupDialogOpen(false);
-    toast.success("Grupo adicionado com sucesso");
+    setActiveGrupoMenuId(null);
   };
 
   const handleDeleteGrupo = (grupoId: string) => {
@@ -289,19 +335,18 @@ export function ConfiguracaoEsteiraPage() {
   };
 
   const cores = [
-    "#3b82f6", // blue
-    "#8b5cf6", // violet
-    "#ec4899", // pink
-    "#f59e0b", // amber
-    "#10b981", // green
-    "#06b6d4", // cyan
-    "#6366f1", // indigo
-    "#ef4444", // red
+    "#3b82f6",
+    "#8b5cf6",
+    "#ec4899",
+    "#f59e0b",
+    "#10b981",
+    "#06b6d4",
+    "#6366f1",
+    "#ef4444",
   ];
 
   return (
     <div className="space-y-6 max-w-screen-2xl mx-auto">
-      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-slate-900">Configuração da Esteira</h2>
@@ -310,7 +355,7 @@ export function ConfiguracaoEsteiraPage() {
           </p>
         </div>
         <div className="flex gap-3">
-          <Button variant="outline" onClick={() => setIsGroupDialogOpen(true)}>
+          <Button variant="outline" onClick={openAddGrupo}>
             <Plus className="w-4 h-4 mr-2" />
             Adicionar Grupo
           </Button>
@@ -325,14 +370,11 @@ export function ConfiguracaoEsteiraPage() {
       </div>
 
       <div className="grid grid-cols-3 gap-6">
-        {/* Etapas */}
         <div className="col-span-2 space-y-4">
           <Card>
             <CardHeader>
               <CardTitle>Etapas da Esteira</CardTitle>
-              <p className="text-sm text-slate-600 mt-1">
-                Arraste para reordenar as etapas
-              </p>
+              <p className="text-sm text-slate-600 mt-1">Arraste para reordenar as etapas</p>
             </CardHeader>
             <CardContent className="space-y-3">
               {etapas.map((etapa, index) => (
@@ -348,45 +390,89 @@ export function ConfiguracaoEsteiraPage() {
           </Card>
         </div>
 
-        {/* Grupos */}
         <div className="space-y-4">
           <Card>
             <CardHeader>
               <CardTitle>Grupos de Usuários</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
-              {grupos.map((grupo) => (
-                <div
-                  key={grupo.id}
-                  className="p-3 bg-slate-50 rounded-lg border border-slate-200"
-                >
-                  <div className="flex items-start justify-between mb-2">
-                    <div className="flex items-center gap-2">
-                      <Users className="w-4 h-4 text-slate-600" />
-                      <p className="font-medium text-slate-900">{grupo.nome}</p>
-                    </div>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => handleDeleteGrupo(grupo.id)}
-                      className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                      aria-label={`Remover grupo ${grupo.nome}`}
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
-                  </div>
-                  <div className="text-xs text-slate-600 space-y-1">
-                    {grupo.usuarios.slice(0, 3).map((usuario) => (
-                      <div key={usuario.id}>• {usuario.nome}</div>
-                    ))}
-                    {grupo.usuarios.length > 3 && (
-                      <div className="text-slate-500">
-                        + {grupo.usuarios.length - 3} mais
+              {grupos.map((grupo) => {
+                const grupoEmUso = etapas.some((etapa) =>
+                  etapa.gruposResponsaveis.some((g) => g.id === grupo.id)
+                );
+
+                return (
+                  <div
+                    key={grupo.id}
+                    className="p-3 bg-slate-50 rounded-lg border border-slate-200"
+                  >
+                    <div className="flex items-start justify-between mb-2">
+                      <div className="flex items-center gap-2">
+                        <Users className="w-4 h-4 text-slate-600" />
+                        <p className="font-medium text-slate-900">{grupo.nome}</p>
                       </div>
-                    )}
+
+                      <div className="relative">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          aria-label="Ações do grupo"
+                          onClick={() =>
+                            setActiveGrupoMenuId((prev) => (prev === grupo.id ? null : grupo.id))
+                          }
+                        >
+                          <MoreVertical className="w-4 h-4" />
+                        </Button>
+
+                        {activeGrupoMenuId === grupo.id && (
+                          <div className="absolute right-0 z-20 mt-1 w-36 rounded-md border border-slate-200 bg-white p-1 shadow-md">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                openViewGrupo(grupo);
+                                setActiveGrupoMenuId(null);
+                              }}
+                              className="w-full rounded-sm px-2 py-1.5 text-left text-sm hover:bg-slate-100"
+                            >
+                              Visualizar
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                openEditGrupo(grupo);
+                                setActiveGrupoMenuId(null);
+                              }}
+                              className="w-full rounded-sm px-2 py-1.5 text-left text-sm hover:bg-slate-100"
+                            >
+                              Editar
+                            </button>
+                            <button
+                              type="button"
+                              disabled={grupoEmUso}
+                              onClick={() => {
+                                handleDeleteGrupo(grupo.id);
+                                setActiveGrupoMenuId(null);
+                              }}
+                              className="w-full rounded-sm px-2 py-1.5 text-left text-sm text-red-600 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
+                            >
+                              Excluir
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="text-xs text-slate-600 space-y-1">
+                      {grupo.usuarios.slice(0, 3).map((usuario) => (
+                        <div key={usuario.id}>• {usuario.nome}</div>
+                      ))}
+                      {grupo.usuarios.length > 3 && (
+                        <div className="text-slate-500">+ {grupo.usuarios.length - 3} mais</div>
+                      )}
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </CardContent>
           </Card>
 
@@ -402,9 +488,7 @@ export function ConfiguracaoEsteiraPage() {
               <Separator />
               <div className="flex items-center justify-between">
                 <span className="text-sm text-slate-600">Grupos Ativos</span>
-                <span className="font-semibold text-slate-900">
-                  {grupos.length}
-                </span>
+                <span className="font-semibold text-slate-900">{grupos.length}</span>
               </div>
               <Separator />
               <div className="flex items-center justify-between">
@@ -418,7 +502,6 @@ export function ConfiguracaoEsteiraPage() {
         </div>
       </div>
 
-      {/* Dialog para Editar Etapa */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent className="sm:max-w-[500px]">
           <DialogHeader>
@@ -458,9 +541,7 @@ export function ConfiguracaoEsteiraPage() {
                       key={grupo.id}
                       className={cn(
                         "flex items-center gap-2 p-2 rounded-lg border cursor-pointer",
-                        checked
-                          ? "border-slate-300 bg-slate-50"
-                          : "border-slate-200"
+                        checked ? "border-slate-300 bg-slate-50" : "border-slate-200"
                       )}
                     >
                       <input
@@ -469,9 +550,7 @@ export function ConfiguracaoEsteiraPage() {
                         checked={checked}
                         onChange={() => {
                           setFormGrupoIds((prev) =>
-                            checked
-                              ? prev.filter((id) => id !== grupo.id)
-                              : [...prev, grupo.id]
+                            checked ? prev.filter((id) => id !== grupo.id) : [...prev, grupo.id]
                           );
                         }}
                       />
@@ -516,11 +595,45 @@ export function ConfiguracaoEsteiraPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Dialog para Adicionar Grupo */}
+      <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>Visualizar Grupo</DialogTitle>
+          </DialogHeader>
+          {viewGrupo ? (
+            <div className="space-y-3 py-4">
+              <div>
+                <p className="text-sm text-slate-600">Nome</p>
+                <p className="text-slate-900 font-medium">{viewGrupo.nome}</p>
+              </div>
+              <div>
+                <p className="text-sm text-slate-600 mb-2">Membros</p>
+                <div className="flex flex-wrap gap-2">
+                  {viewGrupo.usuarios.map((usuario) => (
+                    <Badge key={usuario.id} variant="secondary">
+                      {usuario.nome}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="py-4 text-sm text-slate-600">Grupo não encontrado.</div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsViewDialogOpen(false)}>
+              Fechar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       <Dialog open={isGroupDialogOpen} onOpenChange={setIsGroupDialogOpen}>
         <DialogContent className="sm:max-w-[500px]">
           <DialogHeader>
-            <DialogTitle>Novo Grupo de Usuários</DialogTitle>
+            <DialogTitle>
+              {groupDialogMode === "edit" ? "Editar Grupo" : "Novo Grupo de Usuários"}
+            </DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div>
@@ -550,10 +663,10 @@ export function ConfiguracaoEsteiraPage() {
               Cancelar
             </Button>
             <Button
-              onClick={handleAddGrupo}
+              onClick={handleSaveGrupo}
               className="bg-[#0c4a6e] hover:bg-[#0a3d5a]"
             >
-              Adicionar Grupo
+              {groupDialogMode === "edit" ? "Salvar Alterações" : "Adicionar Grupo"}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -561,24 +674,3 @@ export function ConfiguracaoEsteiraPage() {
     </div>
   );
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
