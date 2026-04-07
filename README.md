@@ -1,20 +1,22 @@
 ﻿# Rubrica - Esteira de aprovação
 
-Este projeto possui front-end (Vite + React) e um backend local (Express) com persistência em arquivo JSON (temporário).
+Este projeto possui front-end (Vite + React) e um backend local (Express + Prisma + SQLite) para persistência.
 
 ## Pré-requisitos
 
 - Node.js (LTS)
 
-## Backend (API local - JSON)
+## Backend (API local)
 
 1. Abra um terminal na pasta `server`.
 2. Instale dependências:
    - `cmd /c npm i`
-3. Inicie a API:
+3. Gere o banco e rode a migração:
+   - `cmd /c npx prisma migrate dev --name init`
+4. Inicie a API:
    - `cmd /c npm run dev`
 
-A API roda por padrão em `http://localhost:3001` e grava os dados em `server/data.json`.
+A API roda por padrão em `http://localhost:3001` e já faz seed inicial a partir de `server/seed.json`.
 
 ## Front-end
 

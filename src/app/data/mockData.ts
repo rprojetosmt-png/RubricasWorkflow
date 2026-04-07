@@ -114,7 +114,7 @@ export const esteiraDefault: Etapa[] = [
     cor: "#8b5cf6",
   },
   {
-    id: "etapa-3",
+    id: "etapa-4",
     nome: "Criação",
     descricao: "Criação da rubrica no sistema",
     ordem: 3,
@@ -122,7 +122,7 @@ export const esteiraDefault: Etapa[] = [
     cor: "#f59e0b",
   },
   {
-    id: "etapa-4",
+    id: "etapa-5",
     nome: "Testes",
     descricao: "Validação e testes de funcionamento",
     ordem: 4,
@@ -130,7 +130,7 @@ export const esteiraDefault: Etapa[] = [
     cor: "#6366f1",
   },
   {
-    id: "etapa-5",
+    id: "etapa-6",
     nome: "Aprovação Final",
     descricao: "Aprovação final da diretoria",
     ordem: 5,
@@ -149,7 +149,7 @@ export const solicitacoes: Solicitacao[] = [
     solicitante: { id: "u1", nome: "Maria Silva" },
     dataSolicitacao: "2026-03-25",
     statusGeral: "em_andamento",
-    etapaAtual: "etapa-3",
+    etapaAtual: "etapa-4",
     descricao:
       "Solicitação de criação de rubrica para adicional de periculosidade conforme legislação vigente CLT Art. 193.",
     documentos: [
@@ -173,7 +173,7 @@ export const solicitacoes: Solicitacao[] = [
         comentario: "Documentação verificada e aprovada.",
       },
       {
-        etapaId: "etapa-3",
+        etapaId: "etapa-4",
         status: "em_analise",
         usuario: { id: "u9", nome: "Ricardo Pereira" },
         data: "2026-03-28",
@@ -216,7 +216,7 @@ export const solicitacoes: Solicitacao[] = [
     solicitante: { id: "u6", nome: "Roberto Lima" },
     dataSolicitacao: "2026-03-20",
     statusGeral: "em_andamento",
-    etapaAtual: "etapa-4",
+    etapaAtual: "etapa-5",
     descricao:
       "Criação de rubrica para bônus variável baseado em metas de performance individual e coletiva.",
     documentos: [
@@ -238,13 +238,13 @@ export const solicitacoes: Solicitacao[] = [
         data: "2026-03-21",
       },
       {
-        etapaId: "etapa-3",
+        etapaId: "etapa-4",
         status: "aprovado",
         usuario: { id: "u10", nome: "Camila Rodrigues" },
         data: "2026-03-24",
       },
       {
-        etapaId: "etapa-4",
+        etapaId: "etapa-5",
         status: "em_analise",
         usuario: { id: "u11", nome: "Lucas Fernandes" },
         data: "2026-03-27",
@@ -259,7 +259,7 @@ export const solicitacoes: Solicitacao[] = [
     solicitante: { id: "u1", nome: "Maria Silva" },
     dataSolicitacao: "2026-03-15",
     statusGeral: "aprovado",
-    etapaAtual: "etapa-5",
+    etapaAtual: "etapa-6",
     descricao:
       "Atualização do cálculo de hora extra 50% para adequação à nova convenção coletiva.",
     documentos: ["Convencao_Coletiva_2026.pdf"],
@@ -275,17 +275,17 @@ export const solicitacoes: Solicitacao[] = [
         data: "2026-03-16",
       },
       {
-        etapaId: "etapa-3",
+        etapaId: "etapa-4",
         status: "aprovado",
         data: "2026-03-18",
       },
       {
-        etapaId: "etapa-4",
+        etapaId: "etapa-5",
         status: "aprovado",
         data: "2026-03-22",
       },
       {
-        etapaId: "etapa-5",
+        etapaId: "etapa-6",
         status: "aprovado",
         usuario: { id: "u13", nome: "Eduardo Mendes" },
         data: "2026-03-23",

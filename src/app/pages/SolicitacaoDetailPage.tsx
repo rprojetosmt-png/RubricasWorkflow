@@ -275,7 +275,7 @@ export function SolicitacaoDetailPage() {
             <div className="absolute top-6 left-0 right-0 h-0.5 bg-slate-200" />
 
             {/* Etapas */}
-            <div className="relative grid grid-cols-5 gap-2">
+            <div className="relative grid grid-cols-6 gap-2">
               {esteiraDefault.map((etapa) => {
                 const status = getEtapaStatus(etapa.id);
                 const isAtual = etapa.id === solicitacao.etapaAtual;
@@ -429,7 +429,7 @@ export function SolicitacaoDetailPage() {
                     className="flex-1 bg-green-600 hover:bg-green-700"
                   >
                     <CheckCircle2 className="w-4 h-4 mr-2" />
-                    {etapaAtualIndex === esteiraDefault.length ? "Aprovar" : "Aprovar Etapa"}
+                    Aprovar Etapa
                   </Button>
                   <Button
                     onClick={handleRejeitar}
@@ -551,7 +551,6 @@ export function SolicitacaoDetailPage() {
     </div>
   );
 }
-
 
 
 

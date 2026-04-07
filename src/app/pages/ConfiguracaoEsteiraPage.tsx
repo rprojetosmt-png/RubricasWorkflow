@@ -1,8 +1,9 @@
-﻿import { useState } from "react";
+import { useState } from "react";
 import { useDrag, useDrop } from "react-dnd";
 import {
   GripVertical,
   Plus,
+  Trash2,
   Save,
   Users,
   Edit,
@@ -20,16 +21,12 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogTrigger,
   DialogFooter,
 } from "../components/ui/dialog";
 import { Badge } from "../components/ui/badge";
 import { Separator } from "../components/ui/separator";
-import {
-  esteiraDefault,
-  gruposUsuarios,
-  type Etapa,
-  type GrupoUsuarios,
-} from "../data/mockData";
+import { esteiraDefault, gruposUsuarios, type Etapa, type GrupoUsuarios } from "../data/mockData";
 import { cn } from "../components/ui/utils";
 import { toast } from "sonner";
 
@@ -40,9 +37,16 @@ interface DraggableEtapaProps {
   index: number;
   moveEtapa: (dragIndex: number, hoverIndex: number) => void;
   onEdit: (etapa: Etapa) => void;
+  onDelete: (etapaId: string) => void;
 }
 
-function DraggableEtapa({ etapa, index, moveEtapa, onEdit }: DraggableEtapaProps) {
+function DraggableEtapa({
+  etapa,
+  index,
+  moveEtapa,
+  onEdit,
+  onDelete,
+}: DraggableEtapaProps) {
   const [expanded, setExpanded] = useState(false);
 
   const [{ isDragging }, drag, dragPreview] = useDrag({
@@ -107,6 +111,14 @@ function DraggableEtapa({ etapa, index, moveEtapa, onEdit }: DraggableEtapaProps
             <Button variant="ghost" size="icon" onClick={() => onEdit(etapa)}>
               <Edit className="w-4 h-4" />
             </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => onDelete(etapa.id)}
+              className="text-red-600 hover:text-red-700 hover:bg-red-50"
+            >
+              <Trash2 className="w-4 h-4" />
+            </Button>
           </div>
         </div>
 
@@ -160,10 +172,8 @@ function DraggableEtapa({ etapa, index, moveEtapa, onEdit }: DraggableEtapaProps
 
 export function ConfiguracaoEsteiraPage() {
   const [etapas, setEtapas] = useState<Etapa[]>(esteiraDefault);
-  const [grupos, setGrupos] = useState<GrupoUsuarios[]>(gruposUsuarios);
   const [editingEtapa, setEditingEtapa] = useState<Etapa | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [isGroupDialogOpen, setIsGroupDialogOpen] = useState(false);
   const [groupDialogMode, setGroupDialogMode] = useState<"add" | "edit">("add");
   const [editingGrupoId, setEditingGrupoId] = useState<string | null>(null);
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
@@ -175,20 +185,18 @@ export function ConfiguracaoEsteiraPage() {
   const [formGrupoIds, setFormGrupoIds] = useState<string[]>([]);
   const [formCor, setFormCor] = useState("#3b82f6");
 
-  const [novoGrupoNome, setNovoGrupoNome] = useState("");
-  const [novoGrupoMembros, setNovoGrupoMembros] = useState("");
-
   const moveEtapa = (dragIndex: number, hoverIndex: number) => {
     const draggedEtapa = etapas[dragIndex];
     const newEtapas = [...etapas];
     newEtapas.splice(dragIndex, 1);
     newEtapas.splice(hoverIndex, 0, draggedEtapa);
-
+    
+    // Atualizar ordem
     const reorderedEtapas = newEtapas.map((etapa, index) => ({
       ...etapa,
       ordem: index + 1,
     }));
-
+    
     setEtapas(reorderedEtapas);
   };
 
@@ -201,12 +209,34 @@ export function ConfiguracaoEsteiraPage() {
     setIsDialogOpen(true);
   };
 
+  const handleAdd = () => {
+    setEditingEtapa(null);
+    setFormNome("");
+    setFormDescricao("");
+    setFormGrupoId("");
+    setFormCor("#3b82f6");
+    setIsDialogOpen(true);
+  };
+
+  const handleDelete = (etapaId: string) => {
+    const newEtapas = etapas.filter((e) => e.id !== etapaId);
+    const reorderedEtapas = newEtapas.map((etapa, index) => ({
+      ...etapa,
+      ordem: index + 1,
+    }));
+    setEtapas(reorderedEtapas);
+    toast.success("Etapa removida com sucesso");
+  };
+
   const handleSaveEtapa = () => {
     if (!editingEtapa) return;
 
     const gruposSelecionados = grupos.filter((g) => formGrupoIds.includes(g.id));
     if (gruposSelecionados.length === 0) {
       toast.error("Selecione ao menos um grupo responsável");
+    const grupo = gruposUsuarios.find((g) => g.id === formGrupoId);
+    if (!grupo) {
+      toast.error("Selecione um grupo responsável");
       return;
     }
 
@@ -229,6 +259,35 @@ export function ConfiguracaoEsteiraPage() {
 
     setEtapas(updatedEtapas);
     toast.success("Etapa atualizada com sucesso");
+    if (editingEtapa) {
+      // Editar existente
+      const updatedEtapas = etapas.map((e) =>
+        e.id === editingEtapa.id
+          ? {
+              ...e,
+              nome: formNome,
+              descricao: formDescricao,
+              grupoResponsavel: grupo,
+              cor: formCor,
+            }
+          : e
+      );
+      setEtapas(updatedEtapas);
+      toast.success("Etapa atualizada com sucesso");
+    } else {
+      // Adicionar nova
+      const novaEtapa: Etapa = {
+        id: `etapa-${Date.now()}`,
+        nome: formNome,
+        descricao: formDescricao,
+        ordem: etapas.length + 1,
+        grupoResponsavel: grupo,
+        cor: formCor,
+      };
+      setEtapas([...etapas, novaEtapa]);
+      toast.success("Etapa adicionada com sucesso");
+    }
+
     setIsDialogOpen(false);
   };
 
@@ -356,13 +415,11 @@ export function ConfiguracaoEsteiraPage() {
         </div>
         <div className="flex gap-3">
           <Button variant="outline" onClick={openAddGrupo}>
+          <Button variant="outline" onClick={handleAdd}>
             <Plus className="w-4 h-4 mr-2" />
-            Adicionar Grupo
+            Adicionar Etapa
           </Button>
-          <Button
-            onClick={handleSaveConfig}
-            className="bg-[#0c4a6e] hover:bg-[#0a3d5a]"
-          >
+          <Button onClick={handleSaveConfig} className="bg-[#0c4a6e] hover:bg-[#0a3d5a]">
             <Save className="w-4 h-4 mr-2" />
             Salvar Configuração
           </Button>
@@ -384,8 +441,21 @@ export function ConfiguracaoEsteiraPage() {
                   index={index}
                   moveEtapa={moveEtapa}
                   onEdit={handleEdit}
+                  onDelete={handleDelete}
                 />
               ))}
+
+              {etapas.length === 0 && (
+                <div className="text-center py-12">
+                  <p className="text-slate-600 mb-4">
+                    Nenhuma etapa configurada
+                  </p>
+                  <Button onClick={handleAdd} variant="outline">
+                    <Plus className="w-4 h-4 mr-2" />
+                    Adicionar Primeira Etapa
+                  </Button>
+                </div>
+              )}
             </CardContent>
           </Card>
         </div>
@@ -473,6 +543,32 @@ export function ConfiguracaoEsteiraPage() {
                   </div>
                 );
               })}
+              {gruposUsuarios.map((grupo) => (
+                <div
+                  key={grupo.id}
+                  className="p-3 bg-slate-50 rounded-lg border border-slate-200"
+                >
+                  <div className="flex items-start justify-between mb-2">
+                    <div className="flex items-center gap-2">
+                      <Users className="w-4 h-4 text-slate-600" />
+                      <p className="font-medium text-slate-900">{grupo.nome}</p>
+                    </div>
+                    <Badge variant="outline">
+                      {grupo.usuarios.length}
+                    </Badge>
+                  </div>
+                  <div className="text-xs text-slate-600 space-y-1">
+                    {grupo.usuarios.slice(0, 3).map((usuario) => (
+                      <div key={usuario.id}>• {usuario.nome}</div>
+                    ))}
+                    {grupo.usuarios.length > 3 && (
+                      <div className="text-slate-500">
+                        + {grupo.usuarios.length - 3} mais
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
             </CardContent>
           </Card>
 
@@ -489,12 +585,15 @@ export function ConfiguracaoEsteiraPage() {
               <div className="flex items-center justify-between">
                 <span className="text-sm text-slate-600">Grupos Ativos</span>
                 <span className="font-semibold text-slate-900">{grupos.length}</span>
+                <span className="font-semibold text-slate-900">
+                  {gruposUsuarios.length}
+                </span>
               </div>
               <Separator />
               <div className="flex items-center justify-between">
                 <span className="text-sm text-slate-600">Total de Usuários</span>
                 <span className="font-semibold text-slate-900">
-                  {grupos.reduce((acc, g) => acc + g.usuarios.length, 0)}
+                  {gruposUsuarios.reduce((acc, g) => acc + g.usuarios.length, 0)}
                 </span>
               </div>
             </CardContent>
@@ -502,10 +601,13 @@ export function ConfiguracaoEsteiraPage() {
         </div>
       </div>
 
+      {/* Dialog para Adicionar/Editar Etapa */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent className="sm:max-w-[500px]">
           <DialogHeader>
-            <DialogTitle>Editar Etapa</DialogTitle>
+            <DialogTitle>
+              {editingEtapa ? "Editar Etapa" : "Nova Etapa"}
+            </DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div>
@@ -562,6 +664,24 @@ export function ConfiguracaoEsteiraPage() {
                   );
                 })}
               </div>
+              <Label htmlFor="grupo">Grupo Responsável</Label>
+              <Select value={formGrupoId} onValueChange={setFormGrupoId}>
+                <SelectTrigger className="mt-2">
+                  <SelectValue placeholder="Selecione um grupo" />
+                </SelectTrigger>
+                <SelectContent>
+                  {gruposUsuarios.map((grupo) => (
+                    <SelectItem key={grupo.id} value={grupo.id}>
+                      <div className="flex items-center justify-between w-full">
+                        <span>{grupo.nome}</span>
+                        <span className="text-xs text-slate-500 ml-2">
+                          ({grupo.usuarios.length} usuários)
+                        </span>
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
             <div>
@@ -667,6 +787,8 @@ export function ConfiguracaoEsteiraPage() {
               className="bg-[#0c4a6e] hover:bg-[#0a3d5a]"
             >
               {groupDialogMode === "edit" ? "Salvar Alterações" : "Adicionar Grupo"}
+            <Button onClick={handleSaveEtapa} className="bg-[#0c4a6e] hover:bg-[#0a3d5a]">
+              {editingEtapa ? "Salvar Alterações" : "Adicionar Etapa"}
             </Button>
           </DialogFooter>
         </DialogContent>
