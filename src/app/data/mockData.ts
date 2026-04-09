@@ -1,4 +1,4 @@
-﻿export interface Usuario {
+export interface Usuario {
   id: string;
   nome: string;
   avatar?: string;
@@ -114,10 +114,18 @@ export const esteiraDefault: Etapa[] = [
     cor: "#8b5cf6",
   },
   {
+    id: "etapa-3",
+    nome: "Parecer Jurídico",
+    descricao: "Análise e parecer legal sobre a rubrica",
+    ordem: 3,
+    gruposResponsaveis: [gruposUsuarios[1]],
+    cor: "#ec4899",
+  },
+  {
     id: "etapa-4",
     nome: "Criação",
     descricao: "Criação da rubrica no sistema",
-    ordem: 3,
+    ordem: 4,
     gruposResponsaveis: [gruposUsuarios[3]],
     cor: "#f59e0b",
   },
@@ -125,7 +133,7 @@ export const esteiraDefault: Etapa[] = [
     id: "etapa-5",
     nome: "Testes",
     descricao: "Validação e testes de funcionamento",
-    ordem: 4,
+    ordem: 5,
     gruposResponsaveis: [gruposUsuarios[4]],
     cor: "#6366f1",
   },
@@ -133,7 +141,7 @@ export const esteiraDefault: Etapa[] = [
     id: "etapa-6",
     nome: "Aprovação Final",
     descricao: "Aprovação final da diretoria",
-    ordem: 5,
+    ordem: 6,
     gruposResponsaveis: [gruposUsuarios[5]],
     cor: "#059669",
   },
@@ -171,6 +179,13 @@ export const solicitacoes: Solicitacao[] = [
         usuario: { id: "u2", nome: "João Santos" },
         data: "2026-03-26",
         comentario: "Documentação verificada e aprovada.",
+      },
+      {
+        etapaId: "etapa-3",
+        status: "aprovado",
+        usuario: { id: "u4", nome: "Carlos Oliveira" },
+        data: "2026-03-27",
+        comentario: "Parecer jurídico favorável à implementação.",
       },
       {
         etapaId: "etapa-4",
@@ -238,6 +253,12 @@ export const solicitacoes: Solicitacao[] = [
         data: "2026-03-21",
       },
       {
+        etapaId: "etapa-3",
+        status: "aprovado",
+        usuario: { id: "u5", nome: "Patricia Souza" },
+        data: "2026-03-22",
+      },
+      {
         etapaId: "etapa-4",
         status: "aprovado",
         usuario: { id: "u10", nome: "Camila Rodrigues" },
@@ -273,6 +294,11 @@ export const solicitacoes: Solicitacao[] = [
         etapaId: "etapa-2",
         status: "aprovado",
         data: "2026-03-16",
+      },
+      {
+        etapaId: "etapa-3",
+        status: "aprovado",
+        data: "2026-03-17",
       },
       {
         etapaId: "etapa-4",

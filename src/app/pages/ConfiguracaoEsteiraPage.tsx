@@ -1,4 +1,4 @@
-﻿import { useState } from "react";
+import { useState } from "react";
 import { useDrag, useDrop } from "react-dnd";
 import {
   GripVertical,
@@ -319,7 +319,7 @@ export function ConfiguracaoEsteiraPage() {
     <div className="space-y-6 max-w-screen-2xl mx-auto">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-slate-900">Configuração da Esteira</h2>
+          <h2 className="text-slate-900">Fluxo de Aprovadores</h2>
           <p className="text-slate-600 mt-1">
             Configure as etapas e grupos responsáveis pela aprovação de rubricas
           </p>

@@ -8,6 +8,10 @@ import {
   Menu,
   User,
   X,
+  ClipboardList,
+  Users,
+  ChevronDown,
+  Circle,
 } from "lucide-react";
 import { cn } from "../components/ui/utils";
 import { useState } from "react";
@@ -85,38 +89,70 @@ export function RootLayout() {
                 </li>
 
                 {/* Cadastro Group */}
-                <li>
-                  <div className="px-3 py-2.5 flex items-center gap-2 text-sm text-white/90">
-                    <LayoutDashboard className="w-4 h-4 flex-shrink-0" />
-                    <span>Cadastro</span>
+                <li className="border-t border-white/10 pt-1 mt-1">
+                  <div className="px-3 py-3 flex items-center justify-between text-sm font-medium text-white hover:bg-white/5 transition-colors cursor-pointer group">
+                    <div className="flex items-center gap-3">
+                      <ClipboardList className="w-5 h-5 text-white/80 group-hover:text-white" />
+                      <span>Cadastro</span>
+                    </div>
+                    <ChevronDown className="w-4 h-4 text-white/60" />
                   </div>
-                  <ul className="ml-6 mt-1 space-y-1 border-l border-white/20 pl-3">
+                  
+                  <ul className="mt-1 space-y-0.5">
+                    {/* Rubrícas Subgroup */}
                     <li>
-                      <Link
-                        to="/"
-                        className={cn(
-                          "block px-3 py-2 rounded text-xs transition-colors",
-                          isActive("/") &&
-                            !location.pathname.includes("configuracao")
-                            ? "text-white bg-white/10"
-                            : "text-white/80 hover:text-white hover:bg-white/5"
-                        )}
-                      >
-                        Dashboard
-                      </Link>
-                    </li>
-                    <li>
-                      <Link
-                        to="/configuracao"
-                        className={cn(
-                          "block px-3 py-2 rounded text-xs transition-colors",
-                          isActive("/configuracao")
-                            ? "text-white bg-white/10"
-                            : "text-white/80 hover:text-white hover:bg-white/5"
-                        )}
-                      >
-                        Configuração da Esteira
-                      </Link>
+                      <div className="pl-10 pr-3 py-2.5 flex items-center justify-between text-[13px] font-medium text-white/90 hover:bg-white/5 transition-colors cursor-pointer group">
+                        <div className="flex items-center gap-3">
+                          <Users className="w-4 h-4 text-white/60 group-hover:text-white" />
+                          <span>Rubrícas</span>
+                        </div>
+                        <ChevronDown className="w-3.5 h-3.5 text-white/40" />
+                      </div>
+                      
+                      <ul className="mt-0.5 space-y-0.5">
+                        <li>
+                          <Link
+                            to="/"
+                            className={cn(
+                              "pl-16 pr-3 py-2 flex items-center gap-2 text-xs transition-all",
+                              isActive("/") &&
+                                !location.pathname.includes("configuracao") &&
+                                !location.pathname.includes("solicitacao")
+                                ? "text-white bg-white/10 font-semibold"
+                                : "text-white/60 hover:text-white hover:bg-white/5"
+                            )}
+                          >
+                            <div className={cn(
+                              "w-1.5 h-1.5 rounded-full",
+                              isActive("/") &&
+                                !location.pathname.includes("configuracao") &&
+                                !location.pathname.includes("solicitacao")
+                                ? "bg-blue-300"
+                                : "bg-white/20"
+                            )} />
+                            Rubrica
+                          </Link>
+                        </li>
+                        <li>
+                          <Link
+                            to="/configuracao"
+                            className={cn(
+                              "pl-16 pr-3 py-2 flex items-center gap-2 text-xs transition-all",
+                              isActive("/configuracao")
+                                ? "text-white bg-white/10 font-semibold"
+                                : "text-white/60 hover:text-white hover:bg-white/5"
+                            )}
+                          >
+                            <div className={cn(
+                              "w-1.5 h-1.5 rounded-full",
+                              isActive("/configuracao")
+                                ? "bg-blue-300"
+                                : "bg-white/20"
+                            )} />
+                            Fluxo de Aprovadores
+                          </Link>
+                        </li>
+                      </ul>
                     </li>
                   </ul>
                 </li>

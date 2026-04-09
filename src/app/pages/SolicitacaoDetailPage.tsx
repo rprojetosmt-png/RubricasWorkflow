@@ -1,4 +1,4 @@
-﻿import { useState, useSyncExternalStore } from "react";
+import { useState, useSyncExternalStore } from "react";
 import { useParams, Link } from "react-router";
 import {
   ArrowLeft,
@@ -267,7 +267,7 @@ export function SolicitacaoDetailPage() {
       {/* Pipeline Visual */}
       <Card>
         <CardHeader>
-          <CardTitle>Progresso da Esteira</CardTitle>
+          <CardTitle>Fluxo de Rubrica</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="relative">

@@ -1,4 +1,4 @@
-﻿import { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate, Link } from "react-router";
 import {
   ArrowLeft,
@@ -266,12 +266,12 @@ export function NovaSolicitacaoPage() {
       {/* Pipeline Visual */}
       <Card>
         <CardHeader>
-          <CardTitle>Progresso da Esteira</CardTitle>
+          <CardTitle>Fluxo de Rubrica</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="relative">
             <div className="absolute top-6 left-0 right-0 h-0.5 bg-slate-200" />
-            <div className="relative grid grid-cols-5 gap-2">
+            <div className="relative grid grid-cols-6 gap-2">
               {esteiraDefault.map((etapa, index) => {
                 const status =
                   historico.find((h) => h.etapaId === etapa.id)?.status ??

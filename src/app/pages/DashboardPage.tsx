@@ -1,4 +1,4 @@
-﻿import { useMemo, useState, useSyncExternalStore } from "react";
+import { useMemo, useState, useSyncExternalStore } from "react";
 import { Link } from "react-router";
 import { Plus, Filter, Search, Clock, CheckCircle2, XCircle } from "lucide-react";
 import { Button } from "../components/ui/button";
@@ -99,7 +99,7 @@ export function DashboardPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-slate-900">Dashboard</h2>
+          <h2 className="text-slate-900">Rubrica</h2>
           <p className="text-slate-600 mt-1">
             Acompanhe todas as solicitações de rubricas
           </p>
