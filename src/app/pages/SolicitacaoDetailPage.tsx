@@ -232,135 +232,97 @@ export function SolicitacaoDetailPage() {
 
   return (
     <div className="space-y-6 max-w-screen-2xl mx-auto">
-      {/* Header */}
-      <div className="flex items-start justify-between">
-        <div className="flex items-start gap-4">
-          <Link to="/">
-            <Button variant="outline" size="icon">
-              <ArrowLeft className="w-4 h-4" />
-            </Button>
-          </Link>
-          <div>
-            <div className="flex items-center gap-3 mb-2">
-              <span className="font-mono text-sm text-slate-600">
-                {solicitacao.codigo}
-              </span>
-              <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
-                {solicitacao.tipo}
-              </Badge>
-            </div>
-            <h2 className="text-slate-900 mb-2">{solicitacao.titulo}</h2>
-            <div className="flex items-center gap-4 text-sm text-slate-600">
-              <div className="flex items-center gap-2">
-                <User className="w-4 h-4" />
-                {solicitacao.solicitante.nome}
+      {/* Contexto + Fluxo */}
+      <Card className="border border-slate-200 shadow-sm">
+        <CardHeader className="py-3 pb-2 space-y-3">
+          <div className="flex items-start justify-between gap-4">
+            <div className="flex items-start gap-3">
+              <Link to="/">
+                <Button variant="outline" size="icon" className="h-9 w-9">
+                  <ArrowLeft className="w-4 h-4" />
+                </Button>
+              </Link>
+              <div className="min-w-0">
+                <div className="flex flex-wrap items-center gap-2 mb-1">
+                  <span className="font-mono text-sm text-slate-600">{solicitacao.codigo}</span>
+                  <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
+                    {solicitacao.tipo}
+                  </Badge>
+                </div>
+                <h2 className="text-slate-900 mb-1">{solicitacao.titulo}</h2>
+                <div className="flex flex-wrap items-center gap-4 text-sm text-slate-600">
+                  <div className="flex items-center gap-2">
+                    <User className="w-4 h-4" />
+                    {solicitacao.solicitante.nome}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Calendar className="w-4 h-4" />
+                    {new Date(solicitacao.dataSolicitacao).toLocaleDateString("pt-BR")}
+                  </div>
+                </div>
               </div>
-              <div className="flex items-center gap-2">
-                <Calendar className="w-4 h-4" />
-                {new Date(solicitacao.dataSolicitacao).toLocaleDateString("pt-BR")}
-              </div>
             </div>
+            <Badge className="bg-amber-50 text-amber-700 border border-amber-200 hover:bg-amber-50">
+              {solicitacao.statusGeral === "aprovado" ? "Rubrica aprovada" : "Rubrica em edição"}
+            </Badge>
           </div>
-        </div>
-      </div>
-
-      {/* Pipeline Visual */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Fluxo de Rubrica</CardTitle>
         </CardHeader>
-        <CardContent>
-          <div className="relative">
-            {/* Linha conectora */}
-            <div className="absolute top-6 left-0 right-0 h-0.5 bg-slate-200" />
-
-            {/* Etapas */}
-            <div className="relative grid grid-cols-6 gap-2">
-              {esteiraDefault.map((etapa) => {
+        <CardContent className="pt-0 pb-3 space-y-3">
+          <div className="relative overflow-x-auto pb-1">
+            <div className="absolute top-4 left-3 right-3 h-px bg-slate-300" />
+            <div className="relative flex min-w-[940px] items-start justify-between gap-4 px-1">
+              {esteiraDefault.map((etapa, index) => {
                 const status = getEtapaStatus(etapa.id);
                 const isAtual = etapa.id === solicitacao.etapaAtual;
                 const isCompleto = status === "aprovado";
                 const isRejeitado = status === "rejeitado";
-                const historico = solicitacao.historico.find(
-                  (h) => h.etapaId === etapa.id
-                );
 
                 return (
-                  <div key={etapa.id} className="flex flex-col items-center">
-                    {/* Círculo da etapa */}
+                  <div key={etapa.id} className="w-36 shrink-0 text-center">
                     <div
                       className={cn(
-                        "w-12 h-12 rounded-full border-4 bg-white flex items-center justify-center relative z-10 transition-all",
-                        isCompleto && "bg-green-50 border-green-500",
-                        isRejeitado && "bg-red-50 border-red-500",
-                        isAtual &&
-                          !isCompleto &&
-                          "bg-blue-50 border-blue-500 ring-4 ring-blue-100",
-                        !isCompleto &&
-                          !isRejeitado &&
-                          !isAtual &&
-                          "border-slate-300"
+                        "mx-auto h-8 w-8 rounded-full border-2 bg-white flex items-center justify-center relative z-10 font-semibold text-xs",
+                        isCompleto && "border-blue-700 bg-blue-700 text-white",
+                        isRejeitado && "border-red-500 bg-red-50 text-red-600",
+                        isAtual && !isCompleto && "border-blue-700 text-blue-700 ring-2 ring-blue-100",
+                        !isCompleto && !isRejeitado && !isAtual && "border-slate-300 text-slate-500"
                       )}
                     >
-                      {getStatusIcon(status)}
+                      {isCompleto ? <CheckCircle2 className="w-4 h-4" /> : index + 1}
                     </div>
-
-                    {/* Nome da etapa */}
-                    <div className="mt-3 text-center">
-                      <p
-                        className={cn(
-                          "text-xs font-medium leading-tight",
-                          isAtual && "text-blue-700",
-                          isCompleto && "text-green-700",
-                          isRejeitado && "text-red-700",
-                          !isCompleto &&
-                            !isRejeitado &&
-                            !isAtual &&
-                            "text-slate-600"
-                        )}
-                      >
-                        {etapa.nome}
-                      </p>
-                      {historico?.data && (
-                        <p className="text-xs text-slate-500 mt-1">
-                          {new Date(historico.data).toLocaleDateString("pt-BR", {
-                            day: "2-digit",
-                            month: "2-digit",
-                          })}
-                        </p>
+                    <p
+                      className={cn(
+                        "mt-1 text-sm font-semibold leading-tight",
+                        isAtual && "text-blue-800",
+                        isCompleto && "text-slate-800",
+                        isRejeitado && "text-red-700",
+                        !isCompleto && !isRejeitado && !isAtual && "text-slate-600"
                       )}
-                    </div>
+                    >
+                      {etapa.nome}
+                    </p>
+                    <p className="text-[11px] text-slate-500 truncate">{etapa.descricao}</p>
                   </div>
                 );
               })}
             </div>
           </div>
 
-          {/* Etapa Atual Info */}
           {etapaAtual && (
-            <div className="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
-              <div className="flex items-start justify-between">
-                <div>
-                  <p className="text-sm font-medium text-blue-900 mb-1">
-                    Etapa Atual: {etapaAtual.nome}
-                  </p>
-                  <p className="text-sm text-blue-700 mb-2">
-                    {etapaAtual.descricao}
-                  </p>
-                  <div className="flex items-center gap-2 text-sm text-blue-800">
-                    <User className="w-4 h-4" />
-                    <span>Responsáveis: {etapaAtual.gruposResponsaveis.map((g) => g.nome).join(", ")}</span>
-                  </div>
-                </div>
-                <Badge className="bg-blue-600 text-white">
-                  {etapaAtualIndex + 1} de {esteiraDefault.length}
-                </Badge>
-              </div>
+            <div className="px-3 py-2 bg-slate-50 rounded-md border border-slate-200 flex flex-wrap items-center gap-2 text-sm">
+              <Badge className="bg-blue-700 text-white hover:bg-blue-700">
+                {etapaAtualIndex + 1} de {esteiraDefault.length}
+              </Badge>
+              <span className="font-medium text-slate-800">Etapa Atual: {etapaAtual.nome}</span>
+              <span className="text-slate-600">{etapaAtual.descricao}</span>
+              <span className="text-slate-700 flex items-center gap-1">
+                <User className="w-4 h-4" />
+                {etapaAtual.gruposResponsaveis.map((g) => g.nome).join(", ")}
+              </span>
             </div>
           )}
         </CardContent>
       </Card>
-
       <div className="grid grid-cols-3 gap-6">
         {/* Coluna Principal */}
         <div className="col-span-2 space-y-6">
@@ -551,6 +513,7 @@ export function SolicitacaoDetailPage() {
     </div>
   );
 }
+
 
 
 
