@@ -1,12 +1,10 @@
-﻿import "dotenv/config";
+import "dotenv/config";
 import express from "express";
 import cors from "cors";
 import fs from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { PrismaClient } from "@prisma/client";
 
-const prisma = new PrismaClient();
 const app = express();
 
 app.use(cors());
@@ -15,6 +13,9 @@ app.use(express.json({ limit: "2mb" }));
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+const DATA_PATH = path.join(__dirname, "data.json");
+const SEED_PATH = path.join(__dirname, "seed.json");
+
 const toDateOnly = (value) => {
   if (!value) return null;
   const date = value instanceof Date ? value : new Date(value);
@@ -22,51 +23,70 @@ const toDateOnly = (value) => {
   return date.toISOString().slice(0, 10);
 };
 
-const fromApiToDb = (payload) => {
-  const dataSolicitacao = payload.dataSolicitacao
-    ? new Date(payload.dataSolicitacao)
-    : new Date();
+const normalizeFromApi = (payload = {}) => ({
+  id: payload.id,
+  codigo: payload.codigo,
+  titulo: payload.titulo,
+  tipo: payload.tipo,
+  solicitante: payload.solicitante,
+  dataSolicitacao: toDateOnly(payload.dataSolicitacao) || toDateOnly(new Date()),
+  statusGeral: payload.statusGeral,
+  etapaAtual: payload.etapaAtual,
+  descricao: payload.descricao,
+  documentos: payload.documentos ?? undefined,
+  historico: payload.historico ?? [],
+});
 
-  return {
-    id: payload.id,
-    codigo: payload.codigo,
-    titulo: payload.titulo,
-    tipo: payload.tipo,
-    solicitante: payload.solicitante,
-    dataSolicitacao,
-    statusGeral: payload.statusGeral,
-    etapaAtual: payload.etapaAtual,
-    descricao: payload.descricao,
-    documentos: payload.documentos ?? null,
-    historico: payload.historico ?? [],
-  };
+const sortByNewest = (a, b) => {
+  const aTime = new Date(a.dataSolicitacao || 0).getTime();
+  const bTime = new Date(b.dataSolicitacao || 0).getTime();
+  return bTime - aTime;
 };
 
-const fromDbToApi = (row) => ({
-  id: row.id,
-  codigo: row.codigo,
-  titulo: row.titulo,
-  tipo: row.tipo,
-  solicitante: row.solicitante,
-  dataSolicitacao: toDateOnly(row.dataSolicitacao),
-  statusGeral: row.statusGeral,
-  etapaAtual: row.etapaAtual,
-  descricao: row.descricao,
-  documentos: row.documentos ?? undefined,
-  historico: row.historico ?? [],
-});
+const readJsonArray = async (filePath) => {
+  try {
+    const content = await fs.readFile(filePath, "utf-8");
+    const parsed = JSON.parse(content);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch (err) {
+    if (err && err.code === "ENOENT") return [];
+    throw err;
+  }
+};
+
+const writeJsonArray = async (filePath, items) => {
+  const data = `${JSON.stringify(items, null, 2)}\n`;
+  await fs.writeFile(filePath, data, "utf-8");
+};
+
+const seedIfEmpty = async () => {
+  const current = await readJsonArray(DATA_PATH);
+  if (current.length > 0) return;
+
+  const seedItems = await readJsonArray(SEED_PATH);
+  if (seedItems.length === 0) return;
+
+  await writeJsonArray(DATA_PATH, seedItems.map(normalizeFromApi));
+};
+
+const readSolicitacoes = async () => {
+  const items = await readJsonArray(DATA_PATH);
+  return items.map(normalizeFromApi);
+};
+
+const writeSolicitacoes = async (items) => {
+  await writeJsonArray(DATA_PATH, items.map(normalizeFromApi));
+};
 
 const nextCodigo = async () => {
   const now = new Date();
   const ano = now.getFullYear();
   const prefix = `RUB-${ano}-`;
-  const rows = await prisma.solicitacao.findMany({
-    select: { codigo: true },
-  });
 
+  const rows = await readSolicitacoes();
   const seq = rows
     .map((s) => s.codigo)
-    .filter((codigo) => codigo.startsWith(prefix))
+    .filter((codigo) => typeof codigo === "string" && codigo.startsWith(prefix))
     .map((codigo) => Number(codigo.slice(prefix.length)))
     .filter((n) => Number.isFinite(n));
 
@@ -75,98 +95,103 @@ const nextCodigo = async () => {
   return `${prefix}${nextSeq}`;
 };
 
-const seedIfEmpty = async () => {
-  const count = await prisma.solicitacao.count();
-  if (count > 0) return;
-
-  try {
-    const seedPath = path.join(__dirname, "seed.json");
-    const content = await fs.readFile(seedPath, "utf-8");
-    const items = JSON.parse(content);
-
-    if (Array.isArray(items) && items.length > 0) {
-      for (const item of items) {
-        await prisma.solicitacao.create({
-          data: fromApiToDb({
-            ...item,
-            codigo: item.codigo || (await nextCodigo()),
-          }),
-        });
-      }
-    }
-  } catch (err) {
-    console.warn("Seed skipped:", err?.message ?? err);
-  }
-};
-
 app.get("/api/health", (_req, res) => {
   res.json({ ok: true });
 });
 
-app.get("/api/solicitacoes/next-codigo", async (_req, res) => {
-  const codigo = await nextCodigo();
-  res.json({ codigo });
-});
-
-app.get("/api/solicitacoes", async (_req, res) => {
-  const rows = await prisma.solicitacao.findMany({
-    orderBy: { createdAt: "desc" },
-  });
-  res.json(rows.map(fromDbToApi));
-});
-
-app.get("/api/solicitacoes/:id", async (req, res) => {
-  const row = await prisma.solicitacao.findUnique({
-    where: { id: req.params.id },
-  });
-
-  if (!row) {
-    res.status(404).json({ message: "Solicitação não encontrada" });
-    return;
+app.get("/api/solicitacoes/next-codigo", async (_req, res, next) => {
+  try {
+    const codigo = await nextCodigo();
+    res.json({ codigo });
+  } catch (err) {
+    next(err);
   }
-
-  res.json(fromDbToApi(row));
 });
 
-app.post("/api/solicitacoes", async (req, res) => {
-  const payload = req.body;
-
-  if (!payload?.titulo || !payload?.tipo || !payload?.descricao) {
-    res.status(400).json({ message: "Dados incompletos" });
-    return;
+app.get("/api/solicitacoes", async (_req, res, next) => {
+  try {
+    const rows = await readSolicitacoes();
+    rows.sort(sortByNewest);
+    res.json(rows);
+  } catch (err) {
+    next(err);
   }
-
-  const codigo = payload.codigo || (await nextCodigo());
-  const data = fromApiToDb({ ...payload, codigo });
-
-  const created = await prisma.solicitacao.create({ data });
-  res.status(201).json(fromDbToApi(created));
 });
 
-app.put("/api/solicitacoes/:id", async (req, res) => {
-  const payload = req.body;
+app.get("/api/solicitacoes/:id", async (req, res, next) => {
+  try {
+    const rows = await readSolicitacoes();
+    const row = rows.find((item) => item.id === req.params.id);
 
-  const existing = await prisma.solicitacao.findUnique({
-    where: { id: req.params.id },
-  });
+    if (!row) {
+      res.status(404).json({ message: "Solicitação não encontrada" });
+      return;
+    }
 
-  if (!existing) {
-    res.status(404).json({ message: "Solicitação não encontrada" });
-    return;
+    res.json(row);
+  } catch (err) {
+    next(err);
   }
+});
 
-  const data = fromApiToDb({
-    ...payload,
-    id: existing.id,
-    codigo: payload.codigo || existing.codigo,
-  });
+app.post("/api/solicitacoes", async (req, res, next) => {
+  try {
+    const payload = req.body;
 
-  const updated = await prisma.solicitacao.update({
-    where: { id: existing.id },
-    data,
-  });
+    if (!payload?.titulo || !payload?.tipo || !payload?.descricao) {
+      res.status(400).json({ message: "Dados incompletos" });
+      return;
+    }
 
-  res.json(fromDbToApi(updated));
+    const rows = await readSolicitacoes();
+    const codigo = payload.codigo || (await nextCodigo());
+
+    const created = normalizeFromApi({
+      ...payload,
+      id: payload.id || `sol-${Date.now()}`,
+      codigo,
+    });
+
+    rows.push(created);
+    await writeSolicitacoes(rows);
+
+    res.status(201).json(created);
+  } catch (err) {
+    next(err);
+  }
+});
+
+app.put("/api/solicitacoes/:id", async (req, res, next) => {
+  try {
+    const payload = req.body;
+    const rows = await readSolicitacoes();
+    const index = rows.findIndex((item) => item.id === req.params.id);
+
+    if (index < 0) {
+      res.status(404).json({ message: "Solicitação não encontrada" });
+      return;
+    }
+
+    const existing = rows[index];
+    const updated = normalizeFromApi({
+      ...existing,
+      ...payload,
+      id: existing.id,
+      codigo: payload.codigo || existing.codigo,
+    });
+
+    rows[index] = updated;
+    await writeSolicitacoes(rows);
+
+    res.json(updated);
+  } catch (err) {
+    next(err);
+  }
+});
+
+app.use((err, _req, res, _next) => {
+  console.error(err);
+  res.status(500).json({ message: "Erro interno do servidor" });
 });
 
 const port = Number(process.env.PORT || 3001);
