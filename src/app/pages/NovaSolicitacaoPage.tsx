@@ -78,14 +78,14 @@ interface SolicitacaoFormData {
   vigenciaFim: Date | undefined;
   paoe: string;
   orgaosSolicitantes: string[];
-  setorId: string;
-  grupoTrabalhistaId: string;
+  setorIds: string[];
+  grupoTrabalhistaIds: string[];
   categoriaTrabalhistaCodigo: string;
   existeOutrosGrupos: "Sim" | "Não";
   outrosGruposDescricao: string;
   cargosAplicaveis: string[];
   servidorResponsavel: string;
-  carater: "Contínuo" | "Temporário";
+  carater: "Permanente" | "Temporário" | "Eventual";
   reterTetoRemuneratorio: "Sim" | "Não";
   incideNatalina: "Sim" | "Não";
   incideFerias: "Sim" | "Não";
@@ -93,6 +93,7 @@ interface SolicitacaoFormData {
   incidenciasTributarias: string[];
   outrasIncidencias: string[];
   baseLegalIds: string[];
+  justificativaLegal: string;
   justificativa: string;
   aceiteTermos: boolean;
 }
@@ -119,8 +120,8 @@ export function NovaSolicitacaoPage() {
       vigenciaFim: undefined,
       paoe: "",
       orgaosSolicitantes: [],
-      setorId: "",
-      grupoTrabalhistaId: "",
+      setorIds: [],
+      grupoTrabalhistaIds: [],
       categoriaTrabalhistaCodigo: "",
       existeOutrosGrupos: "Não",
       outrosGruposDescricao: "",
@@ -134,16 +135,17 @@ export function NovaSolicitacaoPage() {
       incidenciasTributarias: [],
       outrasIncidencias: [],
       baseLegalIds: [],
+      justificativaLegal: "",
       justificativa: "",
       aceiteTermos: false,
     },
   });
 
   const selectedOrgaos = watch("orgaosSolicitantes");
-  const selectedSetorId = watch("setorId");
+  const selectedSetorIds = watch("setorIds");
   const naturezaSelecionada = watch("natureza");
   const vigenciaInicio = watch("vigenciaInicio");
-  const grupoTrabalhistaId = watch("grupoTrabalhistaId");
+  const grupoTrabalhistaIds = watch("grupoTrabalhistaIds");
   const existeOutrosGrupos = watch("existeOutrosGrupos");
   const temIncidenciaTributaria = watch("temIncidenciaTributaria");
   const baseLegalSelecionada = watch("baseLegalIds");
@@ -151,11 +153,6 @@ export function NovaSolicitacaoPage() {
   const setoresFiltrados = useMemo(() => {
     return todosSetores.filter((s) => selectedOrgaos.includes(s.orgaoId));
   }, [selectedOrgaos]);
-
-  const categoriasFiltradas = useMemo(() => {
-    if (!grupoTrabalhistaId) return [];
-    return categoriasPorGrupo[grupoTrabalhistaId] ?? [];
-  }, [grupoTrabalhistaId]);
 
   const temRetroatividade = useMemo(() => {
     if (!vigenciaInicio) return false;
@@ -165,18 +162,15 @@ export function NovaSolicitacaoPage() {
   }, [vigenciaInicio]);
 
   useEffect(() => {
-    if (selectedSetorId && !setoresFiltrados.some((s) => s.id === selectedSetorId)) {
-      setValue("setorId", "");
+    const invalidSetores = selectedSetorIds.filter(id => !setoresFiltrados.some(s => s.id === id));
+    if (invalidSetores.length > 0) {
+      setValue("setorIds", selectedSetorIds.filter(id => !invalidSetores.includes(id)));
     }
-  }, [selectedSetorId, setoresFiltrados, setValue]);
+  }, [selectedSetorIds, setoresFiltrados, setValue]);
 
   useEffect(() => {
     setValue("servidorResponsavel", usuarioAtual.nome);
   }, [setValue]);
-
-  useEffect(() => {
-    setValue("categoriaTrabalhistaCodigo", "");
-  }, [grupoTrabalhistaId, setValue]);
 
   useEffect(() => {
     if (existeOutrosGrupos !== "Sim") {
@@ -200,11 +194,8 @@ export function NovaSolicitacaoPage() {
 
   const titulo = watch("nomeRubrica");
   const tipo = "Nova Rubrica";
-  const gruposTrabalhistas = gruposTrabalhistasEsocial.map((g) => g.nome);
-  const tributosAplicaveis = incidenciasTributariasPrincipais.map((item) => ({
-    id: item.id,
-    nome: item.nome,
-  }));
+  const gruposTrabalhistas = gruposTrabalhistasEsocial;
+  const tributosAplicaveis = incidenciasTributariasPrincipais;
 
 
   const podeEnviar =
@@ -215,16 +206,15 @@ export function NovaSolicitacaoPage() {
     !!watch("vigenciaInicio") &&
     !!watch("paoe") &&
     selectedOrgaos.length > 0 &&
-    !!watch("setorId") &&
-    !!watch("grupoTrabalhistaId") &&
+    watch("setorIds").length > 0 &&
+    watch("grupoTrabalhistaIds").length > 0 &&
     !!watch("categoriaTrabalhistaCodigo") &&
     watch("cargosAplicaveis").length > 0 &&
     !!watch("servidorResponsavel") &&
     !!watch("incideNatalina") &&
     !!watch("incideFerias") &&
     !!watch("temIncidenciaTributaria") &&
-    watch("baseLegalIds").length > 0 &&
-    !!watch("justificativa") &&
+    (watch("baseLegalIds").length > 0 || !!watch("justificativaLegal")?.trim()) &&
     !!watch("aceiteTermos") &&
     (naturezaSelecionada !== "Remuneratória" || (!!watch("carater") && !!watch("reterTetoRemuneratorio"))) &&
     (temIncidenciaTributaria !== "Sim" || watch("incidenciasTributarias").length > 0) &&
@@ -234,23 +224,32 @@ export function NovaSolicitacaoPage() {
   const [etapaIndex, setEtapaIndex] = useState(0);
 
   const preencherDadosTeste = () => {
-    setValue("nomeRubrica", "Gratificação de Desempenho Institucional");
-    setValue("classificacao", "Provento");
-    setValue("orgaosSolicitantes", [orgaos[0].id]);
-    setValue("setores", [todosSetores[0].id]);
-    setValue("servidorResponsavel", "João da Silva");
-    setValue("dataVigencia", new Date());
-    setValue("paoe", listaPAOE[0]);
-    setValue("gruposTrabalhistas", [gruposTrabalhistas[0]]);
-    setValue("cargosAplicaveis", [cargosAplicaveis[7]]);
-    setValue("baseLegal", "Lei Complementar nº 123/2024, Artigo 45.");
-    setValue("incideNatalina", "Sim");
-    setValue("incideFerias", "Sim");
-    setValue("natureza", "Remuneratória");
-    setValue("carater", "Permanente");
-    setValue("compõeTeto", "Sim");
-    setValue("tributos", [tributosAplicaveis[0].nome, tributosAplicaveis[1].nome]);
-    setValue("aceiteTermos", true);
+    const orgaoId = orgaos[0]?.id ?? "";
+    const setorId = todosSetores.find((s) => s.orgaoId === orgaoId)?.id ?? "";
+    const grupoId = gruposTrabalhistasEsocial[0]?.id ?? "";
+    const categoriaId = (categoriasPorGrupo[grupoId] ?? [])[0]?.codigo ?? "";
+
+    setValue("nomeRubrica", `Nova Rubrica ${Date.now()}`, { shouldValidate: true });
+    setValue("classificacao", classificacoes[0], { shouldValidate: true });
+    setValue("natureza", "Remuneratória", { shouldValidate: true });
+    setValue("naturezaEsocial", naturezaRubricaEsocial[0]?.codigo, { shouldValidate: true });
+    setValue("vigenciaInicio", new Date(), { shouldValidate: true });
+    setValue("paoe", listaPAOE[0], { shouldValidate: true });
+    setValue("orgaosSolicitantes", [orgaoId], { shouldValidate: true });
+    setValue("setorIds", [setorId], { shouldValidate: true });
+    setValue("grupoTrabalhistaIds", [grupoId], { shouldValidate: true });
+    setValue("categoriaTrabalhistaCodigo", categoriaId, { shouldValidate: true });
+    setValue("cargosAplicaveis", [cargosAplicaveis[0]], { shouldValidate: true });
+    setValue("incideNatalina", "Sim", { shouldValidate: true });
+    setValue("incideFerias", "Sim", { shouldValidate: true });
+    setValue("carater", "Permanente", { shouldValidate: true });
+    setValue("reterTetoRemuneratorio", "Sim", { shouldValidate: true });
+    setValue("temIncidenciaTributaria", "Sim", { shouldValidate: true });
+    setValue("incidenciasTributarias", [incidenciasTributariasPrincipais[0]?.id], { shouldValidate: true });
+    setValue("justificativaLegal", "LEI 12.345/2024", { shouldValidate: true });
+    setValue("justificativa", "Solicitação de teste.", { shouldValidate: true });
+    setValue("aceiteTermos", true, { shouldValidate: true });
+
     toast.info("Dados de teste preenchidos!");
   };
 
@@ -686,7 +685,7 @@ export function NovaSolicitacaoPage() {
                       Setores <span className="text-red-500">*</span>
                     </Label>
                     <Controller
-                      name="setores"
+                      name="setorIds"
                       control={control}
                       rules={{ required: "Selecione pelo menos um setor" }}
                       render={({ field }) => (
@@ -695,11 +694,11 @@ export function NovaSolicitacaoPage() {
                           selected={field.value}
                           onChange={field.onChange}
                           placeholder={selectedOrgaos.length > 0 ? "Selecione os setores..." : "Selecione órgãos primeiro"}
-                          error={!!errors.setores}
+                          error={!!errors.setorIds}
                         />
                       )}
                     />
-                    {errors.setores && <p className="text-xs text-red-500 mt-1">{errors.setores.message}</p>}
+                    {errors.setorIds && <p className="text-xs text-red-500 mt-1">{errors.setorIds.message}</p>}
                   </div>
 
                   <div className="space-y-2">
@@ -722,7 +721,7 @@ export function NovaSolicitacaoPage() {
                       Data de Vigência <span className="text-red-500">*</span>
                     </Label>
                     <Controller
-                      name="dataVigencia"
+                      name="vigenciaInicio"
                       control={control}
                       rules={{ required: "Campo obrigatório" }}
                       render={({ field }) => (
@@ -733,7 +732,7 @@ export function NovaSolicitacaoPage() {
                               className={cn(
                                 "w-full justify-start text-left font-normal border-2 h-10",
                                 !field.value && "text-muted-foreground",
-                                errors.dataVigencia && "border-red-500"
+                                errors.vigenciaInicio && "border-red-500"
                               )}
                             >
                               <Calendar className="mr-2 h-4 w-4" />
@@ -751,7 +750,7 @@ export function NovaSolicitacaoPage() {
                         </Popover>
                       )}
                     />
-                    {errors.dataVigencia && <p className="text-xs text-red-500 mt-1">{errors.dataVigencia.message}</p>}
+                    {errors.vigenciaInicio && <p className="text-xs text-red-500 mt-1">{errors.vigenciaInicio.message}</p>}
                   </div>
 
                   <div className="space-y-2">
@@ -780,25 +779,55 @@ export function NovaSolicitacaoPage() {
                     {errors.paoe && <p className="text-xs text-red-500 mt-1">{errors.paoe.message}</p>}
                   </div>
 
-                  <div className="col-span-2 space-y-2">
-                    <Label className="flex items-center gap-1">
-                      Grupos/Categorias Trabalhistas <span className="text-red-500">*</span>
-                    </Label>
-                    <Controller
-                      name="gruposTrabalhistas"
-                      control={control}
-                      rules={{ required: "Selecione pelo menos um grupo" }}
-                      render={({ field }) => (
-                        <MultiSelect
-                          options={gruposTrabalhistas.map(g => ({ label: g, value: g }))}
-                          selected={field.value}
-                          onChange={field.onChange}
-                          placeholder="Selecione as categorias..."
-                          error={!!errors.gruposTrabalhistas}
+                  <div className="col-span-2 space-y-4">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label className="flex items-center gap-1">
+                          Grupos Trabalhistas (eSocial) <span className="text-red-500">*</span>
+                        </Label>
+                        <Controller
+                          name="grupoTrabalhistaIds"
+                          control={control}
+                          rules={{ required: "Selecione pelo menos um grupo" }}
+                          render={({ field }) => (
+                            <MultiSelect
+                              options={gruposTrabalhistas.map(g => ({ label: g.nome, value: g.id }))}
+                              selected={field.value}
+                              onChange={field.onChange}
+                              placeholder="Selecione os grupos..."
+                              error={!!errors.grupoTrabalhistaIds}
+                            />
+                          )}
                         />
-                      )}
-                    />
-                    {errors.gruposTrabalhistas && <p className="text-xs text-red-500 mt-1">{errors.gruposTrabalhistas.message}</p>}
+                        {errors.grupoTrabalhistaIds && <p className="text-xs text-red-500 mt-1">{errors.grupoTrabalhistaIds.message}</p>}
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label className="flex items-center gap-1">
+                          Categoria Trabalhista <span className="text-red-500">*</span>
+                        </Label>
+                        <Controller
+                          name="categoriaTrabalhistaCodigo"
+                          control={control}
+                          rules={{ required: "Selecione a categoria" }}
+                          render={({ field }) => (
+                            <Select onValueChange={field.onChange} value={field.value}>
+                              <SelectTrigger className={cn("border-2 h-10", errors.categoriaTrabalhistaCodigo && "border-red-500")}>
+                                <SelectValue placeholder="Selecione..." />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {naturezaRubricaEsocial.map((n) => (
+                                  <SelectItem key={n.codigo} value={n.codigo}>
+                                    {n.codigo} - {n.descricao}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          )}
+                        />
+                        {errors.categoriaTrabalhistaCodigo && <p className="text-xs text-red-500 mt-1">{errors.categoriaTrabalhistaCodigo.message}</p>}
+                      </div>
+                    </div>
                   </div>
 
                   <div className="col-span-2 space-y-2">
@@ -824,17 +853,43 @@ export function NovaSolicitacaoPage() {
 
                   <div className="col-span-2 space-y-2">
                     <Label className="flex items-center gap-1">
-                      Base Legal <span className="text-red-500">*</span>
+                      Justificativa Legal <span className="text-red-500">*</span>
                     </Label>
                     <Controller
-                      name="baseLegal"
+                      name="justificativaLegal"
                       control={control}
                       rules={{ required: "Campo obrigatório" }}
                       render={({ field }) => (
-                        <Textarea {...field} placeholder="Justificativa legal para a solicitação" className={cn("border-2 min-h-24", errors.baseLegal && "border-red-500")} />
+                        <Textarea {...field} placeholder="Base legal da solicitação" className={cn("border-2 min-h-24", errors.justificativaLegal && "border-red-500")} />
                       )}
                     />
-                    {errors.baseLegal && <p className="text-xs text-red-500 mt-1">{errors.baseLegal.message}</p>}
+                    {errors.justificativaLegal && <p className="text-xs text-red-500 mt-1">{errors.justificativaLegal.message}</p>}
+                  </div>
+
+                  <div className="col-span-2 space-y-2">
+                    <Label className="flex items-center gap-1">
+                      Natureza eSocial <span className="text-red-500">*</span>
+                    </Label>
+                    <Controller
+                      name="naturezaEsocial"
+                      control={control}
+                      rules={{ required: "Campo obrigatório" }}
+                      render={({ field }) => (
+                        <Select onValueChange={field.onChange} value={field.value}>
+                          <SelectTrigger className={cn("border-2 h-10", errors.naturezaEsocial && "border-red-500")}>
+                            <SelectValue placeholder="Selecione a natureza eSocial..." />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {naturezaRubricaEsocial.map((n) => (
+                              <SelectItem key={n.codigo} value={n.codigo}>
+                                {n.codigo} - {n.descricao}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      )}
+                    />
+                    {errors.naturezaEsocial && <p className="text-xs text-red-500 mt-1">{errors.naturezaEsocial.message}</p>}
                   </div>
                 </CardContent>
               </Card>
@@ -957,7 +1012,7 @@ export function NovaSolicitacaoPage() {
                     <div className="space-y-3 pt-2">
                       <Label className="text-xs uppercase text-slate-500 font-bold tracking-wider">Compõe Teto? <span className="text-red-500">*</span></Label>
                       <Controller
-                        name="compõeTeto"
+                        name="reterTetoRemuneratorio"
                         control={control}
                         rules={{ required: "Selecione uma opção" }}
                         render={({ field }) => (
@@ -973,7 +1028,7 @@ export function NovaSolicitacaoPage() {
                           </RadioGroup>
                         )}
                       />
-                      {errors.compõeTeto && <p className="text-xs text-red-500">{errors.compõeTeto.message}</p>}
+                      {errors.reterTetoRemuneratorio && <p className="text-xs text-red-500">{errors.reterTetoRemuneratorio.message}</p>}
                     </div>
                   </CardContent>
                 </Card>
@@ -992,12 +1047,12 @@ export function NovaSolicitacaoPage() {
                   <div className="space-y-4">
                     <Label className="text-sm font-semibold">Tributos Aplicáveis (pelo menos 1 obrigatório) <span className="text-red-500">*</span></Label>
                     <Controller
-                      name="tributos"
+                      name="incidenciasTributarias"
                       control={control}
                       defaultValue={[]}
                       rules={{ required: "Selecione pelo menos um tributo" }}
                       render={({ field }) => {
-                        const selectedTributos = Array.isArray(field.value) ? field.value : [];
+                        const selectedIds = Array.isArray(field.value) ? field.value : [];
 
                         return (
                           <div className="grid grid-cols-3 gap-4 p-4 bg-slate-50 rounded-xl border border-slate-100">
@@ -1005,12 +1060,12 @@ export function NovaSolicitacaoPage() {
                               <div key={t.id} className="flex items-center space-x-3 bg-white p-3 rounded-lg border border-slate-200 shadow-sm hover:border-blue-300 transition-colors">
                                 <Checkbox
                                   id={`tributo-${t.id}`}
-                                  checked={selectedTributos.includes(t.nome)}
+                                  checked={selectedIds.includes(t.id)}
                                   onCheckedChange={(checked) => {
                                     if (checked) {
-                                      field.onChange([...selectedTributos, t.nome]);
+                                      field.onChange([...selectedIds, t.id]);
                                     } else {
-                                      field.onChange(selectedTributos.filter((v: string) => v !== t.nome));
+                                      field.onChange(selectedIds.filter((v: string) => v !== t.id));
                                     }
                                   }}
                                 />
@@ -1021,7 +1076,7 @@ export function NovaSolicitacaoPage() {
                         );
                       }}
                     />
-                    {errors.tributos && <p className="text-xs text-red-500">{errors.tributos.message}</p>}
+                    {errors.incidenciasTributarias && <p className="text-xs text-red-500">{errors.incidenciasTributarias.message}</p>}
                   </div>
                 </CardContent>
               </Card>
@@ -1092,7 +1147,7 @@ export function NovaSolicitacaoPage() {
                 </CardHeader>
                 <CardContent>
                   <div className="p-4 bg-slate-50 rounded-lg border border-slate-100 text-slate-700 leading-relaxed italic">
-                    {watch("baseLegal") || "Solicitação de criação de rubrica conforme legislação vigente informada na etapa inicial de registro."}
+                    {watch("justificativaLegal") || "Solicitação de criação de rubrica conforme legislação vigente informada na etapa inicial de registro."}
                   </div>
                 </CardContent>
               </Card>
