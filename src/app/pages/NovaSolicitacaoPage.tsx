@@ -364,18 +364,38 @@ export function NovaSolicitacaoPage() {
     });
 
     const proximaEtapa = esteiraDefault[etapaIndex + 1];
-    if (proximaEtapa) {
+
+    if (etapaIndex === 0 && proximaEtapa) {
       atualizado = upsertHistorico(atualizado, proximaEtapa.id, {
         status: "em_analise",
         data: dataAgora,
         usuario: usuarioAtual,
       });
-      setHistorico(atualizado);
-      setEtapaIndex((prevIndex) => prevIndex + 1);
-      setComentario("");
-      toast.success("Solicitação enviada", {
-        description: "A solicitação foi enviada para análise documental.",
-      });
+
+      const novaSolicitacao: Solicitacao = {
+        id: `sol-${Date.now()}`,
+        codigo: codigoPreview,
+        titulo: data.nomeRubrica || "Nova Solicitação",
+        tipo: "Nova Rubrica",
+        solicitante: usuarioAtual,
+        dataSolicitacao: new Date().toISOString().slice(0, 10),
+        statusGeral: "em_andamento",
+        etapaAtual: proximaEtapa.id,
+        descricao: data.justificativa || "Solicitação sem justificativa detalhada.",
+        historico: atualizado,
+      };
+
+      try {
+        await addSolicitacaoCompleta(novaSolicitacao);
+        toast.success("Solicitação enviada", {
+          description: "Solicitação enviada para Análise Documental.",
+        });
+        navigate("/");
+      } catch (err) {
+        console.error(err);
+        toast.error("Não foi possível salvar a solicitação");
+      }
+
       return;
     }
 
@@ -403,8 +423,6 @@ export function NovaSolicitacaoPage() {
       toast.error("Não foi possível salvar a solicitação");
     }
   };
-
-
   const handleRejeitar = () => {
     setIsRejectDialogOpen(true);
   };

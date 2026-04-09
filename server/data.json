@@ -1,5 +1,6 @@
 [
   {
+    "id": "sol-1775564434691",
     "codigo": "RUB-2026-008",
     "titulo": "TESTE FLUXO 3",
     "tipo": "Nova Rubrica",
@@ -58,10 +59,10 @@
           "nome": "Usuário Atual"
         }
       }
-    ],
-    "id": "sol-1775564434691"
+    ]
   },
   {
+    "id": "sol-1775501335939",
     "codigo": "RUB-2026-007",
     "titulo": "TESTE FLUXO 2",
     "tipo": "Nova Rubrica",
@@ -120,10 +121,10 @@
           "nome": "Usuário Atual"
         }
       }
-    ],
-    "id": "sol-1775501335939"
+    ]
   },
   {
+    "id": "sol-1775495239858",
     "codigo": "RUB-2026-006",
     "titulo": "TESTE FLUXO",
     "tipo": "Nova Rubrica",
@@ -165,8 +166,7 @@
         "status": "aprovado",
         "data": "2026-04-06T17:14:49.977Z"
       }
-    ],
-    "id": "sol-1775495239858"
+    ]
   },
   {
     "id": "sol-1",
@@ -383,6 +383,61 @@
       {
         "etapaId": "etapa-1",
         "status": "pendente"
+      }
+    ]
+  },
+  {
+    "id": "sol-1775766818723",
+    "codigo": "RUB-2026-009",
+    "titulo": "Gratificação de Desempenho Institucional",
+    "tipo": "Nova Rubrica",
+    "solicitante": {
+      "id": "u99",
+      "nome": "Usuário Atual"
+    },
+    "dataSolicitacao": "2026-04-09",
+    "statusGeral": "aprovado",
+    "etapaAtual": "etapa-6",
+    "descricao": "Solicitação sem justificativa detalhada.",
+    "historico": [
+      {
+        "etapaId": "etapa-1",
+        "status": "aprovado",
+        "data": "2026-04-09T20:33:38.723Z",
+        "comentario": "Solicitação preenchida conforme regras da etapa 1.",
+        "usuario": {
+          "id": "u99",
+          "nome": "Usuário Atual"
+        }
+      },
+      {
+        "etapaId": "etapa-2",
+        "status": "aprovado",
+        "data": "2026-04-09T20:33:46.081Z",
+        "usuario": {
+          "id": "u99",
+          "nome": "Usuário Atual"
+        }
+      },
+      {
+        "etapaId": "etapa-3",
+        "status": "aprovado",
+        "data": "2026-04-09T20:49:47.610Z"
+      },
+      {
+        "etapaId": "etapa-4",
+        "status": "aprovado",
+        "data": "2026-04-09T20:49:50.218Z"
+      },
+      {
+        "etapaId": "etapa-5",
+        "status": "aprovado",
+        "data": "2026-04-09T20:49:52.578Z"
+      },
+      {
+        "etapaId": "etapa-6",
+        "status": "aprovado",
+        "data": "2026-04-09T20:49:54.345Z"
       }
     ]
   }

@@ -1,5 +1,5 @@
 import { useState, useSyncExternalStore } from "react";
-import { useParams, Link } from "react-router";
+import { useParams, Link, useNavigate } from "react-router";
 import {
   ArrowLeft,
   CheckCircle2,
@@ -34,6 +34,7 @@ import { cn } from "../components/ui/utils";
 import { toast } from "sonner";
 
 export function SolicitacaoDetailPage() {
+  const navigate = useNavigate();
   const { id } = useParams();
   const solicitacao = useSyncExternalStore(
     subscribeSolicitacoes,
@@ -155,6 +156,7 @@ export function SolicitacaoDetailPage() {
       toast.success("Etapa aprovada com sucesso!", {
         description: "A solicitação foi movida para a próxima etapa.",
       });
+      navigate("/");
     } catch (err) {
       console.error(err);
       toast.error("Não foi possível aprovar a etapa");
@@ -210,6 +212,7 @@ export function SolicitacaoDetailPage() {
 
       setIsRejectDialogOpen(false);
       setMotivoRejeicao("");
+      navigate("/");
     } catch (err) {
       console.error(err);
       toast.error("Não foi possível rejeitar a etapa");
@@ -513,6 +516,13 @@ export function SolicitacaoDetailPage() {
     </div>
   );
 }
+
+
+
+
+
+
+
 
 
 
