@@ -266,7 +266,7 @@ export function NovaSolicitacaoPage() {
       {/* Pipeline Visual */}
       <Card>
         <CardHeader>
-          <CardTitle>Progresso da Esteira</CardTitle>
+          <CardTitle>Fluxo de Rubrica</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="relative">
