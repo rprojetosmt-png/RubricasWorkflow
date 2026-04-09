@@ -386,6 +386,48 @@ export function NovaSolicitacaoPage() {
     });
   };
 
+  const preencherDebugEtapa1 = () => {
+    const orgaoId = orgaos[0]?.id ?? "";
+    const setorId = todosSetores.find((s) => s.orgaoId === orgaoId)?.id ?? "";
+    const grupoId = gruposTrabalhistasEsocial[0]?.id ?? "";
+    const categoriaId = (categoriasPorGrupo[grupoId] ?? [])[0]?.codigo ?? "";
+
+    setValue("nomeRubrica", `DEBUG Rubrica ${Date.now()}`, { shouldValidate: true, shouldDirty: true });
+    setValue("classificacao", classificacoes[0] ?? "Vantagem", { shouldValidate: true, shouldDirty: true });
+    setValue("natureza", "Remuneratória", { shouldValidate: true, shouldDirty: true });
+    setValue("naturezaEsocial", naturezaRubricaEsocial[0]?.codigo ?? "1000", { shouldValidate: true, shouldDirty: true });
+    setValue("vigenciaInicio", new Date(), { shouldValidate: true, shouldDirty: true });
+    setValue("vigenciaFim", undefined, { shouldValidate: true, shouldDirty: true });
+    setValue("paoe", listaPAOE[0] ?? "", { shouldValidate: true, shouldDirty: true });
+
+    setValue("orgaosSolicitantes", orgaoId ? [orgaoId] : [], { shouldValidate: true, shouldDirty: true });
+    setValue("setorId", setorId, { shouldValidate: true, shouldDirty: true });
+    setValue("grupoTrabalhistaId", grupoId, { shouldValidate: true, shouldDirty: true });
+    setValue("categoriaTrabalhistaCodigo", categoriaId, { shouldValidate: true, shouldDirty: true });
+    setValue("existeOutrosGrupos", "Não", { shouldValidate: true, shouldDirty: true });
+    setValue("outrosGruposDescricao", "", { shouldValidate: true, shouldDirty: true });
+    setValue("cargosAplicaveis", [cargosAplicaveis[0] ?? "Analista Administrativo"], { shouldValidate: true, shouldDirty: true });
+    setValue("servidorResponsavel", usuarioAtual.nome, { shouldValidate: true, shouldDirty: true });
+
+    setValue("carater", "Contínuo", { shouldValidate: true, shouldDirty: true });
+    setValue("reterTetoRemuneratorio", "Não", { shouldValidate: true, shouldDirty: true });
+    setValue("incideNatalina", "Sim", { shouldValidate: true, shouldDirty: true });
+    setValue("incideFerias", "Sim", { shouldValidate: true, shouldDirty: true });
+    setValue("temIncidenciaTributaria", "Sim", { shouldValidate: true, shouldDirty: true });
+    setValue("incidenciasTributarias", [incidenciasTributariasPrincipais[0]?.id ?? "irrf"], { shouldValidate: true, shouldDirty: true });
+    setValue("outrasIncidencias", [outrasIncidencias[0]?.id ?? "rpps"], { shouldValidate: true, shouldDirty: true });
+
+    setValue("baseLegalIds", [baseLegalDocumentos[0]?.id ?? "doc-lei-compl-01"], { shouldValidate: true, shouldDirty: true });
+    setValue("justificativa", "Preenchimento automático de debug para validar gravação e avanço da etapa de solicitação.", { shouldValidate: true, shouldDirty: true });
+    setValue("aceiteTermos", true, { shouldValidate: true, shouldDirty: true });
+  };
+
+  const handleDebugPreencherESalvar = () => {
+    preencherDebugEtapa1();
+    setTimeout(() => {
+      void handleSubmit(onFormSubmit)();
+    }, 0);
+  };
   const getInitials = (nome: string) => {
     return nome
       .split(" ")
@@ -1079,6 +1121,14 @@ export function NovaSolicitacaoPage() {
               </div>
 
               <div className="flex gap-4 pt-2">
+                <Button
+                  type="button"
+                  onClick={handleDebugPreencherESalvar}
+                  variant="outline"
+                  className="px-6 h-12 border-amber-400/70 text-amber-300 hover:bg-amber-500/10 hover:text-amber-200 transition-colors"
+                >
+                  Debug: preencher + enviar
+                </Button>
                 <Button
                   type="submit"
                   disabled={!podeEnviar}
