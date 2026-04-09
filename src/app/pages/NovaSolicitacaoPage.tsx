@@ -200,6 +200,12 @@ export function NovaSolicitacaoPage() {
 
   const titulo = watch("nomeRubrica");
   const tipo = "Nova Rubrica";
+  const gruposTrabalhistas = gruposTrabalhistasEsocial.map((g) => g.nome);
+  const tributosAplicaveis = incidenciasTributariasPrincipais.map((item) => ({
+    id: item.id,
+    nome: item.nome,
+  }));
+
 
   const podeEnviar =
     !!watch("nomeRubrica") &&
@@ -970,27 +976,32 @@ export function NovaSolicitacaoPage() {
                     <Controller
                       name="tributos"
                       control={control}
+                      defaultValue={[]}
                       rules={{ required: "Selecione pelo menos um tributo" }}
-                      render={({ field }) => (
-                        <div className="grid grid-cols-3 gap-4 p-4 bg-slate-50 rounded-xl border border-slate-100">
-                          {tributosAplicaveis.map((t) => (
-                            <div key={t.id} className="flex items-center space-x-3 bg-white p-3 rounded-lg border border-slate-200 shadow-sm hover:border-blue-300 transition-colors">
-                              <Checkbox
-                                id={`tributo-${t.id}`}
-                                checked={field.value.includes(t.nome)}
-                                onCheckedChange={(checked) => {
-                                  if (checked) {
-                                    field.onChange([...field.value, t.nome]);
-                                  } else {
-                                    field.onChange(field.value.filter((v: string) => v !== t.nome));
-                                  }
-                                }}
-                              />
-                              <Label htmlFor={`tributo-${t.id}`} className="font-medium cursor-pointer flex-1">{t.nome}</Label>
-                            </div>
-                          ))}
-                        </div>
-                      )}
+                      render={({ field }) => {
+                        const selectedTributos = Array.isArray(field.value) ? field.value : [];
+
+                        return (
+                          <div className="grid grid-cols-3 gap-4 p-4 bg-slate-50 rounded-xl border border-slate-100">
+                            {tributosAplicaveis.map((t) => (
+                              <div key={t.id} className="flex items-center space-x-3 bg-white p-3 rounded-lg border border-slate-200 shadow-sm hover:border-blue-300 transition-colors">
+                                <Checkbox
+                                  id={`tributo-${t.id}`}
+                                  checked={selectedTributos.includes(t.nome)}
+                                  onCheckedChange={(checked) => {
+                                    if (checked) {
+                                      field.onChange([...selectedTributos, t.nome]);
+                                    } else {
+                                      field.onChange(selectedTributos.filter((v: string) => v !== t.nome));
+                                    }
+                                  }}
+                                />
+                                <Label htmlFor={`tributo-${t.id}`} className="font-medium cursor-pointer flex-1">{t.nome}</Label>
+                              </div>
+                            ))}
+                          </div>
+                        );
+                      }}
                     />
                     {errors.tributos && <p className="text-xs text-red-500">{errors.tributos.message}</p>}
                   </div>
@@ -1286,6 +1297,10 @@ export function NovaSolicitacaoPage() {
     </div>
   );
 }
+
+
+
+
 
 
 

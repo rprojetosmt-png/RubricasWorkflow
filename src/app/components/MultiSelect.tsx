@@ -1,5 +1,5 @@
 import * as React from "react";
-import { X, Check, ChevronsUpDown } from "lucide-react";
+import { X, ChevronsUpDown } from "lucide-react";
 import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
 import {
@@ -25,7 +25,7 @@ export interface Option {
 
 interface MultiSelectProps {
   options: Option[];
-  selected: string[];
+  selected?: string[];
   onChange: (selected: string[]) => void;
   placeholder?: string;
   className?: string;
@@ -41,16 +41,17 @@ export function MultiSelect({
   error,
 }: MultiSelectProps) {
   const [open, setOpen] = React.useState(false);
+  const selectedValues = Array.isArray(selected) ? selected : [];
 
   const handleUnselect = (value: string) => {
-    onChange(selected.filter((s) => s !== value));
+    onChange(selectedValues.filter((s) => s !== value));
   };
 
   const handleSelect = (value: string) => {
-    if (selected.includes(value)) {
+    if (selectedValues.includes(value)) {
       handleUnselect(value);
     } else {
-      onChange([...selected, value]);
+      onChange([...selectedValues, value]);
     }
   };
 
@@ -65,13 +66,13 @@ export function MultiSelect({
             className={cn(
               "justify-between h-auto min-h-10 text-left font-normal py-2 px-3",
               error && "border-red-500",
-              !selected.length && "text-muted-foreground",
+              !selectedValues.length && "text-muted-foreground",
               "hover:bg-accent/50 transition-colors border-2"
             )}
           >
             <div className="flex flex-wrap gap-1.5 items-center">
-              {selected.length > 0 ? (
-                selected.map((val) => {
+              {selectedValues.length > 0 ? (
+                selectedValues.map((val) => {
                   const option = options.find((o) => o.value === val);
                   return (
                     <Badge
@@ -108,7 +109,7 @@ export function MultiSelect({
                     className="flex items-center gap-2 cursor-pointer"
                   >
                     <Checkbox
-                      checked={selected.includes(option.value)}
+                      checked={selectedValues.includes(option.value)}
                       className="border-slate-300"
                     />
                     <span className="flex-1">{option.label}</span>
