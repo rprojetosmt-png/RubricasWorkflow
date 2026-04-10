@@ -548,11 +548,15 @@ export function NovaSolicitacaoPage() {
 
   const buildHistoricalDataConfig = () => {
     const orgsStr = (watch("orgaosSolicitantes") || []).map((id: string) => orgaos.find(o => o.id === id)?.nome).filter(Boolean).join(", ") || "Não informado";
+    const setoresStr = (watch("setorIds") || []).map((id: string) => todosSetores.find(s => s.id === id)?.nome).filter(Boolean).join(", ") || "Não informado";
     const inicioStr = watch("vigenciaInicio") ? new Date(watch("vigenciaInicio")).toLocaleDateString("pt-BR") : "Não informado";
+    const fimStr = watch("vigenciaFim") ? new Date(watch("vigenciaFim")).toLocaleDateString("pt-BR") : "Não informado";
     const grupoStr = gruposTrabalhistasEsocial.find(g => g.id === watch("grupoTrabalhistaIds")?.[0])?.nome || "Não informado";
     const catStr = categoriasFiltradas.find(c => c.codigo === watch("categoriaTrabalhistaCodigo"))?.descricao || "Não informado";
     const baseLegalStr = (watch("baseLegalIds") || []).map((id: string) => baseLegalDocumentos.find(b => b.id === id)?.titulo).filter(Boolean).join(", ") || "Não informado";
     const tipo = watch("classificacao") || "Vantagem";
+    const esocialStr = naturezaRubricaEsocial.find(n => n.id === watch("naturezaEsocial"))?.nome || "Não informado";
+    const outrasIncVal = (watch("outrasIncidencias") || []).map((id: string) => outrasIncidencias.find(o => o.id === id)?.nome).filter(Boolean);
 
     return {
       id: codigoPreview,
@@ -565,9 +569,11 @@ export function NovaSolicitacaoPage() {
           title: "INFORMAÇÕES GERAIS",
           fields: [
             { label: "Órgão", value: orgsStr, icon: <Building2 strokeWidth={1.5} /> },
+            { label: "Setores", value: setoresStr, icon: <Building2 strokeWidth={1.5} /> },
             { label: "Servidor Responsável", value: watch("servidorResponsavel") || "Não informado", icon: <User strokeWidth={1.5} /> },
             { label: "Tipo", value: tipo, icon: <Tag strokeWidth={1.5} />, type: "badge-info" as const },
             { label: "Data de Início", value: inicioStr, icon: <Calendar strokeWidth={1.5} /> },
+            { label: "Data Fim", value: fimStr, icon: <Calendar strokeWidth={1.5} />, type: !watch("vigenciaFim") ? ("disabled" as const) : undefined },
             { label: "PAOE", value: watch("paoe") || "Não informado", icon: <FileText strokeWidth={1.5} /> },
           ]
         },
@@ -592,6 +598,7 @@ export function NovaSolicitacaoPage() {
           title: "NATUREZA DA VERBA",
           fields: [
             { label: "Natureza", value: watch("natureza") || "Não informado", icon: <Landmark strokeWidth={1.5} /> },
+            { label: "Tabela 03 (eSocial)", value: esocialStr, icon: <FileText strokeWidth={1.5} /> },
             { label: "Caráter", value: watch("carater") || "Não informado", icon: <CheckCircle2 strokeWidth={1.5} /> },
             { label: "Reter Teto", value: watch("reterTetoRemuneratorio") || "Não informado", icon: <CheckCircle2 strokeWidth={1.5} />, type: watch("reterTetoRemuneratorio") === "Sim" ? ("badge-warning" as const) : undefined },
           ]
@@ -601,6 +608,7 @@ export function NovaSolicitacaoPage() {
           fields: [
             { label: "Tem Incidência", value: watch("temIncidenciaTributaria") || "Não", icon: <CircleDollarSign strokeWidth={1.5} />, type: watch("temIncidenciaTributaria") === "Sim" ? ("badge-warning" as const) : undefined },
             { label: "Tributos", value: (watch("incidenciasTributarias") || []).map((id: string) => tributosAplicaveis.find(t => t.id === id)?.nome).filter(Boolean), icon: <CircleDollarSign strokeWidth={1.5} />, type: (watch("incidenciasTributarias") || []).length > 0 ? ("badge-warning" as const) : undefined },
+            { label: "Outras Incidências", value: outrasIncVal, icon: <CircleDollarSign strokeWidth={1.5} />, type: outrasIncVal.length > 0 ? ("badge-warning" as const) : ("disabled" as const) },
           ]
         }
       ],
