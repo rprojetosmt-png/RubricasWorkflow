@@ -230,19 +230,19 @@ export function NovaSolicitacaoPage() {
     !!watch("naturezaEsocial") &&
     !!watch("vigenciaInicio") &&
     !!watch("paoe") &&
-    selectedOrgaos.length > 0 &&
-    watch("setorIds").length > 0 &&
-    watch("grupoTrabalhistaIds").length > 0 &&
+    (selectedOrgaos || []).length > 0 &&
+    (watch("setorIds") || []).length > 0 &&
+    (watch("grupoTrabalhistaIds") || []).length > 0 &&
     !!watch("categoriaTrabalhistaCodigo") &&
-    watch("cargosAplicaveis").length > 0 &&
+    (watch("cargosAplicaveis") || []).length > 0 &&
     !!watch("servidorResponsavel") &&
     !!watch("incideNatalina") &&
     !!watch("incideFerias") &&
     !!watch("temIncidenciaTributaria") &&
-    watch("baseLegalIds").length > 0 &&
+    (watch("baseLegalIds") || []).length > 0 &&
     !!watch("aceiteTermos") &&
     (naturezaSelecionada !== "Remuneratória" || (!!watch("carater") && !!watch("reterTetoRemuneratorio"))) &&
-    (temIncidenciaTributaria !== "Sim" || watch("incidenciasTributarias").length > 0) &&
+    (temIncidenciaTributaria !== "Sim" || (watch("incidenciasTributarias") || []).length > 0) &&
     (existeOutrosGrupos !== "Sim" || !!watch("outrosGruposDescricao")?.trim());
 
 
@@ -414,7 +414,8 @@ export function NovaSolicitacaoPage() {
         toast.success("Solicitação enviada", {
           description: "Solicitação enviada para Análise Documental.",
         });
-        navigate("/");
+        setHistorico(atualizado);
+        setEtapaIndex(1);
       } catch (err) {
         console.error(err);
         toast.error("Não foi possível salvar a solicitação");
@@ -585,7 +586,7 @@ export function NovaSolicitacaoPage() {
                 const isRejeitado = status === "rejeitado";
 
                 return (
-                  <div key={etapa.id} className="w-36 shrink-0 text-center">
+                  <div key={etapa.id} className="w-36 shrink-0 text-center cursor-pointer hover:opacity-80 transition-opacity" onClick={() => setEtapaIndex(index)}>
                     <div
                       className={cn(
                         "mx-auto h-8 w-8 rounded-full border-2 bg-white flex items-center justify-center relative z-10 font-semibold text-xs",
