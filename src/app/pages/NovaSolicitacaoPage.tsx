@@ -85,7 +85,7 @@ interface SolicitacaoFormData {
   outrosGruposDescricao: string;
   cargosAplicaveis: string[];
   servidorResponsavel: string;
-  carater: "Permanente" | "Temporário" | "Eventual";
+  carater: "Contínuo" | "Temporário";
   reterTetoRemuneratorio: "Sim" | "Não";
   incideNatalina: "Sim" | "Não";
   incideFerias: "Sim" | "Não";
@@ -146,6 +146,8 @@ export function NovaSolicitacaoPage() {
   const naturezaSelecionada = watch("natureza");
   const vigenciaInicio = watch("vigenciaInicio");
   const grupoTrabalhistaIds = watch("grupoTrabalhistaIds");
+  const categoriaTrabalhistaCodigo = watch("categoriaTrabalhistaCodigo");
+  const grupoTrabalhistaPrincipalId = grupoTrabalhistaIds[0] ?? "";
   const existeOutrosGrupos = watch("existeOutrosGrupos");
   const temIncidenciaTributaria = watch("temIncidenciaTributaria");
   const baseLegalSelecionada = watch("baseLegalIds");
@@ -153,6 +155,11 @@ export function NovaSolicitacaoPage() {
   const setoresFiltrados = useMemo(() => {
     return todosSetores.filter((s) => selectedOrgaos.includes(s.orgaoId));
   }, [selectedOrgaos]);
+
+  const categoriasFiltradas = useMemo(() => {
+    if (!grupoTrabalhistaPrincipalId) return [];
+    return categoriasPorGrupo[grupoTrabalhistaPrincipalId] ?? [];
+  }, [grupoTrabalhistaPrincipalId]);
 
   const temRetroatividade = useMemo(() => {
     if (!vigenciaInicio) return false;
@@ -177,6 +184,23 @@ export function NovaSolicitacaoPage() {
       setValue("outrosGruposDescricao", "");
     }
   }, [existeOutrosGrupos, setValue]);
+
+  useEffect(() => {
+    if (!grupoTrabalhistaPrincipalId) {
+      if (categoriaTrabalhistaCodigo) {
+        setValue("categoriaTrabalhistaCodigo", "");
+      }
+      return;
+    }
+
+    const categoriaValida = (categoriasPorGrupo[grupoTrabalhistaPrincipalId] ?? []).some(
+      (cat) => cat.codigo === categoriaTrabalhistaCodigo
+    );
+
+    if (!categoriaValida && categoriaTrabalhistaCodigo) {
+      setValue("categoriaTrabalhistaCodigo", "");
+    }
+  }, [grupoTrabalhistaPrincipalId, categoriaTrabalhistaCodigo, setValue]);
 
   useEffect(() => {
     if (naturezaSelecionada !== "Remuneratória") {
@@ -214,7 +238,7 @@ export function NovaSolicitacaoPage() {
     !!watch("incideNatalina") &&
     !!watch("incideFerias") &&
     !!watch("temIncidenciaTributaria") &&
-    (watch("baseLegalIds").length > 0 || !!watch("justificativaLegal")?.trim()) &&
+    watch("baseLegalIds").length > 0 &&
     !!watch("aceiteTermos") &&
     (naturezaSelecionada !== "Remuneratória" || (!!watch("carater") && !!watch("reterTetoRemuneratorio"))) &&
     (temIncidenciaTributaria !== "Sim" || watch("incidenciasTributarias").length > 0) &&
@@ -242,7 +266,7 @@ export function NovaSolicitacaoPage() {
     setValue("cargosAplicaveis", [cargosAplicaveis[0]], { shouldValidate: true });
     setValue("incideNatalina", "Sim", { shouldValidate: true });
     setValue("incideFerias", "Sim", { shouldValidate: true });
-    setValue("carater", "Permanente", { shouldValidate: true });
+    setValue("carater", "Contínuo", { shouldValidate: true });
     setValue("reterTetoRemuneratorio", "Sim", { shouldValidate: true });
     setValue("temIncidenciaTributaria", "Sim", { shouldValidate: true });
     setValue("incidenciasTributarias", [incidenciasTributariasPrincipais[0]?.id], { shouldValidate: true });
@@ -474,8 +498,8 @@ export function NovaSolicitacaoPage() {
     setValue("paoe", listaPAOE[0] ?? "", { shouldValidate: true, shouldDirty: true });
 
     setValue("orgaosSolicitantes", orgaoId ? [orgaoId] : [], { shouldValidate: true, shouldDirty: true });
-    setValue("setorId", setorId, { shouldValidate: true, shouldDirty: true });
-    setValue("grupoTrabalhistaId", grupoId, { shouldValidate: true, shouldDirty: true });
+    setValue("setorIds", setorId ? [setorId] : [], { shouldValidate: true, shouldDirty: true });
+    setValue("grupoTrabalhistaIds", grupoId ? [grupoId] : [], { shouldValidate: true, shouldDirty: true });
     setValue("categoriaTrabalhistaCodigo", categoriaId, { shouldValidate: true, shouldDirty: true });
     setValue("existeOutrosGrupos", "Não", { shouldValidate: true, shouldDirty: true });
     setValue("outrosGruposDescricao", "", { shouldValidate: true, shouldDirty: true });
@@ -608,536 +632,296 @@ export function NovaSolicitacaoPage() {
         <div className="col-span-2 space-y-6">
           {etapaIndex === 0 ? (
             <form onSubmit={handleSubmit(onFormSubmit)} className="space-y-6">
-              {/* Seção: Dados Básicos */}
-              <Card className="border-none shadow-md overflow-hidden">
-                <div className="h-1 bg-blue-600 w-full" />
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <FileText className="w-5 h-5 text-blue-600" />
-                    Dados Básicos
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="grid grid-cols-2 gap-4">
-                  <div className="col-span-2 space-y-2">
-                    <Label className="flex items-center gap-1">
-                      Nome da Rubrica <span className="text-red-500">*</span>
-                    </Label>
-                    <Controller
-                      name="nomeRubrica"
-                      control={control}
-                      rules={{ required: "Campo obrigatório" }}
-                      render={({ field }) => (
-                        <Input {...field} placeholder="Ex: Adicional de Tempo de Serviço" className={cn("border-2 h-10", errors.nomeRubrica && "border-red-500")} />
-                      )}
-                    />
-                    {errors.nomeRubrica && <p className="text-xs text-red-500 mt-1">{errors.nomeRubrica.message}</p>}
-                  </div>
+  <Card className="border-none shadow-md overflow-hidden">
+    <div className="h-1 bg-blue-600 w-full" />
+    <CardHeader className="flex flex-row items-center justify-between gap-3">
+      <CardTitle className="flex items-center gap-2">
+        <FileText className="w-5 h-5 text-blue-600" />
+        Etapa 1: Identificação da Rubrica
+      </CardTitle>
+      <Button type="button" variant="outline" onClick={preencherDadosTeste} className="border-blue-200 text-blue-700 hover:bg-blue-50 gap-2">
+        <Plus className="w-4 h-4" />
+        Preencher dados fictícios
+      </Button>
+    </CardHeader>
+    <CardContent className="grid grid-cols-2 gap-4">
+      <div className="col-span-2 space-y-2">
+        <Label>Nome da Rubrica <span className="text-red-500">*</span></Label>
+        <Controller
+          name="nomeRubrica"
+          control={control}
+          rules={{ required: "Campo obrigatório", maxLength: { value: 50, message: "Máximo de 50 caracteres" } }}
+          render={({ field }) => <Input {...field} maxLength={50} placeholder="Ex: Adicional de Tempo de Serviço" className={cn("border-2 h-10", errors.nomeRubrica && "border-red-500")} />}
+        />
+        <p className="text-xs text-slate-500">Máximo de 50 caracteres.</p>
+      </div>
 
-                  <div className="space-y-2">
-                    <Label className="flex items-center gap-1">
-                      Classificação <span className="text-red-500">*</span>
-                    </Label>
-                    <Controller
-                      name="classificacao"
-                      control={control}
-                      rules={{ required: "Campo obrigatório" }}
-                      render={({ field }) => (
-                        <Select onValueChange={field.onChange} value={field.value}>
-                          <SelectTrigger className={cn("border-2 h-10", errors.classificacao && "border-red-500")}>
-                            <SelectValue placeholder="Selecione..." />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {classificacoes.map((c) => (
-                              <SelectItem key={c} value={c}>
-                                {c}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      )}
-                    />
-                    {errors.classificacao && <p className="text-xs text-red-500 mt-1">{errors.classificacao.message}</p>}
-                  </div>
+      <div className="space-y-2">
+        <Label>Classificação <span className="text-red-500">*</span></Label>
+        <Controller
+          name="classificacao"
+          control={control}
+          rules={{ required: "Campo obrigatório" }}
+          render={({ field }) => (
+            <Select onValueChange={field.onChange} value={field.value}>
+              <SelectTrigger className={cn("border-2 h-10", errors.classificacao && "border-red-500")}><SelectValue placeholder="Selecione..." /></SelectTrigger>
+              <SelectContent>{classificacoes.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
+            </Select>
+          )}
+        />
+      </div>
 
-                  <div className="space-y-2">
-                    <Label className="flex items-center gap-1">
-                      Órgãos Solicitantes <span className="text-red-500">*</span>
-                    </Label>
-                    <Controller
-                      name="orgaosSolicitantes"
-                      control={control}
-                      rules={{ required: "Selecione pelo menos um órgão" }}
-                      render={({ field }) => (
-                        <MultiSelect
-                          options={orgaos.map(o => ({ label: o.nome, value: o.id }))}
-                          selected={field.value}
-                          onChange={field.onChange}
-                          placeholder="Selecione os órgãos..."
-                          error={!!errors.orgaosSolicitantes}
-                        />
-                      )}
-                    />
-                    {errors.orgaosSolicitantes && <p className="text-xs text-red-500 mt-1">{errors.orgaosSolicitantes.message}</p>}
-                  </div>
+      <div className="space-y-2">
+        <Label>Natureza da Verba <span className="text-red-500">*</span></Label>
+        <Controller
+          name="natureza"
+          control={control}
+          rules={{ required: "Campo obrigatório" }}
+          render={({ field }) => (
+            <Select onValueChange={field.onChange} value={field.value}>
+              <SelectTrigger className={cn("border-2 h-10", errors.natureza && "border-red-500")}><SelectValue placeholder="Selecione a natureza" /></SelectTrigger>
+              <SelectContent>{naturezasVerba.map((n) => <SelectItem key={n} value={n}>{n}</SelectItem>)}</SelectContent>
+            </Select>
+          )}
+        />
+      </div>
 
-                  <div className="space-y-2">
-                    <Label className="flex items-center gap-1">
-                      Setores <span className="text-red-500">*</span>
-                    </Label>
-                    <Controller
-                      name="setorIds"
-                      control={control}
-                      rules={{ required: "Selecione pelo menos um setor" }}
-                      render={({ field }) => (
-                        <MultiSelect
-                          options={setoresFiltrados.map(s => ({ label: s.nome, value: s.id }))}
-                          selected={field.value}
-                          onChange={field.onChange}
-                          placeholder={selectedOrgaos.length > 0 ? "Selecione os setores..." : "Selecione órgãos primeiro"}
-                          error={!!errors.setorIds}
-                        />
-                      )}
-                    />
-                    {errors.setorIds && <p className="text-xs text-red-500 mt-1">{errors.setorIds.message}</p>}
-                  </div>
+      <div className="col-span-2 space-y-2">
+        <Label>Tabela 03 - Natureza das Rubricas (eSocial) <span className="text-red-500">*</span></Label>
+        <Controller
+          name="naturezaEsocial"
+          control={control}
+          rules={{ required: "Campo obrigatório" }}
+          render={({ field }) => (
+            <Select onValueChange={field.onChange} value={field.value}>
+              <SelectTrigger className={cn("border-2 h-10", errors.naturezaEsocial && "border-red-500")}><SelectValue placeholder="Selecione o código eSocial" /></SelectTrigger>
+              <SelectContent>{naturezaRubricaEsocial.map((n) => <SelectItem key={n.codigo} value={n.codigo}>{n.codigo} - {n.descricao}</SelectItem>)}</SelectContent>
+            </Select>
+          )}
+        />
+      </div>
 
-                  <div className="space-y-2">
-                    <Label className="flex items-center gap-1">
-                      Servidor Responsável <span className="text-red-500">*</span>
-                    </Label>
-                    <Controller
-                      name="servidorResponsavel"
-                      control={control}
-                      rules={{ required: "Campo obrigatório" }}
-                      render={({ field }) => (
-                        <Input {...field} placeholder="Digite o nome completo" className={cn("border-2 h-10", errors.servidorResponsavel && "border-red-500")} />
-                      )}
-                    />
-                    {errors.servidorResponsavel && <p className="text-xs text-red-500 mt-1">{errors.servidorResponsavel.message}</p>}
-                  </div>
+      <div className="space-y-2">
+        <Label>Vigência - Data de início <span className="text-red-500">*</span></Label>
+        <Controller
+          name="vigenciaInicio"
+          control={control}
+          rules={{ required: "Campo obrigatório" }}
+          render={({ field }) => <Input type="date" value={field.value ? format(field.value, "yyyy-MM-dd") : ""} onChange={(e) => field.onChange(e.target.value ? new Date(`${e.target.value}T00:00:00`) : undefined)} className={cn("border-2 h-10", errors.vigenciaInicio && "border-red-500")} />}
+        />
+        {temRetroatividade && <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded px-2 py-1">Atenção: data de início anterior ao mês atual (retroatividade).</p>}
+      </div>
 
-                  <div className="space-y-2">
-                    <Label className="flex items-center gap-1">
-                      Data de Vigência <span className="text-red-500">*</span>
-                    </Label>
-                    <Controller
-                      name="vigenciaInicio"
-                      control={control}
-                      rules={{ required: "Campo obrigatório" }}
-                      render={({ field }) => (
-                        <Popover>
-                          <PopoverTrigger asChild>
-                            <Button
-                              variant="outline"
-                              className={cn(
-                                "w-full justify-start text-left font-normal border-2 h-10",
-                                !field.value && "text-muted-foreground",
-                                errors.vigenciaInicio && "border-red-500"
-                              )}
-                            >
-                              <Calendar className="mr-2 h-4 w-4" />
-                              {field.value ? format(field.value, "PPP", { locale: ptBR }) : <span>Escolha uma data</span>}
-                            </Button>
-                          </PopoverTrigger>
-                          <PopoverContent className="w-auto p-0" align="start">
-                            <CalendarComponent
-                              mode="single"
-                              selected={field.value}
-                              onSelect={field.onChange}
-                              initialFocus
-                            />
-                          </PopoverContent>
-                        </Popover>
-                      )}
-                    />
-                    {errors.vigenciaInicio && <p className="text-xs text-red-500 mt-1">{errors.vigenciaInicio.message}</p>}
-                  </div>
+      <div className="space-y-2">
+        <Label>Vigência - Data fim (opcional)</Label>
+        <Controller
+          name="vigenciaFim"
+          control={control}
+          render={({ field }) => <Input type="date" value={field.value ? format(field.value, "yyyy-MM-dd") : ""} onChange={(e) => field.onChange(e.target.value ? new Date(`${e.target.value}T00:00:00`) : undefined)} className="border-2 h-10" />}
+        />
+      </div>
 
-                  <div className="space-y-2">
-                    <Label className="flex items-center gap-1">
-                      PAOE <span className="text-red-500">*</span>
-                    </Label>
-                    <Controller
-                      name="paoe"
-                      control={control}
-                      rules={{ required: "Campo obrigatório" }}
-                      render={({ field }) => (
-                        <Select onValueChange={field.onChange} value={field.value}>
-                          <SelectTrigger className={cn("border-2 h-10", errors.paoe && "border-red-500")}>
-                            <SelectValue placeholder="Selecione a ação..." />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {listaPAOE.map((p) => (
-                              <SelectItem key={p} value={p}>
-                                {p}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      )}
-                    />
-                    {errors.paoe && <p className="text-xs text-red-500 mt-1">{errors.paoe.message}</p>}
-                  </div>
+      <div className="col-span-2 space-y-2">
+        <Label>Projeto/Atividade (PAOE) <span className="text-red-500">*</span></Label>
+        <Controller
+          name="paoe"
+          control={control}
+          rules={{ required: "Campo obrigatório" }}
+          render={({ field }) => (
+            <Select onValueChange={field.onChange} value={field.value}>
+              <SelectTrigger className={cn("border-2 h-10", errors.paoe && "border-red-500")}><SelectValue placeholder="Selecione a ação..." /></SelectTrigger>
+              <SelectContent>{listaPAOE.map((p) => <SelectItem key={p} value={p}>{p}</SelectItem>)}</SelectContent>
+            </Select>
+          )}
+        />
+      </div>
+    </CardContent>
+  </Card>
 
-                  <div className="col-span-2 space-y-4">
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label className="flex items-center gap-1">
-                          Grupos Trabalhistas (eSocial) <span className="text-red-500">*</span>
-                        </Label>
-                        <Controller
-                          name="grupoTrabalhistaIds"
-                          control={control}
-                          rules={{ required: "Selecione pelo menos um grupo" }}
-                          render={({ field }) => (
-                            <MultiSelect
-                              options={gruposTrabalhistas.map(g => ({ label: g.nome, value: g.id }))}
-                              selected={field.value}
-                              onChange={field.onChange}
-                              placeholder="Selecione os grupos..."
-                              error={!!errors.grupoTrabalhistaIds}
-                            />
-                          )}
-                        />
-                        {errors.grupoTrabalhistaIds && <p className="text-xs text-red-500 mt-1">{errors.grupoTrabalhistaIds.message}</p>}
-                      </div>
+  <Card className="border-none shadow-md overflow-hidden">
+    <div className="h-1 bg-cyan-600 w-full" />
+    <CardHeader><CardTitle className="flex items-center gap-2"><User className="w-5 h-5 text-cyan-600" />Etapa 2: Abrangência e Público</CardTitle></CardHeader>
+    <CardContent className="grid grid-cols-2 gap-4">
+      <div className="col-span-2 space-y-2">
+        <Label>Órgãos Solicitantes <span className="text-red-500">*</span></Label>
+        <Controller name="orgaosSolicitantes" control={control} rules={{ validate: (v) => (Array.isArray(v) && v.length > 0) || "Selecione pelo menos um órgão" }} render={({ field }) => {
+          const selected = Array.isArray(field.value) ? field.value : [];
+          return <div className={cn("rounded-md border p-3 grid grid-cols-2 gap-2", errors.orgaosSolicitantes && "border-red-500")}>{orgaos.map((o) => <label key={o.id} className="flex items-center gap-2 text-sm cursor-pointer"><Checkbox checked={selected.includes(o.id)} onCheckedChange={(checked) => checked ? field.onChange([...selected, o.id]) : field.onChange(selected.filter((id: string) => id !== o.id))} /><span>{o.nome}</span></label>)}</div>;
+        }} />
+      </div>
 
-                      <div className="space-y-2">
-                        <Label className="flex items-center gap-1">
-                          Categoria Trabalhista <span className="text-red-500">*</span>
-                        </Label>
-                        <Controller
-                          name="categoriaTrabalhistaCodigo"
-                          control={control}
-                          rules={{ required: "Selecione a categoria" }}
-                          render={({ field }) => (
-                            <Select onValueChange={field.onChange} value={field.value}>
-                              <SelectTrigger className={cn("border-2 h-10", errors.categoriaTrabalhistaCodigo && "border-red-500")}>
-                                <SelectValue placeholder="Selecione..." />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {naturezaRubricaEsocial.map((n) => (
-                                  <SelectItem key={n.codigo} value={n.codigo}>
-                                    {n.codigo} - {n.descricao}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          )}
-                        />
-                        {errors.categoriaTrabalhistaCodigo && <p className="text-xs text-red-500 mt-1">{errors.categoriaTrabalhistaCodigo.message}</p>}
-                      </div>
-                    </div>
-                  </div>
+      <div className="space-y-2">
+        <Label>Setores <span className="text-red-500">*</span></Label>
+        <Controller name="setorIds" control={control} rules={{ validate: (v) => (Array.isArray(v) && v.length > 0) || "Selecione um setor" }} render={({ field }) => (
+          <Select disabled={selectedOrgaos.length === 0} onValueChange={(value) => field.onChange(value ? [value] : [])} value={Array.isArray(field.value) ? (field.value[0] ?? "") : ""}>
+            <SelectTrigger className={cn("border-2 h-10", errors.setorIds && "border-red-500")}><SelectValue placeholder={selectedOrgaos.length === 0 ? "Selecione o órgão primeiro" : "Selecione o setor"} /></SelectTrigger>
+            <SelectContent>{setoresFiltrados.map((s) => <SelectItem key={s.id} value={s.id}>{s.nome}</SelectItem>)}</SelectContent>
+          </Select>
+        )} />
+      </div>
 
-                  <div className="col-span-2 space-y-2">
-                    <Label className="flex items-center gap-1">
-                      Cargos Aplicáveis <span className="text-red-500">*</span>
-                    </Label>
-                    <Controller
-                      name="cargosAplicaveis"
-                      control={control}
-                      rules={{ required: "Selecione pelo menos um cargo" }}
-                      render={({ field }) => (
-                        <MultiSelect
-                          options={cargosAplicaveis.map(c => ({ label: c, value: c }))}
-                          selected={field.value}
-                          onChange={field.onChange}
-                          placeholder="Selecione os cargos..."
-                          error={!!errors.cargosAplicaveis}
-                        />
-                      )}
-                    />
-                    {errors.cargosAplicaveis && <p className="text-xs text-red-500 mt-1">{errors.cargosAplicaveis.message}</p>}
-                  </div>
+      <div className="space-y-2">
+        <Label>Servidor responsável <span className="text-red-500">*</span></Label>
+        <Controller name="servidorResponsavel" control={control} rules={{ required: "Campo obrigatório" }} render={({ field }) => <Input {...field} className={cn("border-2 h-10", errors.servidorResponsavel && "border-red-500")} />} />
+      </div>
 
-                  <div className="col-span-2 space-y-2">
-                    <Label className="flex items-center gap-1">
-                      Justificativa Legal <span className="text-red-500">*</span>
-                    </Label>
-                    <Controller
-                      name="justificativaLegal"
-                      control={control}
-                      rules={{ required: "Campo obrigatório" }}
-                      render={({ field }) => (
-                        <Textarea {...field} placeholder="Base legal da solicitação" className={cn("border-2 min-h-24", errors.justificativaLegal && "border-red-500")} />
-                      )}
-                    />
-                    {errors.justificativaLegal && <p className="text-xs text-red-500 mt-1">{errors.justificativaLegal.message}</p>}
-                  </div>
+      <div className="space-y-2">
+        <Label>Grupo Trabalhista (eSocial) <span className="text-red-500">*</span></Label>
+        <Controller name="grupoTrabalhistaIds" control={control} rules={{ validate: (v) => (Array.isArray(v) && v.length > 0) || "Selecione o grupo" }} render={({ field }) => (
+          <Select onValueChange={(value) => field.onChange(value ? [value] : [])} value={Array.isArray(field.value) ? (field.value[0] ?? "") : ""}>
+            <SelectTrigger className={cn("border-2 h-10", errors.grupoTrabalhistaIds && "border-red-500")}><SelectValue placeholder="Selecione o grupo" /></SelectTrigger>
+            <SelectContent>{gruposTrabalhistas.map((g) => <SelectItem key={g.id} value={g.id}>{g.nome}</SelectItem>)}</SelectContent>
+          </Select>
+        )} />
+      </div>
 
-                  <div className="col-span-2 space-y-2">
-                    <Label className="flex items-center gap-1">
-                      Natureza eSocial <span className="text-red-500">*</span>
-                    </Label>
-                    <Controller
-                      name="naturezaEsocial"
-                      control={control}
-                      rules={{ required: "Campo obrigatório" }}
-                      render={({ field }) => (
-                        <Select onValueChange={field.onChange} value={field.value}>
-                          <SelectTrigger className={cn("border-2 h-10", errors.naturezaEsocial && "border-red-500")}>
-                            <SelectValue placeholder="Selecione a natureza eSocial..." />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {naturezaRubricaEsocial.map((n) => (
-                              <SelectItem key={n.codigo} value={n.codigo}>
-                                {n.codigo} - {n.descricao}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      )}
-                    />
-                    {errors.naturezaEsocial && <p className="text-xs text-red-500 mt-1">{errors.naturezaEsocial.message}</p>}
-                  </div>
-                </CardContent>
-              </Card>
+      <div className="space-y-2">
+        <Label>Categoria Trabalhista <span className="text-red-500">*</span></Label>
+        <Controller name="categoriaTrabalhistaCodigo" control={control} rules={{ required: "Selecione a categoria" }} render={({ field }) => (
+          <Select disabled={!grupoTrabalhistaPrincipalId} onValueChange={field.onChange} value={field.value}>
+            <SelectTrigger className={cn("border-2 h-10", errors.categoriaTrabalhistaCodigo && "border-red-500")}><SelectValue placeholder={grupoTrabalhistaPrincipalId ? "Selecione a categoria" : "Selecione o grupo primeiro"} /></SelectTrigger>
+            <SelectContent>{categoriasFiltradas.map((cat) => <SelectItem key={cat.codigo} value={cat.codigo}>{cat.codigo} - {cat.descricao}</SelectItem>)}</SelectContent>
+          </Select>
+        )} />
+      </div>
 
-              <div className="grid grid-cols-2 gap-6">
-                {/* Seção: Incidências */}
-                <Card className="border-none shadow-md overflow-hidden">
-                  <div className="h-1 bg-amber-500 w-full" />
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2 text-slate-800">
-                      <CheckCircle2 className="w-5 h-5 text-amber-500" />
-                      Incidências
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-6">
-                    <div className="space-y-3">
-                      <Label className="text-sm font-semibold">Incide em Gratificação Natalina? <span className="text-red-500">*</span></Label>
-                      <Controller
-                        name="incideNatalina"
-                        control={control}
-                        rules={{ required: "Selecione uma opção" }}
-                        render={({ field }) => (
-                          <RadioGroup onValueChange={field.onChange} value={field.value} className="flex gap-4">
-                            <div className="flex items-center space-x-2">
-                              <RadioGroupItem value="Sim" id="natalina-sim" />
-                              <Label htmlFor="natalina-sim" className="font-normal">Sim</Label>
-                            </div>
-                            <div className="flex items-center space-x-2">
-                              <RadioGroupItem value="Não" id="natalina-nao" />
-                              <Label htmlFor="natalina-nao" className="font-normal">Não</Label>
-                            </div>
-                          </RadioGroup>
-                        )}
-                      />
-                      {errors.incideNatalina && <p className="text-xs text-red-500">{errors.incideNatalina.message}</p>}
-                    </div>
+      <div className="space-y-2">
+        <Label>Existem outros grupos?</Label>
+        <Controller name="existeOutrosGrupos" control={control} render={({ field }) => (
+          <RadioGroup onValueChange={field.onChange} value={field.value} className="flex gap-4 pt-2">
+            <div className="flex items-center gap-2"><RadioGroupItem value="Não" id="outros-grupos-nao" /><Label htmlFor="outros-grupos-nao" className="font-normal">Não</Label></div>
+            <div className="flex items-center gap-2"><RadioGroupItem value="Sim" id="outros-grupos-sim" /><Label htmlFor="outros-grupos-sim" className="font-normal">Sim</Label></div>
+          </RadioGroup>
+        )} />
+      </div>
 
-                    <div className="space-y-3">
-                      <Label className="text-sm font-semibold">Incide em 1/3 de Férias? <span className="text-red-500">*</span></Label>
-                      <Controller
-                        name="incideFerias"
-                        control={control}
-                        rules={{ required: "Selecione uma opção" }}
-                        render={({ field }) => (
-                          <RadioGroup onValueChange={field.onChange} value={field.value} className="flex gap-4">
-                            <div className="flex items-center space-x-2">
-                              <RadioGroupItem value="Sim" id="ferias-sim" />
-                              <Label htmlFor="ferias-sim" className="font-normal">Sim</Label>
-                            </div>
-                            <div className="flex items-center space-x-2">
-                              <RadioGroupItem value="Não" id="ferias-nao" />
-                              <Label htmlFor="ferias-nao" className="font-normal">Não</Label>
-                            </div>
-                          </RadioGroup>
-                        )}
-                      />
-                      {errors.incideFerias && <p className="text-xs text-red-500">{errors.incideFerias.message}</p>}
-                    </div>
-                  </CardContent>
-                </Card>
+      <div className="space-y-2">
+        <Label>Detalhar outros grupos</Label>
+        <Controller name="outrosGruposDescricao" control={control} rules={{ validate: (v) => existeOutrosGrupos !== "Sim" || !!v?.trim() || "Informe os outros grupos" }} render={({ field }) => <Input {...field} disabled={existeOutrosGrupos !== "Sim"} className={cn("border-2 h-10", errors.outrosGruposDescricao && "border-red-500")} />} />
+      </div>
 
-                {/* Seção: Natureza da Verba */}
-                <Card className="border-none shadow-md overflow-hidden">
-                  <div className="h-1 bg-emerald-500 w-full" />
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2 text-slate-800">
-                      <Info className="w-5 h-5 text-emerald-500" />
-                      Natureza da Verba
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-5">
-                    <div className="space-y-3">
-                      <Label className="text-xs uppercase text-slate-500 font-bold tracking-wider">Natureza <span className="text-red-500">*</span></Label>
-                      <Controller
-                        name="natureza"
-                        control={control}
-                        rules={{ required: "Selecione a natureza" }}
-                        render={({ field }) => (
-                          <RadioGroup onValueChange={field.onChange} value={field.value} className="flex gap-4">
-                            <div className="flex items-center space-x-2">
-                              <RadioGroupItem value="Remuneratória" id="natureza-rem" />
-                              <Label htmlFor="natureza-rem" className="font-normal">Remuneratória</Label>
-                            </div>
-                            <div className="flex items-center space-x-2">
-                              <RadioGroupItem value="Indenizatória" id="natureza-ind" />
-                              <Label htmlFor="natureza-ind" className="font-normal">Indenizatória</Label>
-                            </div>
-                          </RadioGroup>
-                        )}
-                      />
-                      {errors.natureza && <p className="text-xs text-red-500">{errors.natureza.message}</p>}
-                    </div>
+      <div className="col-span-2 space-y-2">
+        <Label>Cargos que utilizarão a rubrica <span className="text-red-500">*</span></Label>
+        <Controller name="cargosAplicaveis" control={control} rules={{ validate: (v) => (Array.isArray(v) && v.length > 0) || "Selecione pelo menos um cargo" }} render={({ field }) => {
+          const selected = Array.isArray(field.value) ? field.value : [];
+          return <div className={cn("rounded-md border p-3 grid grid-cols-2 gap-2", errors.cargosAplicaveis && "border-red-500")}>{cargosAplicaveis.map((cargo) => <label key={cargo} className="flex items-center gap-2 text-sm cursor-pointer"><Checkbox checked={selected.includes(cargo)} onCheckedChange={(checked) => checked ? field.onChange([...selected, cargo]) : field.onChange(selected.filter((v: string) => v !== cargo))} /><span>{cargo}</span></label>)}</div>;
+        }} />
+      </div>
+    </CardContent>
+  </Card>
 
-                    <div className="space-y-3">
-                      <Label className="text-xs uppercase text-slate-500 font-bold tracking-wider">Caráter <span className="text-red-500">*</span></Label>
-                      <Controller
-                        name="carater"
-                        control={control}
-                        rules={{ required: "Selecione o caráter" }}
-                        render={({ field }) => (
-                          <RadioGroup onValueChange={field.onChange} value={field.value} className="flex flex-col gap-2">
-                            <div className="flex items-center space-x-2">
-                              <RadioGroupItem value="Permanente" id="carater-perm" />
-                              <Label htmlFor="carater-perm" className="font-normal">Permanente</Label>
-                            </div>
-                            <div className="flex items-center space-x-2">
-                              <RadioGroupItem value="Temporário" id="carater-temp" />
-                              <Label htmlFor="carater-temp" className="font-normal">Temporário</Label>
-                            </div>
-                            <div className="flex items-center space-x-2">
-                              <RadioGroupItem value="Eventual" id="carater-eve" />
-                              <Label htmlFor="carater-eve" className="font-normal">Eventual</Label>
-                            </div>
-                          </RadioGroup>
-                        )}
-                      />
-                      {errors.carater && <p className="text-xs text-red-500">{errors.carater.message}</p>}
-                    </div>
+  <Card className="border-none shadow-md overflow-hidden">
+    <div className="h-1 bg-amber-500 w-full" />
+    <CardHeader><CardTitle className="flex items-center gap-2"><CheckCircle2 className="w-5 h-5 text-amber-500" />Etapa 3: Incidências e Regras</CardTitle></CardHeader>
+    <CardContent className="grid grid-cols-2 gap-4">
+      {naturezaSelecionada === "Remuneratória" && (
+        <>
+          <div className="space-y-2">
+            <Label>Caráter <span className="text-red-500">*</span></Label>
+            <Controller name="carater" control={control} rules={{ required: "Selecione o caráter" }} render={({ field }) => (
+              <RadioGroup onValueChange={field.onChange} value={field.value} className="flex flex-col gap-2 pt-2">
+                <div className="flex items-center gap-2"><RadioGroupItem value="Contínuo" id="carater-continuo" /><Label htmlFor="carater-continuo" className="font-normal">Contínuo (incide previdência)</Label></div>
+                <div className="flex items-center gap-2"><RadioGroupItem value="Temporário" id="carater-temp" /><Label htmlFor="carater-temp" className="font-normal">Temporário (não incide)</Label></div>
+              </RadioGroup>
+            )} />
+          </div>
 
-                    <div className="space-y-3 pt-2">
-                      <Label className="text-xs uppercase text-slate-500 font-bold tracking-wider">Compõe Teto? <span className="text-red-500">*</span></Label>
-                      <Controller
-                        name="reterTetoRemuneratorio"
-                        control={control}
-                        rules={{ required: "Selecione uma opção" }}
-                        render={({ field }) => (
-                          <RadioGroup onValueChange={field.onChange} value={field.value} className="flex gap-4">
-                            <div className="flex items-center space-x-2">
-                              <RadioGroupItem value="Sim" id="teto-sim" />
-                              <Label htmlFor="teto-sim" className="font-normal">Sim</Label>
-                            </div>
-                            <div className="flex items-center space-x-2">
-                              <RadioGroupItem value="Não" id="teto-nao" />
-                              <Label htmlFor="teto-nao" className="font-normal">Não</Label>
-                            </div>
-                          </RadioGroup>
-                        )}
-                      />
-                      {errors.reterTetoRemuneratorio && <p className="text-xs text-red-500">{errors.reterTetoRemuneratorio.message}</p>}
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
+          <div className="space-y-2">
+            <Label>Reter teto remuneratório? <span className="text-red-500">*</span></Label>
+            <Controller name="reterTetoRemuneratorio" control={control} rules={{ required: "Selecione uma opção" }} render={({ field }) => (
+              <RadioGroup onValueChange={field.onChange} value={field.value} className="flex gap-4 pt-2">
+                <div className="flex items-center gap-2"><RadioGroupItem value="Sim" id="teto-sim" /><Label htmlFor="teto-sim" className="font-normal">Sim</Label></div>
+                <div className="flex items-center gap-2"><RadioGroupItem value="Não" id="teto-nao" /><Label htmlFor="teto-nao" className="font-normal">Não</Label></div>
+              </RadioGroup>
+            )} />
+          </div>
+        </>
+      )}
 
-              {/* Seção: Incidência Tributária */}
-              <Card className="border-none shadow-md overflow-hidden">
-                <div className="h-1 bg-red-500 w-full" />
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2 text-slate-800">
-                    <Badge className="bg-red-100 text-red-700 hover:bg-red-100">$</Badge>
-                    Incidência Tributária
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    <Label className="text-sm font-semibold">Tributos Aplicáveis (pelo menos 1 obrigatório) <span className="text-red-500">*</span></Label>
-                    <Controller
-                      name="incidenciasTributarias"
-                      control={control}
-                      defaultValue={[]}
-                      rules={{ required: "Selecione pelo menos um tributo" }}
-                      render={({ field }) => {
-                        const selectedIds = Array.isArray(field.value) ? field.value : [];
+      <div className="space-y-2">
+        <Label>Incidirá gratificação natalina? <span className="text-red-500">*</span></Label>
+        <Controller name="incideNatalina" control={control} rules={{ required: "Selecione uma opção" }} render={({ field }) => (
+          <RadioGroup onValueChange={field.onChange} value={field.value} className="flex gap-4 pt-2">
+            <div className="flex items-center gap-2"><RadioGroupItem value="Sim" id="natalina-sim" /><Label htmlFor="natalina-sim" className="font-normal">Sim</Label></div>
+            <div className="flex items-center gap-2"><RadioGroupItem value="Não" id="natalina-nao" /><Label htmlFor="natalina-nao" className="font-normal">Não</Label></div>
+          </RadioGroup>
+        )} />
+      </div>
 
-                        return (
-                          <div className="grid grid-cols-3 gap-4 p-4 bg-slate-50 rounded-xl border border-slate-100">
-                            {tributosAplicaveis.map((t) => (
-                              <div key={t.id} className="flex items-center space-x-3 bg-white p-3 rounded-lg border border-slate-200 shadow-sm hover:border-blue-300 transition-colors">
-                                <Checkbox
-                                  id={`tributo-${t.id}`}
-                                  checked={selectedIds.includes(t.id)}
-                                  onCheckedChange={(checked) => {
-                                    if (checked) {
-                                      field.onChange([...selectedIds, t.id]);
-                                    } else {
-                                      field.onChange(selectedIds.filter((v: string) => v !== t.id));
-                                    }
-                                  }}
-                                />
-                                <Label htmlFor={`tributo-${t.id}`} className="font-medium cursor-pointer flex-1">{t.nome}</Label>
-                              </div>
-                            ))}
-                          </div>
-                        );
-                      }}
-                    />
-                    {errors.incidenciasTributarias && <p className="text-xs text-red-500">{errors.incidenciasTributarias.message}</p>}
-                  </div>
-                </CardContent>
-              </Card>
+      <div className="space-y-2">
+        <Label>Incidirá 1/3 de férias? <span className="text-red-500">*</span></Label>
+        <Controller name="incideFerias" control={control} rules={{ required: "Selecione uma opção" }} render={({ field }) => (
+          <RadioGroup onValueChange={field.onChange} value={field.value} className="flex gap-4 pt-2">
+            <div className="flex items-center gap-2"><RadioGroupItem value="Sim" id="ferias-sim" /><Label htmlFor="ferias-sim" className="font-normal">Sim</Label></div>
+            <div className="flex items-center gap-2"><RadioGroupItem value="Não" id="ferias-nao" /><Label htmlFor="ferias-nao" className="font-normal">Não</Label></div>
+          </RadioGroup>
+        )} />
+      </div>
 
-              {/* Seção: Termo de Compromisso */}
-              <Card className="border-none shadow-md overflow-hidden bg-slate-900 text-white">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <CheckCircle2 className="w-5 h-5 text-blue-400" />
-                    Termo de Responsabilidade e Compromisso
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-6">
-                  <div className="p-4 bg-slate-800 rounded-lg border border-slate-700 text-sm text-slate-300 leading-relaxed">
-                    Declaro para os devidos fins que todas as informações prestadas neste formulário são verdadeiras e de minha inteira responsabilidade. Estou ciente de que a criação desta rubrica impactará na folha de pagamento e nos cálculos tributários da instituição, devendo estar estritamente de acordo com a base legal informada. Comprometo-me a fornecer documentação complementar caso solicitada em etapas posteriores do fluxo de rubrica.
-                  </div>
+      <div className="col-span-2 space-y-2">
+        <Label>Terá incidência tributária? <span className="text-red-500">*</span></Label>
+        <Controller name="temIncidenciaTributaria" control={control} rules={{ required: "Selecione uma opção" }} render={({ field }) => (
+          <RadioGroup onValueChange={field.onChange} value={field.value} className="flex gap-4 pt-2">
+            <div className="flex items-center gap-2"><RadioGroupItem value="Sim" id="trib-sim" /><Label htmlFor="trib-sim" className="font-normal">Sim</Label></div>
+            <div className="flex items-center gap-2"><RadioGroupItem value="Não" id="trib-nao" /><Label htmlFor="trib-nao" className="font-normal">Não</Label></div>
+          </RadioGroup>
+        )} />
+      </div>
 
-                  <div className="flex items-start space-x-3 items-center p-2">
-                    <Controller
-                      name="aceiteTermos"
-                      control={control}
-                      rules={{ required: true }}
-                      render={({ field }) => (
-                        <Checkbox
-                          id="aceite-termos"
-                          checked={field.value}
-                          onCheckedChange={field.onChange}
-                          className="border-slate-500 data-[state=checked]:bg-blue-500"
-                        />
-                      )}
-                    />
-                    <Label htmlFor="aceite-termos" className="text-sm font-medium leading-none cursor-pointer text-slate-200">
-                      Li e aceito os termos de responsabilidade <span className="text-red-400">*</span>
-                    </Label>
-                  </div>
+      {temIncidenciaTributaria === "Sim" && (
+        <>
+          <div className="col-span-2 space-y-2">
+            <Label>Tributos aplicáveis (pelo menos 1) <span className="text-red-500">*</span></Label>
+            <Controller name="incidenciasTributarias" control={control} rules={{ validate: (v) => (Array.isArray(v) && v.length > 0) || "Selecione ao menos um tributo" }} render={({ field }) => {
+              const selected = Array.isArray(field.value) ? field.value : [];
+              return <div className={cn("rounded-md border p-3 grid grid-cols-3 gap-2", errors.incidenciasTributarias && "border-red-500")}>{tributosAplicaveis.map((t) => <label key={t.id} className="flex items-center gap-2 text-sm cursor-pointer"><Checkbox checked={selected.includes(t.id)} onCheckedChange={(checked) => checked ? field.onChange([...selected, t.id]) : field.onChange(selected.filter((v: string) => v !== t.id))} /><span>{t.nome}</span></label>)}</div>;
+            }} />
+          </div>
 
-                  <div className="flex gap-4 pt-2">
-                    <Button
-                      type="submit"
-                      disabled={!watch("aceiteTermos")}
-                      className={cn(
-                        "flex-1 h-12 text-base font-bold transition-all",
-                        watch("aceiteTermos") ? "bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-900/40" : "bg-slate-700 text-slate-400 cursor-not-allowed"
-                      )}
-                    >
-                      Enviar Solicitação
-                      <ArrowRight className="ml-2 w-5 h-5" />
-                    </Button>
-                    <Link to="/" className="flex-1">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        className="w-full h-12 border-red-500/50 text-red-400 hover:bg-red-500/10 hover:text-red-300 transition-colors"
-                      >
-                        Cancelar
-                      </Button>
-                    </Link>
-                  </div>
-                </CardContent>
-              </Card>
-            </form>
+          <div className="col-span-2 space-y-2">
+            <Label>Outras incidências</Label>
+            <Controller name="outrasIncidencias" control={control} render={({ field }) => {
+              const selected = Array.isArray(field.value) ? field.value : [];
+              return <div className="rounded-md border p-3 grid grid-cols-3 gap-2">{outrasIncidencias.map((o) => <label key={o.id} className="flex items-center gap-2 text-sm cursor-pointer"><Checkbox checked={selected.includes(o.id)} onCheckedChange={(checked) => checked ? field.onChange([...selected, o.id]) : field.onChange(selected.filter((v: string) => v !== o.id))} /><span>{o.nome}</span></label>)}</div>;
+            }} />
+          </div>
+        </>
+      )}
+    </CardContent>
+  </Card>
+
+  <Card className="border-none shadow-md overflow-hidden">
+    <div className="h-1 bg-indigo-600 w-full" />
+    <CardHeader><CardTitle className="flex items-center gap-2"><FileText className="w-5 h-5 text-indigo-600" />Etapa 4: Amparo Legal e Formalização</CardTitle></CardHeader>
+    <CardContent className="space-y-4">
+      <div className="space-y-2">
+        <Label>Base Legal (obrigatório) <span className="text-red-500">*</span></Label>
+        <Controller name="baseLegalIds" control={control} rules={{ validate: (v) => (Array.isArray(v) && v.length > 0) || "Selecione ao menos um documento" }} render={({ field }) => {
+          const selected = Array.isArray(field.value) ? field.value : [];
+          return <div className={cn("rounded-md border p-3 space-y-2", errors.baseLegalIds && "border-red-500")}>{baseLegalDocumentos.map((doc) => <div key={doc.id} className="flex items-center justify-between gap-3"><label className="flex items-center gap-2 text-sm cursor-pointer"><Checkbox checked={selected.includes(doc.id)} onCheckedChange={(checked) => checked ? field.onChange([...selected, doc.id]) : field.onChange(selected.filter((v: string) => v !== doc.id))} /><span>{doc.titulo}</span></label><Button type="button" variant="link" className="h-auto p-0">Visualizar PDF</Button></div>)}</div>;
+        }} />
+        <p className="text-xs text-slate-500">Lista do módulo de Documentos Legais. Upload direto não é permitido.</p>
+        {baseLegalSelecionada.length === 0 && <Link to="/documentos-legais" className="text-sm text-blue-700 underline">Cadastrar novo documento</Link>}
+      </div>
+
+      <div className="space-y-2">
+        <Label>Justificativa da criação da rubrica</Label>
+        <Controller name="justificativaLegal" control={control} render={({ field }) => <Textarea {...field} className="border-2 min-h-24" placeholder="Descreva o motivo da criação da rubrica" />} />
+      </div>
+
+      <div className="rounded-lg border bg-slate-50 p-3 space-y-2">
+        <Label className="flex items-center gap-2 text-sm"><Controller name="aceiteTermos" control={control} rules={{ required: true }} render={({ field }) => <Checkbox checked={field.value} onCheckedChange={field.onChange} />} />Termo de compromisso <span className="text-red-500">*</span></Label>
+        <p className="text-xs text-slate-600">Declaro que as informações são verdadeiras e assumo responsabilidade pelo conteúdo enviado.</p>
+      </div>
+
+      <div className="flex gap-4 pt-2">
+        <Button type="submit" disabled={!podeEnviar} className={cn("flex-1 h-11", podeEnviar ? "bg-blue-600 hover:bg-blue-700" : "bg-slate-400 cursor-not-allowed")}>Enviar Solicitação<ArrowRight className="ml-2 w-4 h-4" /></Button>
+        <Link to="/" className="flex-1"><Button type="button" variant="outline" className="w-full h-11">Cancelar</Button></Link>
+      </div>
+    </CardContent>
+  </Card>
+</form>
+
           ) : (
             <div className="space-y-6">
               {/* Visualização de Análise (Etapas > 0) */}
@@ -1370,6 +1154,29 @@ export function NovaSolicitacaoPage() {
     </div>
   );
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
