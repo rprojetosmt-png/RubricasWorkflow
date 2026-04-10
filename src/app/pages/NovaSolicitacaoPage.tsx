@@ -14,6 +14,14 @@ import {
   Info,
   ChevronDown,
   Download,
+  Building2,
+  Tag,
+  Users,
+  Briefcase,
+  Scale,
+  Star,
+  Landmark,
+  CircleDollarSign,
 } from "lucide-react";
 import { Button } from "../components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
@@ -41,11 +49,13 @@ import {
   type HistoricoEtapa,
   type Solicitacao,
   type Usuario,
+  historicalDataMock,
 } from "../data/mockData";
 import { addSolicitacaoCompleta, getNextCodigo } from "../data/solicitacoesStore";
 import { cn } from "../components/ui/utils";
 import { toast } from "sonner";
 import { useForm, Controller } from "react-hook-form";
+import { HistoricalDataCard } from "../components/HistoricalDataCard";
 import {
   classificacoes,
   orgaos,
@@ -536,6 +546,71 @@ export function NovaSolicitacaoPage() {
       .slice(0, 2);
   };
 
+  const buildHistoricalDataConfig = () => {
+    const orgsStr = (watch("orgaosSolicitantes") || []).map((id: string) => orgaos.find(o => o.id === id)?.nome).filter(Boolean).join(", ") || "Não informado";
+    const inicioStr = watch("vigenciaInicio") ? new Date(watch("vigenciaInicio")).toLocaleDateString("pt-BR") : "Não informado";
+    const grupoStr = gruposTrabalhistasEsocial.find(g => g.id === watch("grupoTrabalhistaIds")?.[0])?.nome || "Não informado";
+    const catStr = categoriasFiltradas.find(c => c.codigo === watch("categoriaTrabalhistaCodigo"))?.descricao || "Não informado";
+    const baseLegalStr = (watch("baseLegalIds") || []).map((id: string) => baseLegalDocumentos.find(b => b.id === id)?.titulo).filter(Boolean).join(", ") || "Não informado";
+    const tipo = watch("classificacao") || "Vantagem";
+
+    return {
+      id: codigoPreview,
+      title: watch("nomeRubrica") || "Nova Rubrica",
+      subtitle: orgsStr,
+      status: tipo,
+      readOnly: true,
+      sections: [
+        {
+          title: "INFORMAÇÕES GERAIS",
+          fields: [
+            { label: "Órgão", value: orgsStr, icon: <Building2 strokeWidth={1.5} /> },
+            { label: "Servidor Responsável", value: watch("servidorResponsavel") || "Não informado", icon: <User strokeWidth={1.5} /> },
+            { label: "Tipo", value: tipo, icon: <Tag strokeWidth={1.5} />, type: "badge-info" as const },
+            { label: "Data de Início", value: inicioStr, icon: <Calendar strokeWidth={1.5} /> },
+            { label: "PAOE", value: watch("paoe") || "Não informado", icon: <FileText strokeWidth={1.5} /> },
+          ]
+        },
+        {
+          title: "GRUPOS E CARGOS",
+          fields: [
+            { label: "Grupo Trabalhista", value: grupoStr, icon: <Users strokeWidth={1.5} /> },
+            { label: "Categoria Trabalhista", value: catStr, icon: <Users strokeWidth={1.5} /> },
+            { label: "Outros Grupos", value: watch("existeOutrosGrupos") === "Sim" ? watch("outrosGruposDescricao") || "Sim" : "Não informado", icon: <Users strokeWidth={1.5} />, type: watch("existeOutrosGrupos") !== "Sim" ? ("disabled" as const) : undefined },
+            { label: "Cargos Vinculados", value: watch("cargosAplicaveis") || [], icon: <Briefcase strokeWidth={1.5} /> },
+            { label: "Base Legal", value: baseLegalStr, icon: <Scale strokeWidth={1.5} /> },
+          ]
+        },
+        {
+          title: "INCIDÊNCIAS",
+          fields: [
+            { label: "Gratificação Natalina", value: watch("incideNatalina") || "Não informado", icon: <Star strokeWidth={1.5} />, type: watch("incideNatalina") === "Sim" ? ("badge-success" as const) : undefined },
+            { label: "1/3 de Férias", value: watch("incideFerias") || "Não informado", icon: <Star strokeWidth={1.5} />, type: watch("incideFerias") === "Sim" ? ("badge-success" as const) : undefined },
+          ]
+        },
+        {
+          title: "NATUREZA DA VERBA",
+          fields: [
+            { label: "Natureza", value: watch("natureza") || "Não informado", icon: <Landmark strokeWidth={1.5} /> },
+            { label: "Caráter", value: watch("carater") || "Não informado", icon: <CheckCircle2 strokeWidth={1.5} /> },
+            { label: "Reter Teto", value: watch("reterTetoRemuneratorio") || "Não informado", icon: <CheckCircle2 strokeWidth={1.5} />, type: watch("reterTetoRemuneratorio") === "Sim" ? ("badge-warning" as const) : undefined },
+          ]
+        },
+        {
+          title: "INCIDÊNCIA TRIBUTÁRIA",
+          fields: [
+            { label: "Tem Incidência", value: watch("temIncidenciaTributaria") || "Não", icon: <CircleDollarSign strokeWidth={1.5} />, type: watch("temIncidenciaTributaria") === "Sim" ? ("badge-warning" as const) : undefined },
+            { label: "Tributos", value: (watch("incidenciasTributarias") || []).map((id: string) => tributosAplicaveis.find(t => t.id === id)?.nome).filter(Boolean), icon: <CircleDollarSign strokeWidth={1.5} />, type: (watch("incidenciasTributarias") || []).length > 0 ? ("badge-warning" as const) : undefined },
+          ]
+        }
+      ],
+      attachments: (watch("baseLegalIds") || []).map((id: string) => {
+        const doc = baseLegalDocumentos.find(b => b.id === id);
+        return { name: `${doc?.titulo || 'Documento'}.pdf`, size: "245 KB" };
+      })
+    };
+  };
+
   return (
     <div className="space-y-6 max-w-screen-2xl mx-auto">
       {/* Contexto + Fluxo */}
@@ -927,6 +1002,7 @@ export function NovaSolicitacaoPage() {
           ) : (
             <div className="space-y-6">
               {/* Visualização de Análise (Etapas > 0) */}
+              <HistoricalDataCard {...buildHistoricalDataConfig()} />
               <Card className="border-none shadow-md">
                 <CardHeader>
                   <CardTitle className="text-lg">Descrição</CardTitle>

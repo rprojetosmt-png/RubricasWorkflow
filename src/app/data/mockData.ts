@@ -340,3 +340,29 @@ export const solicitacoes: Solicitacao[] = [
   },
 ];
 
+export const historicalDataMock = {
+  "id": "8055",
+  "title": "Adicional de Complexidade",
+  "status": "Vantagem",
+  "readOnly": true,
+  "sections": [
+    {
+      "title": "INFORMAÇÕES GERAIS",
+      "fields": [
+        {"label": "Órgão", "value": "SEPLAG", "icon": "business"},
+        {"label": "Data de Início", "value": "31/03/2024", "icon": "event"}
+      ]
+    },
+    {
+      "title": "INCIDÊNCIAS",
+      "fields": [
+        {"label": "Gratificação Natalina", "value": "Sim", "type": "badge-success"},
+        {"label": "1/3 de Férias", "value": "Sim", "type": "badge-success"}
+      ]
+    }
+  ],
+  "attachments": [
+    {"name": "Decreto_8055_Adicional_Complexidade.pdf", "size": "245 KB"},
+    {"name": "Portaria_SEPLAG_2024_Regulamentacao.pdf", "size": "1,2 MB"}
+  ]
+};

@@ -756,5 +756,75 @@
         }
       }
     ]
+  },
+  {
+    "id": "sol-1775847988295",
+    "codigo": "RUB-2026-016",
+    "titulo": "Nova Rubrica teste de análise",
+    "tipo": "Nova Rubrica",
+    "solicitante": {
+      "id": "u99",
+      "nome": "Usuário Atual"
+    },
+    "dataSolicitacao": "2026-04-10",
+    "statusGeral": "em_andamento",
+    "etapaAtual": "etapa-2",
+    "descricao": "Solicitação de teste.",
+    "historico": [
+      {
+        "etapaId": "etapa-1",
+        "status": "aprovado",
+        "data": "2026-04-10T19:06:28.293Z",
+        "comentario": "Solicitação preenchida conforme regras da etapa 1.",
+        "usuario": {
+          "id": "u99",
+          "nome": "Usuário Atual"
+        }
+      },
+      {
+        "etapaId": "etapa-2",
+        "status": "em_analise",
+        "data": "2026-04-10T19:06:28.293Z",
+        "usuario": {
+          "id": "u99",
+          "nome": "Usuário Atual"
+        }
+      }
+    ]
+  },
+  {
+    "id": "sol-1775848372178",
+    "codigo": "RUB-2026-017",
+    "titulo": "TESTE",
+    "tipo": "Nova Rubrica",
+    "solicitante": {
+      "id": "u99",
+      "nome": "Usuário Atual"
+    },
+    "dataSolicitacao": "2026-04-10",
+    "statusGeral": "em_andamento",
+    "etapaAtual": "etapa-2",
+    "descricao": "Solicitação de teste.",
+    "historico": [
+      {
+        "etapaId": "etapa-1",
+        "status": "aprovado",
+        "data": "2026-04-10T19:12:52.178Z",
+        "comentario": "Solicitação preenchida conforme regras da etapa 1.",
+        "usuario": {
+          "id": "u99",
+          "nome": "Usuário Atual"
+        }
+      },
+      {
+        "etapaId": "etapa-2",
+        "status": "em_analise",
+        "data": "2026-04-10T19:12:52.178Z",
+        "usuario": {
+          "id": "u99",
+          "nome": "Usuário Atual"
+        }
+      }
+    ]
   }
 ]
