@@ -72,24 +72,24 @@ import { ptBR } from "date-fns/locale";
 interface SolicitacaoFormData {
   nomeRubrica: string;
   classificacao: string;
-  natureza: "Remuneratória" | "Indenizatória";
+  natureza?: "Remuneratória" | "Indenizatória";
   naturezaEsocial: string;
-  vigenciaInicio: Date | undefined;
-  vigenciaFim: Date | undefined;
+  vigenciaInicio?: Date;
+  vigenciaFim?: Date;
   paoe: string;
   orgaosSolicitantes: string[];
   setorIds: string[];
   grupoTrabalhistaIds: string[];
   categoriaTrabalhistaCodigo: string;
-  existeOutrosGrupos: "Sim" | "Não";
+  existeOutrosGrupos?: "Sim" | "Não";
   outrosGruposDescricao: string;
   cargosAplicaveis: string[];
   servidorResponsavel: string;
-  carater: "Contínuo" | "Temporário";
-  reterTetoRemuneratorio: "Sim" | "Não";
-  incideNatalina: "Sim" | "Não";
-  incideFerias: "Sim" | "Não";
-  temIncidenciaTributaria: "Sim" | "Não";
+  carater?: "Contínuo" | "Temporário";
+  reterTetoRemuneratorio?: "Sim" | "Não";
+  incideNatalina?: "Sim" | "Não";
+  incideFerias?: "Sim" | "Não";
+  temIncidenciaTributaria?: "Sim" | "Não";
   incidenciasTributarias: string[];
   outrasIncidencias: string[];
   baseLegalIds: string[];
@@ -153,7 +153,7 @@ export function NovaSolicitacaoPage() {
   const baseLegalSelecionada = watch("baseLegalIds");
 
   const setoresFiltrados = useMemo(() => {
-    return todosSetores.filter((s) => selectedOrgaos.includes(s.orgaoId));
+    return todosSetores.filter((s) => (selectedOrgaos || []).includes(s.orgaoId));
   }, [selectedOrgaos]);
 
   const categoriasFiltradas = useMemo(() => {
@@ -169,9 +169,10 @@ export function NovaSolicitacaoPage() {
   }, [vigenciaInicio]);
 
   useEffect(() => {
-    const invalidSetores = selectedSetorIds.filter(id => !setoresFiltrados.some(s => s.id === id));
+    const validSetorIds = selectedSetorIds || [];
+    const invalidSetores = validSetorIds.filter(id => !setoresFiltrados.some(s => s.id === id));
     if (invalidSetores.length > 0) {
-      setValue("setorIds", selectedSetorIds.filter(id => !invalidSetores.includes(id)));
+      setValue("setorIds", validSetorIds.filter(id => !invalidSetores.includes(id)));
     }
   }, [selectedSetorIds, setoresFiltrados, setValue]);
 
