@@ -16,6 +16,7 @@ export interface Etapa {
   descricao: string;
   ordem: number;
   gruposResponsaveis: GrupoUsuarios[];
+  requiredSignerIds?: string[];
   cor: string;
 }
 

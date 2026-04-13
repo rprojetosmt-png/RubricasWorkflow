@@ -9,6 +9,7 @@ import {
   MoreVertical,
   ChevronDown,
   ChevronRight,
+  Check,
 } from "lucide-react";
 import { Button } from "../components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
@@ -34,15 +35,36 @@ import { cn } from "../components/ui/utils";
 import { toast } from "sonner";
 
 const ITEM_TYPE = "ETAPA";
+const ESTEIRA_STORAGE_KEY = "rubricas.esteira.config";
 
 interface DraggableEtapaProps {
   etapa: Etapa;
   index: number;
   moveEtapa: (dragIndex: number, hoverIndex: number) => void;
   onEdit: (etapa: Etapa) => void;
+  onToggleRequiredSigner: (etapaId: string, userId: string) => void;
 }
 
-function DraggableEtapa({ etapa, index, moveEtapa, onEdit }: DraggableEtapaProps) {
+const normalizeEtapa = (etapa: Etapa): Etapa => ({
+  ...etapa,
+  requiredSignerIds: Array.isArray(etapa.requiredSignerIds) ? etapa.requiredSignerIds : [],
+});
+
+const loadEtapasConfig = (): Etapa[] => {
+  try {
+    const raw = localStorage.getItem(ESTEIRA_STORAGE_KEY);
+    if (!raw) return esteiraDefault.map(normalizeEtapa);
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed) || parsed.length === 0) {
+      return esteiraDefault.map(normalizeEtapa);
+    }
+    return parsed.map((etapa) => normalizeEtapa(etapa as Etapa));
+  } catch {
+    return esteiraDefault.map(normalizeEtapa);
+  }
+};
+
+function DraggableEtapa({ etapa, index, moveEtapa, onEdit, onToggleRequiredSigner }: DraggableEtapaProps) {
   const [expanded, setExpanded] = useState(false);
 
   const [{ isDragging }, drag, dragPreview] = useDrag({
@@ -60,6 +82,10 @@ function DraggableEtapa({ etapa, index, moveEtapa, onEdit }: DraggableEtapaProps
       }
     },
   });
+
+  const membrosUnicos = etapa.gruposResponsaveis
+    .flatMap((grupo) => grupo.usuarios)
+    .filter((usuario, i, arr) => arr.findIndex((item) => item.id === usuario.id) === i);
 
   return (
     <div
@@ -122,19 +148,32 @@ function DraggableEtapa({ etapa, index, moveEtapa, onEdit }: DraggableEtapaProps
               </div>
 
               <div>
-                <p className="text-sm font-medium text-slate-700 mb-2">Membros dos Grupos</p>
+                <p className="text-sm font-medium text-slate-700 mb-2">Membros dos Grupos (clique para marcar assinatura obrigatória)</p>
                 <div className="flex flex-wrap gap-2">
-                  {etapa.gruposResponsaveis
-                    .flatMap((grupo) => grupo.usuarios)
-                    .filter(
-                      (usuario, i, arr) => arr.findIndex((item) => item.id === usuario.id) === i
-                    )
-                    .map((usuario) => (
-                      <Badge key={usuario.id} variant="secondary">
+                  {membrosUnicos.map((usuario) => {
+                    const isRequired = (etapa.requiredSignerIds ?? []).includes(usuario.id);
+
+                    return (
+                      <button
+                        key={usuario.id}
+                        type="button"
+                        onClick={() => onToggleRequiredSigner(etapa.id, usuario.id)}
+                        className={cn(
+                          "inline-flex items-center gap-1 rounded-full border px-3 py-1 text-sm transition-colors",
+                          isRequired
+                            ? "border-green-300 bg-green-50 text-green-800"
+                            : "border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100"
+                        )}
+                      >
+                        {isRequired && <Check className="w-3.5 h-3.5" />}
                         {usuario.nome}
-                      </Badge>
-                    ))}
+                      </button>
+                    );
+                  })}
                 </div>
+                <p className="text-xs text-slate-500 mt-2">
+                  Obrigatórios nesta etapa: {(etapa.requiredSignerIds ?? []).length}
+                </p>
               </div>
             </div>
           </>
@@ -145,7 +184,7 @@ function DraggableEtapa({ etapa, index, moveEtapa, onEdit }: DraggableEtapaProps
 }
 
 export function ConfiguracaoEsteiraPage() {
-  const [etapas, setEtapas] = useState<Etapa[]>(esteiraDefault);
+  const [etapas, setEtapas] = useState<Etapa[]>(() => loadEtapasConfig());
   const [grupos, setGrupos] = useState<GrupoUsuarios[]>(gruposUsuarios);
 
   const [editingEtapa, setEditingEtapa] = useState<Etapa | null>(null);
@@ -190,6 +229,22 @@ export function ConfiguracaoEsteiraPage() {
     setIsDialogOpen(true);
   };
 
+  const handleToggleRequiredSigner = (etapaId: string, userId: string) => {
+    setEtapas((prev) =>
+      prev.map((etapa) => {
+        if (etapa.id !== etapaId) return etapa;
+
+        const current = etapa.requiredSignerIds ?? [];
+        const exists = current.includes(userId);
+
+        return {
+          ...etapa,
+          requiredSignerIds: exists ? current.filter((id) => id !== userId) : [...current, userId],
+        };
+      })
+    );
+  };
+
   const handleSaveEtapa = () => {
     if (!editingEtapa) return;
 
@@ -204,6 +259,10 @@ export function ConfiguracaoEsteiraPage() {
       return;
     }
 
+    const allowedMemberIds = gruposSelecionados
+      .flatMap((grupo) => grupo.usuarios)
+      .map((usuario) => usuario.id);
+
     const updatedEtapas = etapas.map((e) =>
       e.id === editingEtapa.id
         ? {
@@ -211,6 +270,7 @@ export function ConfiguracaoEsteiraPage() {
             nome: formNome,
             descricao: formDescricao,
             gruposResponsaveis: gruposSelecionados,
+            requiredSignerIds: (e.requiredSignerIds ?? []).filter((id) => allowedMemberIds.includes(id)),
             cor: formCor,
           }
         : e
@@ -222,6 +282,7 @@ export function ConfiguracaoEsteiraPage() {
   };
 
   const handleSaveConfig = () => {
+    localStorage.setItem(ESTEIRA_STORAGE_KEY, JSON.stringify(etapas));
     toast.success("Configuração salva com sucesso!", {
       description: "A esteira foi atualizada e está pronta para uso.",
     });
@@ -352,6 +413,7 @@ export function ConfiguracaoEsteiraPage() {
                   index={index}
                   moveEtapa={moveEtapa}
                   onEdit={handleEdit}
+                  onToggleRequiredSigner={handleToggleRequiredSigner}
                 />
               ))}
             </CardContent>
