@@ -38,6 +38,7 @@ export interface Solicitacao {
   statusGeral: "em_andamento" | "aprovado" | "rejeitado";
   etapaAtual: string;
   historico: HistoricoEtapa[];
+  assinaturasEtapa?: Record<string, string[]>;
   descricao: string;
   documentos?: string[];
 }
@@ -116,33 +117,25 @@ export const esteiraDefault: Etapa[] = [
   },
   {
     id: "etapa-3",
-    nome: "Parecer Jurídico",
-    descricao: "Análise e parecer legal sobre a rubrica",
-    ordem: 3,
-    gruposResponsaveis: [gruposUsuarios[1]],
-    cor: "#ec4899",
-  },
-  {
-    id: "etapa-4",
     nome: "Criação",
     descricao: "Criação da rubrica no sistema",
-    ordem: 4,
+    ordem: 3,
     gruposResponsaveis: [gruposUsuarios[3]],
     cor: "#f59e0b",
   },
   {
-    id: "etapa-5",
+    id: "etapa-4",
     nome: "Testes",
     descricao: "Validação e testes de funcionamento",
-    ordem: 5,
+    ordem: 4,
     gruposResponsaveis: [gruposUsuarios[4]],
     cor: "#6366f1",
   },
   {
-    id: "etapa-6",
+    id: "etapa-5",
     nome: "Aprovação Final",
     descricao: "Aprovação final da diretoria",
-    ordem: 6,
+    ordem: 5,
     gruposResponsaveis: [gruposUsuarios[5]],
     cor: "#059669",
   },
@@ -281,7 +274,7 @@ export const solicitacoes: Solicitacao[] = [
     solicitante: { id: "u1", nome: "Maria Silva" },
     dataSolicitacao: "2026-03-15",
     statusGeral: "aprovado",
-    etapaAtual: "etapa-6",
+    etapaAtual: "etapa-5",
     descricao:
       "Atualização do cálculo de hora extra 50% para adequação à nova convenção coletiva.",
     documentos: ["Convencao_Coletiva_2026.pdf"],
@@ -312,7 +305,7 @@ export const solicitacoes: Solicitacao[] = [
         data: "2026-03-22",
       },
       {
-        etapaId: "etapa-6",
+        etapaId: "etapa-5",
         status: "aprovado",
         usuario: { id: "u13", nome: "Eduardo Mendes" },
         data: "2026-03-23",
@@ -367,3 +360,5 @@ export const historicalDataMock = {
     {"name": "Portaria_SEPLAG_2024_Regulamentacao.pdf", "size": "1,2 MB"}
   ]
 };
+
+

@@ -10,6 +10,7 @@ import {
   Calendar,
   MessageSquare,
   Download,
+  AlertTriangle,
 } from "lucide-react";
 import { Button } from "../components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
@@ -24,23 +25,37 @@ import {
   DialogTitle,
 } from "../components/ui/dialog";
 import { Label } from "../components/ui/label";
-import { esteiraDefault, type HistoricoEtapa } from "../data/mockData";
+import { type HistoricoEtapa } from "../data/mockData";
 import {
   getSolicitacaoById,
   subscribeSolicitacoes,
   updateSolicitacao,
 } from "../data/solicitacoesStore";
+import { getEsteiraConfig, subscribeEsteiraConfig } from "../data/esteiraStore";
+import {
+  getSessionContext,
+  subscribeSessionContext,
+} from "../data/sessionStore";
 import { cn } from "../components/ui/utils";
 import { toast } from "sonner";
 
 export function SolicitacaoDetailPage() {
   const navigate = useNavigate();
   const { id } = useParams();
+
   const solicitacao = useSyncExternalStore(
     subscribeSolicitacoes,
     () => (id ? getSolicitacaoById(id) : null),
     () => (id ? getSolicitacaoById(id) : null)
   );
+
+  const etapas = useSyncExternalStore(subscribeEsteiraConfig, getEsteiraConfig, getEsteiraConfig);
+  const session = useSyncExternalStore(
+    subscribeSessionContext,
+    getSessionContext,
+    getSessionContext
+  );
+
   const [comentario, setComentario] = useState("");
   const [isRejectDialogOpen, setIsRejectDialogOpen] = useState(false);
   const [motivoRejeicao, setMotivoRejeicao] = useState("");
@@ -49,9 +64,7 @@ export function SolicitacaoDetailPage() {
     return (
       <div className="text-center py-12">
         <h2 className="text-slate-900 mb-2">Solicitação não encontrada</h2>
-        <p className="text-slate-600 mb-4">
-          A solicitação que você está procurando não existe.
-        </p>
+        <p className="text-slate-600 mb-4">A solicitação que você está procurando não existe.</p>
         <Link to="/">
           <Button variant="outline">
             <ArrowLeft className="w-4 h-4 mr-2" />
@@ -61,6 +74,37 @@ export function SolicitacaoDetailPage() {
       </div>
     );
   }
+
+  const etapaAtual = etapas.find((e) => e.id === solicitacao.etapaAtual);
+  const etapaAtualIndex = etapas.findIndex((e) => e.id === solicitacao.etapaAtual);
+
+  if (!etapaAtual) {
+    return (
+      <div className="text-center py-12">
+        <h2 className="text-slate-900 mb-2">Etapa atual inválida</h2>
+        <p className="text-slate-600 mb-4">A configuração da esteira foi alterada e esta solicitação ficou inconsistente.</p>
+        <Link to="/">
+          <Button variant="outline">Voltar</Button>
+        </Link>
+      </div>
+    );
+  }
+
+  const grupoPermitido = etapaAtual.gruposResponsaveis.some(
+    (grupo) => grupo.id === session.activeGroupId
+  );
+
+  const membrosEtapa = etapaAtual.gruposResponsaveis
+    .flatMap((grupo) => grupo.usuarios)
+    .filter((usuario, i, arr) => arr.findIndex((u) => u.id === usuario.id) === i);
+
+  const requiredSignerIds = (etapaAtual.requiredSignerIds ?? []).filter((id) =>
+    membrosEtapa.some((u) => u.id === id)
+  );
+  const assinaturaAtual = solicitacao.assinaturasEtapa?.[etapaAtual.id] ?? [];
+  const assinaturasUnicas = Array.from(new Set(assinaturaAtual));
+  const missingSignerIds = requiredSignerIds.filter((id) => !assinaturasUnicas.includes(id));
+  const usuarioAtualEhObrigatorio = requiredSignerIds.includes(session.activeUserId);
 
   const getEtapaStatus = (etapaId: string) => {
     const historico = solicitacao.historico.find((h) => h.etapaId === etapaId);
@@ -76,14 +120,7 @@ export function SolicitacaoDetailPage() {
       case "em_analise":
         return <Clock className={cn(size, "text-blue-600")} />;
       case "pendente":
-        return (
-          <div
-            className={cn(
-              size.replace("w-", "w-").replace("h-", "h-"),
-              "rounded-full border-2 border-slate-300"
-            )}
-          />
-        );
+        return <div className={cn(size, "rounded-full border-2 border-slate-300")} />;
       default:
         return null;
     }
@@ -97,11 +134,7 @@ export function SolicitacaoDetailPage() {
     const index = lista.findIndex((h) => h.etapaId === etapaId);
     if (index >= 0) {
       const atualizado = { ...lista[index], ...patch } as HistoricoEtapa;
-      return [
-        ...lista.slice(0, index),
-        atualizado,
-        ...lista.slice(index + 1),
-      ];
+      return [...lista.slice(0, index), atualizado, ...lista.slice(index + 1)];
     }
 
     return [
@@ -115,33 +148,63 @@ export function SolicitacaoDetailPage() {
   };
 
   const handleAprovar = async () => {
+    if (!grupoPermitido) {
+      toast.error("Você não tem permissão para agir nesta etapa com o grupo selecionado.");
+      return;
+    }
+
+    if (requiredSignerIds.length > 0 && !usuarioAtualEhObrigatorio) {
+      toast.error("Este usuário não está marcado como assinante obrigatório nesta etapa.");
+      return;
+    }
+
     const dataAgora = new Date().toISOString();
 
     try {
       await updateSolicitacao(solicitacao.id, (prev) => {
-        const etapaIndex = esteiraDefault.findIndex(
-          (e) => e.id === prev.etapaAtual
-        );
+        const etapaIndex = etapas.findIndex((e) => e.id === prev.etapaAtual);
         const etapaAtualId = prev.etapaAtual;
-        const proximaEtapa = esteiraDefault[etapaIndex + 1] ?? null;
+        const proximaEtapa = etapas[etapaIndex + 1] ?? null;
+
+        const assinaturasEtapa = { ...(prev.assinaturasEtapa ?? {}) };
+        const assinaturasExistentes = Array.from(new Set(assinaturasEtapa[etapaAtualId] ?? []));
+        const requiredIdsEtapa = (etapaAtual.requiredSignerIds ?? []).filter((id) =>
+          membrosEtapa.some((u) => u.id === id)
+        );
+
+        if (requiredIdsEtapa.length > 0 && !assinaturasExistentes.includes(session.activeUserId)) {
+          assinaturasExistentes.push(session.activeUserId);
+        }
+        assinaturasEtapa[etapaAtualId] = assinaturasExistentes;
+
+        const faltantes = requiredIdsEtapa.filter((id) => !assinaturasExistentes.includes(id));
+        const liberarAvanco = requiredIdsEtapa.length === 0 || faltantes.length === 0;
 
         let historico = upsertHistorico(prev.historico, etapaAtualId, {
-          status: "aprovado",
+          status: liberarAvanco ? "aprovado" : "em_analise",
           data: dataAgora,
-          comentario: comentario.trim() || undefined,
+          comentario: liberarAvanco
+            ? comentario.trim() || undefined
+            : `Assinatura registrada (${assinaturasExistentes.length}/${requiredIdsEtapa.length})`,
+          usuario: {
+            id: session.activeUserId,
+            nome: session.activeUserName,
+          },
         });
 
         let novoStatusGeral = prev.statusGeral;
         let novaEtapaAtual = prev.etapaAtual;
 
-        if (proximaEtapa) {
-          novaEtapaAtual = proximaEtapa.id;
-          historico = upsertHistorico(historico, proximaEtapa.id, {
-            status: "em_analise",
-            data: dataAgora,
-          });
-        } else {
-          novoStatusGeral = "aprovado";
+        if (liberarAvanco) {
+          if (proximaEtapa) {
+            novaEtapaAtual = proximaEtapa.id;
+            historico = upsertHistorico(historico, proximaEtapa.id, {
+              status: "em_analise",
+              data: dataAgora,
+            });
+          } else {
+            novoStatusGeral = "aprovado";
+          }
         }
 
         return {
@@ -149,21 +212,32 @@ export function SolicitacaoDetailPage() {
           etapaAtual: novaEtapaAtual,
           statusGeral: novoStatusGeral,
           historico,
+          assinaturasEtapa,
         };
       });
 
+      if (requiredSignerIds.length > 0 && missingSignerIds.length > 1) {
+        toast.info("Assinatura registrada", {
+          description: `Faltam ${missingSignerIds.length - 1} assinatura(s) obrigatória(s).`,
+        });
+      } else {
+        const botaoLabel = etapaAtualIndex === etapas.length - 1 ? "Aprovar" : "Aprovar Etapa";
+        toast.success(`${botaoLabel} concluído com sucesso!`);
+      }
+
       setComentario("");
-      toast.success("Etapa aprovada com sucesso!", {
-        description: "A solicitação foi movida para a próxima etapa.",
-      });
       navigate("/");
     } catch (err) {
       console.error(err);
-      toast.error("Não foi possível aprovar a etapa");
+      toast.error("Não foi possível concluir a ação");
     }
   };
 
   const handleRejeitar = () => {
+    if (!grupoPermitido) {
+      toast.error("Você não tem permissão para rejeitar esta etapa com o grupo selecionado.");
+      return;
+    }
     setIsRejectDialogOpen(true);
   };
 
@@ -177,16 +251,18 @@ export function SolicitacaoDetailPage() {
 
     try {
       await updateSolicitacao(solicitacao.id, (prev) => {
-        const etapaIndex = esteiraDefault.findIndex(
-          (e) => e.id === prev.etapaAtual
-        );
+        const etapaIndex = etapas.findIndex((e) => e.id === prev.etapaAtual);
         const etapaAtualId = prev.etapaAtual;
-        const etapaAnterior = etapaIndex > 0 ? esteiraDefault[etapaIndex - 1] : null;
+        const etapaAnterior = etapaIndex > 0 ? etapas[etapaIndex - 1] : null;
 
         let historico = upsertHistorico(prev.historico, etapaAtualId, {
           status: "rejeitado",
           data: dataAgora,
           comentario: motivoRejeicao.trim(),
+          usuario: {
+            id: session.activeUserId,
+            nome: session.activeUserName,
+          },
         });
 
         let novaEtapaAtual = etapaAtualId;
@@ -228,14 +304,16 @@ export function SolicitacaoDetailPage() {
       .slice(0, 2);
   };
 
-  const etapaAtual = esteiraDefault.find((e) => e.id === solicitacao.etapaAtual);
-  const etapaAtualIndex = esteiraDefault.findIndex(
-    (e) => e.id === solicitacao.etapaAtual
-  );
+  const assinaturaObrigatoriaNomes = requiredSignerIds
+    .map((id) => membrosEtapa.find((u) => u.id === id)?.nome)
+    .filter(Boolean) as string[];
+
+  const assinouNomes = assinaturasUnicas
+    .map((id) => membrosEtapa.find((u) => u.id === id)?.nome)
+    .filter(Boolean) as string[];
 
   return (
     <div className="space-y-6 max-w-screen-2xl mx-auto">
-      {/* Contexto + Fluxo */}
       <Card className="border border-slate-200 shadow-sm">
         <CardHeader className="py-3 pb-2 space-y-3">
           <div className="flex items-start justify-between gap-4">
@@ -273,8 +351,8 @@ export function SolicitacaoDetailPage() {
         <CardContent className="pt-0 pb-3 space-y-3">
           <div className="relative overflow-x-auto pb-1">
             <div className="absolute top-4 left-3 right-3 h-px bg-slate-300" />
-            <div className="relative flex min-w-[940px] items-start justify-between gap-4 px-1">
-              {esteiraDefault.map((etapa, index) => {
+            <div className="relative flex min-w-[820px] items-start justify-between gap-4 px-1">
+              {etapas.map((etapa, index) => {
                 const status = getEtapaStatus(etapa.id);
                 const isAtual = etapa.id === solicitacao.etapaAtual;
                 const isCompleto = status === "aprovado";
@@ -293,15 +371,7 @@ export function SolicitacaoDetailPage() {
                     >
                       {isCompleto ? <CheckCircle2 className="w-4 h-4" /> : index + 1}
                     </div>
-                    <p
-                      className={cn(
-                        "mt-1 text-sm font-semibold leading-tight",
-                        isAtual && "text-blue-800",
-                        isCompleto && "text-slate-800",
-                        isRejeitado && "text-red-700",
-                        !isCompleto && !isRejeitado && !isAtual && "text-slate-600"
-                      )}
-                    >
+                    <p className={cn("mt-1 text-sm font-semibold leading-tight", isAtual && "text-blue-800")}>
                       {etapa.nome}
                     </p>
                     <p className="text-[11px] text-slate-500 truncate">{etapa.descricao}</p>
@@ -311,25 +381,35 @@ export function SolicitacaoDetailPage() {
             </div>
           </div>
 
-          {etapaAtual && (
-            <div className="px-3 py-2 bg-slate-50 rounded-md border border-slate-200 flex flex-wrap items-center gap-2 text-sm">
-              <Badge className="bg-blue-700 text-white hover:bg-blue-700">
-                {etapaAtualIndex + 1} de {esteiraDefault.length}
-              </Badge>
-              <span className="font-medium text-slate-800">Etapa Atual: {etapaAtual.nome}</span>
-              <span className="text-slate-600">{etapaAtual.descricao}</span>
-              <span className="text-slate-700 flex items-center gap-1">
-                <User className="w-4 h-4" />
-                {etapaAtual.gruposResponsaveis.map((g) => g.nome).join(", ")}
-              </span>
-            </div>
-          )}
+          <div className="px-3 py-2 bg-slate-50 rounded-md border border-slate-200 flex flex-wrap items-center gap-2 text-sm">
+            <Badge className="bg-blue-700 text-white hover:bg-blue-700">
+              {etapaAtualIndex + 1} de {etapas.length}
+            </Badge>
+            <span className="font-medium text-slate-800">Etapa Atual: {etapaAtual.nome}</span>
+            <span className="text-slate-700 flex items-center gap-1">
+              <User className="w-4 h-4" />
+              {etapaAtual.gruposResponsaveis.map((g) => g.nome).join(", ")}
+            </span>
+          </div>
         </CardContent>
       </Card>
+
+      {!grupoPermitido && solicitacao.statusGeral === "em_andamento" && (
+        <Card className="border-amber-300 bg-amber-50">
+          <CardContent className="pt-4 flex items-start gap-3 text-amber-900">
+            <AlertTriangle className="w-5 h-5 mt-0.5" />
+            <div>
+              <p className="font-medium">Usuário sem permissão para esta etapa</p>
+              <p className="text-sm">
+                Selecione no topo um usuário do grupo responsável por esta etapa para aprovar ou rejeitar.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       <div className="grid grid-cols-3 gap-6">
-        {/* Coluna Principal */}
         <div className="col-span-2 space-y-6">
-          {/* Descrição */}
           <Card>
             <CardHeader>
               <CardTitle>Descrição</CardTitle>
@@ -339,7 +419,6 @@ export function SolicitacaoDetailPage() {
             </CardContent>
           </Card>
 
-          {/* Documentos */}
           {solicitacao.documentos && solicitacao.documentos.length > 0 && (
             <Card>
               <CardHeader>
@@ -350,15 +429,13 @@ export function SolicitacaoDetailPage() {
                   {solicitacao.documentos.map((doc, index) => (
                     <div
                       key={index}
-                      className="flex items-center justify-between p-3 bg-slate-50 rounded-lg border border-slate-200 hover:bg-slate-100 transition-colors"
+                      className="flex items-center justify-between p-3 bg-slate-50 rounded-lg border border-slate-200"
                     >
                       <div className="flex items-center gap-3">
                         <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
                           <FileText className="w-5 h-5 text-blue-600" />
                         </div>
-                        <span className="text-sm font-medium text-slate-700">
-                          {doc}
-                        </span>
+                        <span className="text-sm font-medium text-slate-700">{doc}</span>
                       </div>
                       <Button variant="ghost" size="sm">
                         <Download className="w-4 h-4" />
@@ -370,34 +447,57 @@ export function SolicitacaoDetailPage() {
             </Card>
           )}
 
-          {/* Ações */}
           {solicitacao.statusGeral === "em_andamento" && (
             <Card>
               <CardHeader>
                 <CardTitle>Ações</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
+                {requiredSignerIds.length > 0 && (
+                  <div className="p-3 rounded-lg border bg-slate-50 space-y-2">
+                    <p className="text-sm font-medium text-slate-800">Assinaturas obrigatórias</p>
+                    <p className="text-xs text-slate-600">
+                      {assinouNomes.length}/{requiredSignerIds.length} assinaturas coletadas
+                    </p>
+                    <p className="text-xs text-slate-600">
+                      Obrigatórios: {assinaturaObrigatoriaNomes.join(", ")}
+                    </p>
+                    <p className="text-xs text-slate-600">
+                      Já assinaram: {assinouNomes.length > 0 ? assinouNomes.join(", ") : "ninguém"}
+                    </p>
+                  </div>
+                )}
+
                 <div>
-                  <label className="text-sm font-medium text-slate-700 mb-2 block">
-                    Comentário (opcional)
-                  </label>
+                  <label className="text-sm font-medium text-slate-700 mb-2 block">Comentário (opcional)</label>
                   <Textarea
                     placeholder="Adicione observações sobre esta etapa..."
                     value={comentario}
                     onChange={(e) => setComentario(e.target.value)}
                     rows={4}
+                    disabled={!grupoPermitido}
                   />
                 </div>
                 <div className="flex gap-3">
                   <Button
                     onClick={handleAprovar}
+                    disabled={!grupoPermitido}
                     className="flex-1 bg-green-600 hover:bg-green-700"
                   >
                     <CheckCircle2 className="w-4 h-4 mr-2" />
-                    Aprovar Etapa
+                    {requiredSignerIds.length > 0
+                      ? missingSignerIds.length > 0
+                        ? "Assinar Etapa"
+                        : etapaAtualIndex === etapas.length - 1
+                        ? "Aprovar"
+                        : "Aprovar Etapa"
+                      : etapaAtualIndex === etapas.length - 1
+                      ? "Aprovar"
+                      : "Aprovar Etapa"}
                   </Button>
                   <Button
                     onClick={handleRejeitar}
+                    disabled={!grupoPermitido}
                     variant="outline"
                     className="flex-1 border-red-300 text-red-700 hover:bg-red-50"
                   >
@@ -410,7 +510,6 @@ export function SolicitacaoDetailPage() {
           )}
         </div>
 
-        {/* Sidebar - Histórico */}
         <div className="space-y-6">
           <Card>
             <CardHeader>
@@ -425,35 +524,23 @@ export function SolicitacaoDetailPage() {
                     return new Date(b.data).getTime() - new Date(a.data).getTime();
                   })
                   .map((hist, index) => {
-                    const etapa = esteiraDefault.find((e) => e.id === hist.etapaId);
+                    const etapa = etapas.find((e) => e.id === hist.etapaId);
                     if (!etapa) return null;
 
                     return (
-                      <div key={index} className="relative">
-                        {index !== solicitacao.historico.length - 1 && (
-                          <div className="absolute left-5 top-10 bottom-0 w-0.5 bg-slate-200" />
-                        )}
+                      <div key={`${hist.etapaId}-${index}`} className="relative">
                         <div className="flex gap-3">
                           <Avatar className="w-10 h-10 border-2 border-white shadow-sm">
-                            <AvatarFallback
-                              className="text-xs"
-                              style={{ backgroundColor: etapa.cor + "20" }}
-                            >
+                            <AvatarFallback className="text-xs" style={{ backgroundColor: etapa.cor + "20" }}>
                               {hist.usuario ? getInitials(hist.usuario.nome) : "SYS"}
                             </AvatarFallback>
                           </Avatar>
                           <div className="flex-1 pb-4">
                             <div className="flex items-start justify-between mb-1">
-                              <p className="text-sm font-medium text-slate-900">
-                                {etapa.nome}
-                              </p>
+                              <p className="text-sm font-medium text-slate-900">{etapa.nome}</p>
                               {getStatusIcon(hist.status, "w-4 h-4")}
                             </div>
-                            {hist.usuario && (
-                              <p className="text-xs text-slate-600 mb-1">
-                                {hist.usuario.nome}
-                              </p>
-                            )}
+                            {hist.usuario && <p className="text-xs text-slate-600 mb-1">{hist.usuario.nome}</p>}
                             {hist.data && (
                               <p className="text-xs text-slate-500">
                                 {new Date(hist.data).toLocaleDateString("pt-BR", {
@@ -496,18 +583,13 @@ export function SolicitacaoDetailPage() {
               onChange={(e) => setMotivoRejeicao(e.target.value)}
               rows={4}
             />
-            <p className="text-xs text-slate-500">
-              Esse motivo será informado ao solicitante.
-            </p>
+            <p className="text-xs text-slate-500">Esse motivo será informado ao solicitante.</p>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsRejectDialogOpen(false)}>
               Cancelar
             </Button>
-            <Button
-              className="bg-red-600 hover:bg-red-700"
-              onClick={handleConfirmarRejeicao}
-            >
+            <Button className="bg-red-600 hover:bg-red-700" onClick={handleConfirmarRejeicao}>
               Confirmar rejeição
             </Button>
           </DialogFooter>
@@ -516,16 +598,3 @@ export function SolicitacaoDetailPage() {
     </div>
   );
 }
-
-
-
-
-
-
-
-
-
-
-
-
-

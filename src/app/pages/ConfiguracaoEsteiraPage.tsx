@@ -25,17 +25,21 @@ import {
 } from "../components/ui/dialog";
 import { Badge } from "../components/ui/badge";
 import { Separator } from "../components/ui/separator";
-import {
-  esteiraDefault,
-  gruposUsuarios,
-  type Etapa,
-  type GrupoUsuarios,
-} from "../data/mockData";
+import { gruposUsuarios, type Etapa, type GrupoUsuarios } from "../data/mockData";
+import { getEsteiraConfig, saveEsteiraConfig } from "../data/esteiraStore";
 import { cn } from "../components/ui/utils";
 import { toast } from "sonner";
 
 const ITEM_TYPE = "ETAPA";
-const ESTEIRA_STORAGE_KEY = "rubricas.esteira.config";
+
+const collectGroupsFromEtapas = (etapas: Etapa[]): GrupoUsuarios[] => {
+  const map = new Map<string, GrupoUsuarios>();
+  gruposUsuarios.forEach((grupo) => map.set(grupo.id, grupo));
+  etapas.forEach((etapa) => {
+    etapa.gruposResponsaveis.forEach((grupo) => map.set(grupo.id, grupo));
+  });
+  return Array.from(map.values());
+};
 
 interface DraggableEtapaProps {
   etapa: Etapa;
@@ -44,25 +48,6 @@ interface DraggableEtapaProps {
   onEdit: (etapa: Etapa) => void;
   onToggleRequiredSigner: (etapaId: string, userId: string) => void;
 }
-
-const normalizeEtapa = (etapa: Etapa): Etapa => ({
-  ...etapa,
-  requiredSignerIds: Array.isArray(etapa.requiredSignerIds) ? etapa.requiredSignerIds : [],
-});
-
-const loadEtapasConfig = (): Etapa[] => {
-  try {
-    const raw = localStorage.getItem(ESTEIRA_STORAGE_KEY);
-    if (!raw) return esteiraDefault.map(normalizeEtapa);
-    const parsed = JSON.parse(raw);
-    if (!Array.isArray(parsed) || parsed.length === 0) {
-      return esteiraDefault.map(normalizeEtapa);
-    }
-    return parsed.map((etapa) => normalizeEtapa(etapa as Etapa));
-  } catch {
-    return esteiraDefault.map(normalizeEtapa);
-  }
-};
 
 function DraggableEtapa({ etapa, index, moveEtapa, onEdit, onToggleRequiredSigner }: DraggableEtapaProps) {
   const [expanded, setExpanded] = useState(false);
@@ -115,11 +100,7 @@ function DraggableEtapa({ etapa, index, moveEtapa, onEdit, onToggleRequiredSigne
 
           <div className="flex items-center gap-2">
             <Button variant="ghost" size="icon" onClick={() => setExpanded(!expanded)}>
-              {expanded ? (
-                <ChevronDown className="w-4 h-4" />
-              ) : (
-                <ChevronRight className="w-4 h-4" />
-              )}
+              {expanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
             </Button>
             <Button variant="ghost" size="icon" onClick={() => onEdit(etapa)}>
               <Edit className="w-4 h-4" />
@@ -135,24 +116,21 @@ function DraggableEtapa({ etapa, index, moveEtapa, onEdit, onToggleRequiredSigne
                 <p className="text-sm font-medium text-slate-700 mb-2">Grupos Responsáveis</p>
                 <div className="flex flex-wrap items-center gap-2 p-3 bg-slate-50 rounded-lg border border-slate-200">
                   <Users className="w-4 h-4 text-slate-600" />
-                  {etapa.gruposResponsaveis.length === 0 ? (
-                    <span className="text-sm text-slate-600">Nenhum grupo definido</span>
-                  ) : (
-                    etapa.gruposResponsaveis.map((grupo) => (
-                      <Badge key={grupo.id} variant="secondary">
-                        {grupo.nome}
-                      </Badge>
-                    ))
-                  )}
+                  {etapa.gruposResponsaveis.map((grupo) => (
+                    <Badge key={grupo.id} variant="secondary">
+                      {grupo.nome}
+                    </Badge>
+                  ))}
                 </div>
               </div>
 
               <div>
-                <p className="text-sm font-medium text-slate-700 mb-2">Membros dos Grupos (clique para marcar assinatura obrigatória)</p>
+                <p className="text-sm font-medium text-slate-700 mb-2">
+                  Membros dos Grupos (clique para marcar assinatura obrigatória)
+                </p>
                 <div className="flex flex-wrap gap-2">
                   {membrosUnicos.map((usuario) => {
                     const isRequired = (etapa.requiredSignerIds ?? []).includes(usuario.id);
-
                     return (
                       <button
                         key={usuario.id}
@@ -184,8 +162,9 @@ function DraggableEtapa({ etapa, index, moveEtapa, onEdit, onToggleRequiredSigne
 }
 
 export function ConfiguracaoEsteiraPage() {
-  const [etapas, setEtapas] = useState<Etapa[]>(() => loadEtapasConfig());
-  const [grupos, setGrupos] = useState<GrupoUsuarios[]>(gruposUsuarios);
+  const initialEtapas = getEsteiraConfig();
+  const [etapas, setEtapas] = useState<Etapa[]>(initialEtapas);
+  const [grupos, setGrupos] = useState<GrupoUsuarios[]>(() => collectGroupsFromEtapas(initialEtapas));
 
   const [editingEtapa, setEditingEtapa] = useState<Etapa | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -233,7 +212,6 @@ export function ConfiguracaoEsteiraPage() {
     setEtapas((prev) =>
       prev.map((etapa) => {
         if (etapa.id !== etapaId) return etapa;
-
         const current = etapa.requiredSignerIds ?? [];
         const exists = current.includes(userId);
 
@@ -259,9 +237,9 @@ export function ConfiguracaoEsteiraPage() {
       return;
     }
 
-    const allowedMemberIds = gruposSelecionados
-      .flatMap((grupo) => grupo.usuarios)
-      .map((usuario) => usuario.id);
+    const allowedMemberIds = new Set(
+      gruposSelecionados.flatMap((grupo) => grupo.usuarios).map((usuario) => usuario.id)
+    );
 
     const updatedEtapas = etapas.map((e) =>
       e.id === editingEtapa.id
@@ -270,7 +248,7 @@ export function ConfiguracaoEsteiraPage() {
             nome: formNome,
             descricao: formDescricao,
             gruposResponsaveis: gruposSelecionados,
-            requiredSignerIds: (e.requiredSignerIds ?? []).filter((id) => allowedMemberIds.includes(id)),
+            requiredSignerIds: (e.requiredSignerIds ?? []).filter((id) => allowedMemberIds.has(id)),
             cor: formCor,
           }
         : e
@@ -282,7 +260,8 @@ export function ConfiguracaoEsteiraPage() {
   };
 
   const handleSaveConfig = () => {
-    localStorage.setItem(ESTEIRA_STORAGE_KEY, JSON.stringify(etapas));
+    const saved = saveEsteiraConfig(etapas);
+    setEtapas(saved);
     toast.success("Configuração salva com sucesso!", {
       description: "A esteira foi atualizada e está pronta para uso.",
     });
@@ -326,17 +305,42 @@ export function ConfiguracaoEsteiraPage() {
     }
 
     if (groupDialogMode === "edit" && editingGrupoId) {
+      const grupoAnterior = grupos.find((g) => g.id === editingGrupoId);
       const usuarios = membros.map((nome, index) => ({
-        id: `${editingGrupoId}-u${index + 1}`,
+        id: grupoAnterior?.usuarios[index]?.id ?? `${editingGrupoId}-u${index + 1}`,
         nome,
       }));
 
+      const grupoAtualizado: GrupoUsuarios = {
+        id: editingGrupoId,
+        nome: novoGrupoNome.trim(),
+        usuarios,
+      };
+
       setGrupos((prev) =>
-        prev.map((grupo) =>
-          grupo.id === editingGrupoId
-            ? { ...grupo, nome: novoGrupoNome.trim(), usuarios }
-            : grupo
-        )
+        prev.map((grupo) => (grupo.id === editingGrupoId ? grupoAtualizado : grupo))
+      );
+
+      setEtapas((prev) =>
+        prev.map((etapa) => {
+          if (!etapa.gruposResponsaveis.some((g) => g.id === editingGrupoId)) {
+            return etapa;
+          }
+
+          const gruposResponsaveis = etapa.gruposResponsaveis.map((grupo) =>
+            grupo.id === editingGrupoId ? grupoAtualizado : grupo
+          );
+
+          const allowedMemberIds = new Set(
+            gruposResponsaveis.flatMap((grupo) => grupo.usuarios).map((usuario) => usuario.id)
+          );
+
+          return {
+            ...etapa,
+            gruposResponsaveis,
+            requiredSignerIds: (etapa.requiredSignerIds ?? []).filter((id) => allowedMemberIds.has(id)),
+          };
+        })
       );
 
       toast.success("Grupo atualizado com sucesso");
@@ -381,9 +385,7 @@ export function ConfiguracaoEsteiraPage() {
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-slate-900">Fluxo de Aprovadores</h2>
-          <p className="text-slate-600 mt-1">
-            Configure as etapas e grupos responsáveis pela aprovação de rubricas
-          </p>
+          <p className="text-slate-600 mt-1">Configure as etapas e grupos responsáveis pela aprovação de rubricas</p>
         </div>
 
         <div className="flex gap-3">
@@ -432,10 +434,7 @@ export function ConfiguracaoEsteiraPage() {
                 );
 
                 return (
-                  <div
-                    key={grupo.id}
-                    className="p-3 bg-slate-50 rounded-lg border border-slate-200"
-                  >
+                  <div key={grupo.id} className="p-3 bg-slate-50 rounded-lg border border-slate-200">
                     <div className="flex items-start justify-between mb-2">
                       <div className="flex items-center gap-2">
                         <Users className="w-4 h-4 text-slate-600" />
@@ -447,9 +446,7 @@ export function ConfiguracaoEsteiraPage() {
                           variant="ghost"
                           size="icon"
                           aria-label="Ações do grupo"
-                          onClick={() =>
-                            setActiveGrupoMenuId((prev) => (prev === grupo.id ? null : grupo.id))
-                          }
+                          onClick={() => setActiveGrupoMenuId((prev) => (prev === grupo.id ? null : grupo.id))}
                         >
                           <MoreVertical className="w-4 h-4" />
                         </Button>
@@ -505,30 +502,6 @@ export function ConfiguracaoEsteiraPage() {
               })}
             </CardContent>
           </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Resumo</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-slate-600">Total de Etapas</span>
-                <span className="font-semibold text-slate-900">{etapas.length}</span>
-              </div>
-              <Separator />
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-slate-600">Grupos Ativos</span>
-                <span className="font-semibold text-slate-900">{grupos.length}</span>
-              </div>
-              <Separator />
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-slate-600">Total de Usuários</span>
-                <span className="font-semibold text-slate-900">
-                  {grupos.reduce((acc, g) => acc + g.usuarios.length, 0)}
-                </span>
-              </div>
-            </CardContent>
-          </Card>
         </div>
       </div>
 
@@ -541,13 +514,7 @@ export function ConfiguracaoEsteiraPage() {
           <div className="space-y-4 py-4">
             <div>
               <Label htmlFor="nome">Nome da Etapa</Label>
-              <Input
-                id="nome"
-                value={formNome}
-                onChange={(e) => setFormNome(e.target.value)}
-                placeholder="Ex: Análise Documental"
-                className="mt-2"
-              />
+              <Input id="nome" value={formNome} onChange={(e) => setFormNome(e.target.value)} className="mt-2" />
             </div>
 
             <div>
@@ -556,7 +523,6 @@ export function ConfiguracaoEsteiraPage() {
                 id="descricao"
                 value={formDescricao}
                 onChange={(e) => setFormDescricao(e.target.value)}
-                placeholder="Descreva o que acontece nesta etapa..."
                 rows={3}
                 className="mt-2"
               />
@@ -586,9 +552,6 @@ export function ConfiguracaoEsteiraPage() {
                         }}
                       />
                       <span className="text-sm text-slate-900">{grupo.nome}</span>
-                      <span className="text-xs text-slate-500 ml-auto">
-                        ({grupo.usuarios.length} usuários)
-                      </span>
                     </label>
                   );
                 })}
@@ -602,10 +565,7 @@ export function ConfiguracaoEsteiraPage() {
                   <button
                     key={cor}
                     onClick={() => setFormCor(cor)}
-                    className={cn(
-                      "w-10 h-10 rounded-lg transition-all",
-                      formCor === cor && "ring-2 ring-offset-2 ring-slate-400"
-                    )}
+                    className={cn("w-10 h-10 rounded-lg transition-all", formCor === cor && "ring-2 ring-offset-2 ring-slate-400")}
                     style={{ backgroundColor: cor }}
                   />
                 ))}
@@ -661,9 +621,7 @@ export function ConfiguracaoEsteiraPage() {
       <Dialog open={isGroupDialogOpen} onOpenChange={setIsGroupDialogOpen}>
         <DialogContent className="sm:max-w-[500px]">
           <DialogHeader>
-            <DialogTitle>
-              {groupDialogMode === "edit" ? "Editar Grupo" : "Novo Grupo de Usuários"}
-            </DialogTitle>
+            <DialogTitle>{groupDialogMode === "edit" ? "Editar Grupo" : "Novo Grupo de Usuários"}</DialogTitle>
           </DialogHeader>
 
           <div className="space-y-4 py-4">
@@ -673,7 +631,6 @@ export function ConfiguracaoEsteiraPage() {
                 id="grupo-nome"
                 value={novoGrupoNome}
                 onChange={(e) => setNovoGrupoNome(e.target.value)}
-                placeholder="Ex: Compras"
                 className="mt-2"
               />
             </div>
@@ -683,7 +640,6 @@ export function ConfiguracaoEsteiraPage() {
                 id="grupo-membros"
                 value={novoGrupoMembros}
                 onChange={(e) => setNovoGrupoMembros(e.target.value)}
-                placeholder="Um nome por linha ou separados por vírgula"
                 rows={4}
                 className="mt-2"
               />

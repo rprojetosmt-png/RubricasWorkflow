@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useSyncExternalStore } from "react";
 import { useNavigate, Link } from "react-router";
 import {
   ArrowLeft,
@@ -45,13 +45,13 @@ import {
 } from "../components/ui/select";
 import { Avatar, AvatarFallback } from "../components/ui/avatar";
 import {
-  esteiraDefault,
   type HistoricoEtapa,
   type Solicitacao,
   type Usuario,
   historicalDataMock,
 } from "../data/mockData";
 import { addSolicitacaoCompleta, getNextCodigo } from "../data/solicitacoesStore";
+import { getEsteiraConfig, subscribeEsteiraConfig } from "../data/esteiraStore";
 import { cn } from "../components/ui/utils";
 import { toast } from "sonner";
 import { useForm, Controller } from "react-hook-form";
@@ -256,6 +256,7 @@ export function NovaSolicitacaoPage() {
     (existeOutrosGrupos !== "Sim" || !!watch("outrosGruposDescricao")?.trim());
 
 
+  const etapas = useSyncExternalStore(subscribeEsteiraConfig, getEsteiraConfig, getEsteiraConfig);
   const [etapaIndex, setEtapaIndex] = useState(0);
 
   const preencherDadosTeste = () => {
@@ -299,7 +300,7 @@ export function NovaSolicitacaoPage() {
       usuario: usuarioAtual,
     });
 
-    const proximaEtapa = esteiraDefault[etapaIndex + 1];
+    const proximaEtapa = etapas[etapaIndex + 1];
     if (proximaEtapa) {
       atualizado = upsertHistorico(atualizado, proximaEtapa.id, {
         status: "em_analise",
@@ -323,7 +324,7 @@ export function NovaSolicitacaoPage() {
   const [historico, setHistorico] = useState<HistoricoEtapa[]>([]);
   const [codigoPreview, setCodigoPreview] = useState("RUB-YYYY-000");
 
-  const etapaAtual = esteiraDefault[etapaIndex];
+  const etapaAtual = etapas[etapaIndex];
   const etapaAtualIndex = etapaIndex + 1;
 
   useEffect(() => {
@@ -398,7 +399,7 @@ export function NovaSolicitacaoPage() {
       usuario: usuarioAtual,
     });
 
-    const proximaEtapa = esteiraDefault[etapaIndex + 1];
+    const proximaEtapa = etapas[etapaIndex + 1];
 
     if (etapaIndex === 0 && proximaEtapa) {
       atualizado = upsertHistorico(atualizado, proximaEtapa.id, {
@@ -479,7 +480,7 @@ export function NovaSolicitacaoPage() {
     });
 
     if (etapaIndex > 0) {
-      const etapaAnterior = esteiraDefault[etapaIndex - 1];
+      const etapaAnterior = etapas[etapaIndex - 1];
       atualizado = upsertHistorico(atualizado, etapaAnterior.id, {
         status: "em_analise",
         data: dataAgora,
@@ -661,7 +662,7 @@ export function NovaSolicitacaoPage() {
           <div className="relative overflow-x-auto pb-1">
             <div className="absolute top-4 left-3 right-3 h-px bg-slate-300" />
             <div className="relative flex min-w-[940px] items-start justify-between gap-4 px-1">
-              {esteiraDefault.map((etapa, index) => {
+              {etapas.map((etapa, index) => {
                 const status =
                   historico.find((h) => h.etapaId === etapa.id)?.status ??
                   (index === etapaIndex ? "em_analise" : "pendente");
@@ -702,7 +703,7 @@ export function NovaSolicitacaoPage() {
 
           <div className="px-3 py-2 bg-slate-50 rounded-md border border-slate-200 flex flex-wrap items-center gap-2 text-sm">
             <Badge className="bg-blue-700 text-white hover:bg-blue-700">
-              {etapaAtualIndex} de {esteiraDefault.length}
+              {etapaAtualIndex} de {etapas.length}
             </Badge>
             <span className="font-medium text-slate-800">Etapa Atual: {etapaAtual.nome}</span>
             <span className="text-slate-600">{etapaAtual.descricao}</span>
@@ -1149,7 +1150,7 @@ export function NovaSolicitacaoPage() {
                       return new Date(b.data).getTime() - new Date(a.data).getTime();
                     })
                     .map((hist, index) => {
-                      const etapa = esteiraDefault.find((e) => e.id === hist.etapaId);
+                      const etapa = etapas.find((e) => e.id === hist.etapaId);
                       if (!etapa) return null;
 
                       return (
@@ -1241,6 +1242,9 @@ export function NovaSolicitacaoPage() {
     </div>
   );
 }
+
+
+
 
 
 

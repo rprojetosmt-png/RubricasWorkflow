@@ -35,6 +35,7 @@ const normalizeFromApi = (payload = {}) => ({
   descricao: payload.descricao,
   documentos: payload.documentos ?? undefined,
   historico: payload.historico ?? [],
+  assinaturasEtapa: payload.assinaturasEtapa ?? {},
 });
 
 const sortByNewest = (a, b) => {
@@ -206,3 +207,5 @@ seedIfEmpty()
     console.error(err);
     process.exit(1);
   });
+
+

@@ -12,7 +12,7 @@ import {
   SelectValue,
 } from "../components/ui/select";
 import { Card, CardContent } from "../components/ui/card";
-import { esteiraDefault } from "../data/mockData";
+import { getEsteiraConfig, subscribeEsteiraConfig } from "../data/esteiraStore";
 import { getSolicitacoes, subscribeSolicitacoes } from "../data/solicitacoesStore";
 import { cn } from "../components/ui/utils";
 
@@ -22,6 +22,7 @@ export function DashboardPage() {
     getSolicitacoes,
     getSolicitacoes
   );
+  const etapas = useSyncExternalStore(subscribeEsteiraConfig, getEsteiraConfig, getEsteiraConfig);
   const [filtroStatus, setFiltroStatus] = useState<string>("todos");
   const [busca, setBusca] = useState("");
 
@@ -40,7 +41,7 @@ export function DashboardPage() {
   }, [busca, filtroStatus, solicitacoes]);
 
   const getEtapaAtual = (etapaId: string) => {
-    return esteiraDefault.find((e) => e.id === etapaId);
+    return etapas.find((e) => e.id === etapaId);
   };
 
   const getStatusIcon = (status: string) => {
@@ -213,7 +214,7 @@ export function DashboardPage() {
           const etapaAtual = getEtapaAtual(solicitacao.etapaAtual);
           const progressoPercentual =
             (solicitacao.historico.filter((h) => h.status === "aprovado").length /
-              esteiraDefault.length) *
+              etapas.length) *
             100;
 
           return (
@@ -305,3 +306,5 @@ export function DashboardPage() {
     </div>
   );
 }
+
+
