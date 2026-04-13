@@ -57,6 +57,7 @@ const loadEtapasFromStorage = (): Etapa[] => {
 
 const ensureLoaded = () => {
   if (!etapasCache) {
+    localStorage.removeItem(ESTEIRA_STORAGE_KEY); // Temporary flush to apply new changes from mockData
     etapasCache = loadEtapasFromStorage();
   }
 };
