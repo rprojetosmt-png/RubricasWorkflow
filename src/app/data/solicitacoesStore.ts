@@ -1,36 +1,42 @@
-﻿import type { Solicitacao } from "./mockData";
-
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3001";
+import { type Solicitacao, solicitacoes as mockSolicitacoes } from "./mockData";
 
 const listeners = new Set<() => void>();
 let data: Solicitacao[] = [];
 let loaded = false;
-let loadingPromise: Promise<void> | null = null;
 
 const emit = () => {
   listeners.forEach((listener) => listener());
 };
 
-const fetchJson = async <T>(input: RequestInfo, init?: RequestInit) => {
-  const res = await fetch(input, init);
-  if (!res.ok) {
-    const message = await res.text();
-    throw new Error(message || "Erro na API");
+const saveToStorage = () => {
+  try {
+    localStorage.setItem("solicitacoes", JSON.stringify(data));
+  } catch (err) {
+    console.error("Failed to save to localStorage", err);
   }
-  return (await res.json()) as T;
-};
-
-export const refreshSolicitacoes = async () => {
-  data = await fetchJson<Solicitacao[]>(`${API_URL}/api/solicitacoes`);
-  emit();
 };
 
 const ensureLoaded = () => {
   if (loaded) return;
   loaded = true;
-  loadingPromise = refreshSolicitacoes().catch((err) => {
-    console.error(err);
-  });
+  try {
+    const saved = localStorage.getItem("solicitacoes");
+    if (saved) {
+      data = JSON.parse(saved);
+      if (!Array.isArray(data) || data.length === 0) {
+        data = [...mockSolicitacoes];
+      }
+    } else {
+      data = [...mockSolicitacoes];
+    }
+  } catch (err) {
+    console.error("Failed to load from localStorage", err);
+    data = [...mockSolicitacoes];
+  }
+};
+
+export const refreshSolicitacoes = async () => {
+  emit();
 };
 
 export const getSolicitacoes = () => {
@@ -52,55 +58,42 @@ export const subscribeSolicitacoes = (listener: () => void) => {
 };
 
 export const getNextCodigo = async () => {
-  const result = await fetchJson<{ codigo: string }>(
-    `${API_URL}/api/solicitacoes/next-codigo`
-  );
-  return result.codigo;
+  ensureLoaded();
+  const year = new Date().getFullYear();
+  const count = data.filter((s) => s.codigo.includes(year.toString())).length + 1;
+  return `RUB-${year}-${String(count).padStart(3, "0")}`;
 };
 
 export const addSolicitacao = async (payload: Omit<Solicitacao, "id">) => {
-  const created = await fetchJson<Solicitacao>(`${API_URL}/api/solicitacoes`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload),
-  });
-  await refreshSolicitacoes();
+  ensureLoaded();
+  const created: Solicitacao = { ...payload, id: `sol-${Date.now()}` };
+  data.push(created);
+  saveToStorage();
+  emit();
   return created;
 };
 
 export const addSolicitacaoCompleta = async (solicitacao: Solicitacao) => {
-  const created = await fetchJson<Solicitacao>(`${API_URL}/api/solicitacoes`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(solicitacao),
-  });
-  await refreshSolicitacoes();
-  return created;
+  ensureLoaded();
+  data.push(solicitacao);
+  saveToStorage();
+  emit();
+  return solicitacao;
 };
 
 export const updateSolicitacao = async (
   id: string,
   updater: (current: Solicitacao) => Solicitacao
 ) => {
-  const current = data.find((s) => s.id === id);
-  if (!current) return null;
-
-  const updatedPayload = updater(current);
-  const updated = await fetchJson<Solicitacao>(
-    `${API_URL}/api/solicitacoes/${id}`,
-    {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(updatedPayload),
-    }
-  );
-  await refreshSolicitacoes();
-  return updated;
+  ensureLoaded();
+  const index = data.findIndex((s) => s.id === id);
+  if (index === -1) return null;
+  data[index] = updater(data[index]);
+  saveToStorage();
+  emit();
+  return data[index];
 };
 
 export const waitForInitialLoad = async () => {
   ensureLoaded();
-  if (loadingPromise) {
-    await loadingPromise;
-  }
 };

@@ -281,6 +281,7 @@ export function NovaSolicitacaoPage() {
     setValue("reterTetoRemuneratorio", "Sim", { shouldValidate: true });
     setValue("temIncidenciaTributaria", "Sim", { shouldValidate: true });
     setValue("incidenciasTributarias", [incidenciasTributariasPrincipais[0]?.id], { shouldValidate: true });
+    setValue("baseLegalIds", [baseLegalDocumentos[0]?.id ?? ""], { shouldValidate: true });
     setValue("justificativaLegal", "LEI 12.345/2024", { shouldValidate: true });
     setValue("justificativa", "Solicitação de teste.", { shouldValidate: true });
     setValue("aceiteTermos", true, { shouldValidate: true });
