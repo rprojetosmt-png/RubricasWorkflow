@@ -1088,48 +1088,6 @@ export function NovaSolicitacaoPage() {
         </div>
 
         <div className="space-y-6">
-          <Card className="border-none shadow-md">
-            <CardHeader className="pb-3 border-b border-slate-100">
-              <CardTitle className="text-lg">Informações Adicionais</CardTitle>
-            </CardHeader>
-            <CardContent className="pt-4 space-y-4">
-              <div className="p-3 bg-blue-50/50 rounded-lg border border-blue-100 flex gap-3 items-start">
-                <div className="bg-blue-500 p-1.5 rounded-md mt-0.5">
-                  <Info className="w-4 h-4 text-white" />
-                </div>
-                <div>
-                  <p className="text-xs font-bold text-blue-900 uppercase tracking-wider mb-1">Atenção</p>
-                  <p className="text-xs text-blue-800 leading-normal">
-                    Todos os campos marcados com um asterisco vermelho (<span className="text-red-600">*</span>) são de preenchimento obrigatório para avançar na esteira.
-                  </p>
-                </div>
-              </div>
-
-              <Separator className="bg-slate-100" />
-
-              <div>
-                <Label className="text-xs font-bold text-slate-500 uppercase mb-2 block">Status da Etapa</Label>
-                <div className="flex items-center gap-2 text-sm font-medium text-emerald-600 bg-emerald-50 p-2 rounded-md border border-emerald-100 w-fit">
-                  <Clock className="w-4 h-4" />
-                  Aguardando Preenchimento
-                </div>
-              </div>
-
-              {etapaIndex === 0 && (
-                <div className="pt-2">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={preencherDadosTeste}
-                    className="w-full border-blue-200 text-blue-600 hover:bg-blue-50 gap-2"
-                  >
-                    <Plus className="w-4 h-4" />
-                    Preencher dados de teste
-                  </Button>
-                </div>
-              )}
-            </CardContent>
-          </Card>
 
 
           <Card className="border-none shadow-md">
