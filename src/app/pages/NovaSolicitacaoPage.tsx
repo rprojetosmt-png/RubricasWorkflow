@@ -27,7 +27,7 @@ import {
   AlertTriangle,
 } from "lucide-react";
 import { Button } from "../components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "../components/ui/card";
 import { Badge } from "../components/ui/badge";
 import { Textarea } from "../components/ui/textarea";
 import { Input } from "../components/ui/input";
@@ -1127,10 +1127,16 @@ export function NovaSolicitacaoPage() {
 
               {/* Card Parecer Técnico (ex-Ações) */}
               <Card className="border-none shadow-md">
-                <CardHeader>
-                  <CardTitle className="text-lg">Parecer Técnico</CardTitle>
+                <CardHeader className="pb-3 border-b border-slate-50">
+                  <div className="flex flex-col gap-1">
+                    <CardTitle className="text-lg">Parecer Técnico</CardTitle>
+                    <CardDescription className="flex items-center gap-1.5 text-xs font-semibold text-slate-500 uppercase tracking-tight">
+                      <Users className="w-3.5 h-3.5" />
+                      Responsabilidade: {etapaAtual.gruposResponsaveis.map((g) => g.nome).join(", ")}
+                    </CardDescription>
+                  </div>
                 </CardHeader>
-                <CardContent className="space-y-4">
+                <CardContent className="space-y-4 pt-5">
                   <div className="space-y-2">
                     <Textarea
                       placeholder="Descreva o parecer técnico desta etapa... *"
