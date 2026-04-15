@@ -201,6 +201,8 @@ export function ConfiguracaoEsteiraPage() {
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
   const [viewGrupo, setViewGrupo] = useState<GrupoUsuarios | null>(null);
   const [activeGrupoMenuId, setActiveGrupoMenuId] = useState<string | null>(null);
+  const [isDeleteGroupDialogOpen, setIsDeleteGroupDialogOpen] = useState(false);
+  const [grupoPendenteExclusao, setGrupoPendenteExclusao] = useState<GrupoUsuarios | null>(null);
 
   const [formNome, setFormNome] = useState("");
   const [formDescricao, setFormDescricao] = useState("");
@@ -389,8 +391,9 @@ export function ConfiguracaoEsteiraPage() {
   };
 
   const handleDeleteGrupo = (grupoId: string) => {
+    const grupo = grupos.find((g) => g.id === grupoId);
     const grupoEmUso = etapas.some((etapa) =>
-      etapa.gruposResponsaveis.some((grupo) => grupo.id === grupoId)
+      etapa.gruposResponsaveis.some((item) => item.id === grupoId)
     );
 
     if (grupoEmUso) {
@@ -398,11 +401,22 @@ export function ConfiguracaoEsteiraPage() {
       return;
     }
 
-    const grupo = grupos.find((g) => g.id === grupoId);
-    setGrupos((prev) => prev.filter((g) => g.id !== grupoId));
-    if (grupo) {
-      toast.success(`Grupo "${grupo.nome}" removido`);
+    setGrupoPendenteExclusao(grupo ?? null);
+    setIsDeleteGroupDialogOpen(true);
+    setActiveGrupoMenuId(null);
+  };
+
+  const confirmDeleteGrupo = () => {
+    if (!grupoPendenteExclusao) {
+      setIsDeleteGroupDialogOpen(false);
+      return;
     }
+
+    setGrupos((prev) => prev.filter((item) => item.id !== grupoPendenteExclusao.id));
+    toast.success(`Grupo "${grupoPendenteExclusao.nome}" removido`);
+    setIsDeleteGroupDialogOpen(false);
+    setGrupoPendenteExclusao(null);
+    setActiveGrupoMenuId(null);
   };
 
   const cores = ["#3b82f6", "#8b5cf6", "#ec4899", "#f59e0b", "#10b981", "#06b6d4", "#6366f1", "#ef4444"];
@@ -589,10 +603,7 @@ export function ConfiguracaoEsteiraPage() {
                                   <button
                                     type="button"
                                     disabled={grupoEmUso}
-                                    onClick={() => {
-                                      handleDeleteGrupo(grupo.id);
-                                      setActiveGrupoMenuId(null);
-                                    }}
+                                    onClick={() => handleDeleteGrupo(grupo.id)}
                                     className="w-full rounded-sm px-2 py-1.5 text-left text-sm text-red-600 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
                                   >
                                     Excluir
@@ -689,10 +700,7 @@ export function ConfiguracaoEsteiraPage() {
                             <button
                               type="button"
                               disabled={grupoEmUso}
-                              onClick={() => {
-                                handleDeleteGrupo(grupo.id);
-                                setActiveGrupoMenuId(null);
-                              }}
+                              onClick={() => handleDeleteGrupo(grupo.id)}
                               className="w-full rounded-sm px-2 py-1.5 text-left text-sm text-red-600 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
                             >
                               Excluir
@@ -928,6 +936,43 @@ export function ConfiguracaoEsteiraPage() {
             </Button>
             <Button onClick={handleSaveGrupo} className="bg-[#0c4a6e] hover:bg-[#0a3d5a]">
               {groupDialogMode === "edit" ? "Salvar Alterações" : "Adicionar Grupo"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={isDeleteGroupDialogOpen}
+        onOpenChange={(open) => {
+          setIsDeleteGroupDialogOpen(open);
+          if (!open) {
+            setGrupoPendenteExclusao(null);
+          }
+        }}
+      >
+        <DialogContent className="sm:max-w-[440px]">
+          <DialogHeader>
+            <DialogTitle>Confirmar Exclusão</DialogTitle>
+          </DialogHeader>
+
+          <div className="py-2 text-sm text-slate-700">
+            Tem certeza que deseja excluir o grupo
+            <span className="font-semibold"> {grupoPendenteExclusao?.nome ?? "selecionado"}</span>?
+            <p className="mt-2 text-slate-500">Essa ação não poderá ser desfeita.</p>
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setIsDeleteGroupDialogOpen(false);
+                setGrupoPendenteExclusao(null);
+              }}
+            >
+              Cancelar
+            </Button>
+            <Button onClick={confirmDeleteGrupo} className="bg-red-600 hover:bg-red-700">
+              Excluir Grupo
             </Button>
           </DialogFooter>
         </DialogContent>
