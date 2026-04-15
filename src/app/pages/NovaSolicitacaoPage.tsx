@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo, useSyncExternalStore } from "react";
+import { useEffect, useState, useMemo, useSyncExternalStore, useRef } from "react";
 import { useNavigate, Link } from "react-router";
 import {
   ArrowLeft,
@@ -22,6 +22,9 @@ import {
   Star,
   Landmark,
   CircleDollarSign,
+  Paperclip,
+  Trash2,
+  AlertTriangle,
 } from "lucide-react";
 import { Button } from "../components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
@@ -321,8 +324,12 @@ export function NovaSolicitacaoPage() {
   const [comentario, setComentario] = useState("");
   const [motivoRejeicao, setMotivoRejeicao] = useState("");
   const [isRejectDialogOpen, setIsRejectDialogOpen] = useState(false);
+  const [isRejectRubricaDialogOpen, setIsRejectRubricaDialogOpen] = useState(false);
+  const [motivoRejeicaoRubrica, setMotivoRejeicaoRubrica] = useState("");
   const [historico, setHistorico] = useState<HistoricoEtapa[]>([]);
   const [codigoPreview, setCodigoPreview] = useState("RUB-YYYY-000");
+  const [arquivosAnexados, setArquivosAnexados] = useState<File[]>([]);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const etapaAtual = etapas[etapaIndex];
   const etapaAtualIndex = etapaIndex + 1;
@@ -492,9 +499,52 @@ export function NovaSolicitacaoPage() {
     setHistorico(atualizado);
     setIsRejectDialogOpen(false);
     setMotivoRejeicao("");
-    toast.error("Etapa rejeitada", {
+    toast.error("Etapa reprovada", {
       description: `Motivo: ${motivoRejeicao.trim()}`,
     });
+  };
+
+  const handleRejeitarRubrica = () => {
+    setIsRejectRubricaDialogOpen(true);
+  };
+
+  const handleConfirmarRejeicaoRubrica = async () => {
+    if (!motivoRejeicaoRubrica.trim()) {
+      toast.error("Informe o motivo da rejeição da rubrica");
+      return;
+    }
+
+    const dataAgora = new Date().toISOString();
+    const atualizado = upsertHistorico(historico, etapaAtual.id, {
+      status: "rejeitado",
+      data: dataAgora,
+      comentario: motivoRejeicaoRubrica.trim(),
+      usuario: usuarioAtual,
+    });
+
+    const novaSolicitacao = {
+      id: `sol-${Date.now()}`,
+      codigo: codigoPreview,
+      titulo: watch("nomeRubrica") || "Nova Solicitação",
+      tipo: "Nova Rubrica",
+      solicitante: usuarioAtual,
+      dataSolicitacao: new Date().toISOString().slice(0, 10),
+      statusGeral: "rejeitado" as const,
+      etapaAtual: etapaAtual.id,
+      descricao: watch("justificativaLegal") || "Solicitação rejeitada.",
+      historico: atualizado,
+    };
+
+    try {
+      await addSolicitacaoCompleta(novaSolicitacao);
+      toast.error("Rubrica rejeitada", {
+        description: `A solicitação foi encerrada. Motivo: ${motivoRejeicaoRubrica.trim()}`,
+      });
+      navigate("/");
+    } catch (err) {
+      console.error(err);
+      toast.error("Não foi possível registrar a rejeição");
+    }
   };
 
   const preencherDebugEtapa1 = () => {
@@ -559,6 +609,7 @@ export function NovaSolicitacaoPage() {
     const tipo = watch("classificacao") || "Vantagem";
     const esocialStr = naturezaRubricaEsocial.find(n => n.id === watch("naturezaEsocial"))?.nome || "Não informado";
     const outrasIncVal = (watch("outrasIncidencias") || []).map((id: string) => outrasIncidencias.find(o => o.id === id)?.nome).filter(Boolean);
+    const justificativaVal = watch("justificativaLegal")?.trim() || "Não informado";
 
     return {
       id: codigoPreview,
@@ -611,6 +662,12 @@ export function NovaSolicitacaoPage() {
             { label: "Tem Incidência", value: watch("temIncidenciaTributaria") || "Não", icon: <CircleDollarSign strokeWidth={1.5} />, type: watch("temIncidenciaTributaria") === "Sim" ? ("badge-warning" as const) : undefined },
             { label: "Tributos", value: (watch("incidenciasTributarias") || []).map((id: string) => tributosAplicaveis.find(t => t.id === id)?.nome).filter(Boolean), icon: <CircleDollarSign strokeWidth={1.5} />, type: (watch("incidenciasTributarias") || []).length > 0 ? ("badge-warning" as const) : undefined },
             { label: "Outras Incidências", value: outrasIncVal, icon: <CircleDollarSign strokeWidth={1.5} />, type: outrasIncVal.length > 0 ? ("badge-warning" as const) : ("disabled" as const) },
+          ]
+        },
+        {
+          title: "JUSTIFICATIVA LEGAL",
+          fields: [
+            { label: "Justificativa", value: justificativaVal, icon: <FileText strokeWidth={1.5} /> },
           ]
         }
       ],
@@ -1013,72 +1070,116 @@ export function NovaSolicitacaoPage() {
             <div className="space-y-6">
               {/* Visualização de Análise (Etapas > 0) */}
               <HistoricalDataCard {...buildHistoricalDataConfig()} />
-              <Card className="border-none shadow-md">
-                <CardHeader>
-                  <CardTitle className="text-lg">Descrição</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="p-4 bg-slate-50 rounded-lg border border-slate-100 text-slate-700 leading-relaxed italic">
-                    {watch("justificativaLegal") || "Solicitação de criação de rubrica conforme legislação vigente informada na etapa inicial de registro."}
-                  </div>
-                </CardContent>
-              </Card>
 
+              {/* Card Documentos Anexados */}
               <Card className="border-none shadow-md">
                 <CardHeader>
                   <CardTitle className="text-lg">Documentos Anexados</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-3">
-                  {[
-                    "Legislacao_Vinculada.pdf",
-                    "Memoria_Calculo.xlsx",
-                    "Parecer_Tecnico_Preliminar.pdf"
-                  ].map((doc, idx) => (
-                    <div key={idx} className="flex items-center justify-between p-3 bg-slate-50 rounded-xl border border-slate-100 group hover:border-blue-200 transition-colors">
-                      <div className="flex items-center gap-3">
-                        <div className="p-2 bg-blue-100 rounded-lg text-blue-600">
-                          <FileText className="w-5 h-5" />
+                  {arquivosAnexados.length === 0 ? (
+                    <p className="text-sm text-slate-400 italic">Nenhum documento anexado.</p>
+                  ) : (
+                    arquivosAnexados.map((file, idx) => (
+                      <div key={idx} className="flex items-center justify-between p-3 bg-slate-50 rounded-xl border border-slate-100 group hover:border-blue-200 transition-colors">
+                        <div className="flex items-center gap-3">
+                          <div className="p-2 bg-blue-100 rounded-lg text-blue-600">
+                            <FileText className="w-5 h-5" />
+                          </div>
+                          <div>
+                            <span className="text-sm font-medium text-slate-700">{file.name}</span>
+                            <p className="text-xs text-slate-400">{(file.size / 1024).toFixed(1)} KB</p>
+                          </div>
                         </div>
-                        <span className="text-sm font-medium text-slate-700">{doc}</span>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="text-slate-400 hover:text-red-500 hover:bg-red-50"
+                          onClick={() => setArquivosAnexados((prev) => prev.filter((_, i) => i !== idx))}
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
                       </div>
-                      <Button variant="ghost" size="icon" className="text-slate-400 hover:text-blue-600 hover:bg-blue-50">
-                        <Download className="w-4 h-4" />
-                      </Button>
-                    </div>
-                  ))}
+                    ))
+                  )}
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    multiple
+                    className="hidden"
+                    onChange={(e) => {
+                      const files = Array.from(e.target.files || []);
+                      setArquivosAnexados((prev) => [...prev, ...files]);
+                      if (fileInputRef.current) fileInputRef.current.value = "";
+                    }}
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="w-full border-dashed border-slate-300 text-slate-600 hover:border-blue-400 hover:text-blue-600 hover:bg-blue-50 gap-2"
+                    onClick={() => fileInputRef.current?.click()}
+                  >
+                    <Paperclip className="w-4 h-4" />
+                    Anexar documento
+                  </Button>
                 </CardContent>
               </Card>
 
+              {/* Card Parecer Técnico (ex-Ações) */}
               <Card className="border-none shadow-md">
                 <CardHeader>
-                  <CardTitle className="text-lg">Ações</CardTitle>
+                  <CardTitle className="text-lg">Parecer Técnico</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="space-y-2">
-                    <Label className="text-sm text-slate-600">Comentário (opcional)</Label>
                     <Textarea
-                      placeholder="Adicione observações sobre esta etapa..."
+                      placeholder="Descreva o parecer técnico desta etapa... *"
                       value={comentario}
                       onChange={(e) => setComentario(e.target.value)}
                       rows={4}
                       className="border-slate-200 focus:border-blue-500 focus:ring-blue-100"
                     />
+                    {comentario.trim() === "" && (
+                      <p className="text-xs text-red-500">O parecer técnico é obrigatório para aprovar ou reprovar a etapa.</p>
+                    )}
                   </div>
-                  <div className="flex gap-4 pt-2">
+                  <div className="flex flex-col gap-3 pt-2">
+                    <div className="flex gap-3">
+                      <Button
+                        onClick={() => {
+                          if (!comentario.trim()) {
+                            toast.error("Preencha o parecer técnico antes de aprovar.");
+                            return;
+                          }
+                          handleAprovarEtapa();
+                        }}
+                        className="flex-1 h-12 bg-green-600 hover:bg-green-700 shadow-lg shadow-green-200 font-bold"
+                      >
+                        <CheckCircle2 className="mr-2 w-5 h-5" />
+                        Aprovar Etapa
+                      </Button>
+                      <Button
+                        onClick={() => {
+                          if (!comentario.trim()) {
+                            toast.error("Preencha o parecer técnico antes de reprovar.");
+                            return;
+                          }
+                          handleRejeitar();
+                        }}
+                        variant="outline"
+                        className="flex-1 h-12 border-orange-500 text-orange-600 hover:bg-orange-50 font-bold"
+                      >
+                        <XCircle className="mr-2 w-5 h-5" />
+                        Reprovar Etapa
+                      </Button>
+                    </div>
                     <Button
-                      onClick={handleAprovarEtapa}
-                      className="flex-1 h-12 bg-green-600 hover:bg-green-700 shadow-lg shadow-green-200 font-bold"
-                    >
-                      <CheckCircle2 className="mr-2 w-5 h-5" />
-                      Aprovar Etapa
-                    </Button>
-                    <Button
-                      onClick={handleRejeitar}
+                      onClick={handleRejeitarRubrica}
                       variant="outline"
-                      className="flex-1 h-12 border-red-500 text-red-500 hover:bg-red-50 font-bold"
+                      className="w-full h-12 border-red-600 text-red-600 hover:bg-red-50 font-bold"
                     >
-                      <XCircle className="mr-2 w-5 h-5" />
-                      Rejeitar
+                      <AlertTriangle className="mr-2 w-5 h-5" />
+                      Rejeitar Rubrica
                     </Button>
                   </div>
                 </CardContent>
@@ -1166,22 +1267,23 @@ export function NovaSolicitacaoPage() {
         </div>
       </div>
 
+      {/* Dialog: Reprovar Etapa */}
       <Dialog open={isRejectDialogOpen} onOpenChange={setIsRejectDialogOpen}>
         <DialogContent className="sm:max-w-[520px]">
           <DialogHeader>
-            <DialogTitle>Rejeitar etapa</DialogTitle>
+            <DialogTitle>Reprovar etapa</DialogTitle>
           </DialogHeader>
           <div className="space-y-3 py-2">
-            <Label htmlFor="motivo-rejeicao">Motivo da rejeição</Label>
+            <Label htmlFor="motivo-rejeicao">Motivo da reprovação</Label>
             <Textarea
               id="motivo-rejeicao"
-              placeholder="Descreva o motivo da rejeição..."
+              placeholder="Descreva o motivo da reprovação..."
               value={motivoRejeicao}
               onChange={(e) => setMotivoRejeicao(e.target.value)}
               rows={4}
             />
             <p className="text-xs text-slate-500">
-              Esse motivo será informado ao solicitante.
+              Esse motivo será informado ao solicitante e a etapa retornará para revisão.
             </p>
           </div>
           <DialogFooter>
@@ -1189,10 +1291,54 @@ export function NovaSolicitacaoPage() {
               Cancelar
             </Button>
             <Button
-              className="bg-red-600 hover:bg-red-700"
+              className="bg-orange-600 hover:bg-orange-700"
               onClick={handleConfirmarRejeicao}
             >
-              Confirmar rejeição
+              Confirmar reprovação
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog: Rejeitar Rubrica (cancelamento definitivo) */}
+      <Dialog open={isRejectRubricaDialogOpen} onOpenChange={setIsRejectRubricaDialogOpen}>
+        <DialogContent className="sm:max-w-[520px]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-red-700">
+              <AlertTriangle className="w-5 h-5" />
+              Rejeitar Rubrica
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3 py-2">
+            <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-800">
+              <strong>Atenção:</strong> Esta ação encerrará definitivamente a solicitação e ela não poderá ser retomada.
+            </div>
+            <Label htmlFor="motivo-rejeicao-rubrica">Motivo da rejeição <span className="text-red-500">*</span></Label>
+            <Textarea
+              id="motivo-rejeicao-rubrica"
+              placeholder="Descreva o motivo da rejeição definitiva da rubrica..."
+              value={motivoRejeicaoRubrica}
+              onChange={(e) => setMotivoRejeicaoRubrica(e.target.value)}
+              rows={4}
+              className="border-red-200 focus:border-red-400"
+            />
+            {motivoRejeicaoRubrica.trim() === "" && (
+              <p className="text-xs text-red-500">O motivo é obrigatório.</p>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => {
+              setIsRejectRubricaDialogOpen(false);
+              setMotivoRejeicaoRubrica("");
+            }}>
+              Cancelar
+            </Button>
+            <Button
+              className="bg-red-700 hover:bg-red-800"
+              onClick={handleConfirmarRejeicaoRubrica}
+              disabled={!motivoRejeicaoRubrica.trim()}
+            >
+              Confirmar rejeição da rubrica
             </Button>
           </DialogFooter>
         </DialogContent>
