@@ -1,6 +1,6 @@
-import { useMemo, useState, useSyncExternalStore } from "react";
+import { useMemo, useState, useEffect, useSyncExternalStore } from "react";
 import { Link } from "react-router";
-import { Plus, Filter, Search, Clock, CheckCircle2, XCircle } from "lucide-react";
+import { Plus, Filter, Search, Clock, CheckCircle2, XCircle, ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { Badge } from "../components/ui/badge";
@@ -25,6 +25,12 @@ export function DashboardPage() {
   const etapas = useSyncExternalStore(subscribeEsteiraConfig, getEsteiraConfig, getEsteiraConfig);
   const [filtroStatus, setFiltroStatus] = useState<string>("todos");
   const [busca, setBusca] = useState("");
+  const [paginaAtual, setPaginaAtual] = useState(1);
+  const [itensPorPagina, setItensPorPagina] = useState(5);
+
+  useEffect(() => {
+    setPaginaAtual(1);
+  }, [busca, filtroStatus, itensPorPagina]);
 
   const solicitacoesFiltradas = useMemo(() => {
     return solicitacoes.filter((sol) => {
@@ -39,6 +45,12 @@ export function DashboardPage() {
       return matchBusca && matchStatus;
     });
   }, [busca, filtroStatus, solicitacoes]);
+
+  const totalPaginas = Math.ceil(solicitacoesFiltradas.length / itensPorPagina);
+  const solicitacoesPaginadas = solicitacoesFiltradas.slice(
+    (paginaAtual - 1) * itensPorPagina,
+    paginaAtual * itensPorPagina
+  );
 
   const getEtapaAtual = (etapaId: string) => {
     return etapas.find((e) => e.id === etapaId);
@@ -210,18 +222,13 @@ export function DashboardPage() {
 
       {/* Lista de Solicitações */}
       <div className="space-y-3">
-        {solicitacoesFiltradas.map((solicitacao) => {
+        {solicitacoesPaginadas.map((solicitacao) => {
           const etapaAtual = getEtapaAtual(solicitacao.etapaAtual);
-          const progressoPercentual =
-            (solicitacao.historico.filter((h) => h.status === "aprovado").length /
-              etapas.length) *
-            100;
-
           return (
             <Link key={solicitacao.id} to={`/solicitacao/${solicitacao.id}`}>
               <Card className="hover:shadow-md transition-shadow cursor-pointer">
                 <CardContent className="pt-6">
-                  <div className="flex items-start justify-between mb-4">
+                  <div className="flex items-center justify-between">
                     <div className="flex-1">
                       <div className="flex items-center gap-3 mb-2">
                         <span className="font-mono text-sm text-slate-600">
@@ -238,12 +245,9 @@ export function DashboardPage() {
                           {getStatusLabel(solicitacao.statusGeral)}
                         </Badge>
                       </div>
-                      <h3 className="text-slate-900 mb-1">
+                      <h3 className="text-slate-900 mb-2 font-medium">
                         {solicitacao.titulo}
                       </h3>
-                      <p className="text-sm text-slate-600 line-clamp-2 mb-3">
-                        {solicitacao.descricao}
-                      </p>
                       <div className="flex items-center gap-4 text-sm text-slate-500">
                         <span>Solicitante: {solicitacao.solicitante.nome}</span>
                         <span>•</span>
@@ -255,30 +259,18 @@ export function DashboardPage() {
                       </div>
                     </div>
 
-                    <div className="ml-4 min-w-[200px]">
+                    <div className="ml-4 min-w-[200px] flex justify-end">
                       {etapaAtual && (
-                        <div className="flex items-center gap-2 mb-2">
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-medium text-slate-700">
+                            {etapaAtual.nome}
+                          </span>
                           <div
                             className="w-3 h-3 rounded-full"
                             style={{ backgroundColor: etapaAtual.cor }}
                           />
-                          <span className="text-sm font-medium text-slate-700">
-                            {etapaAtual.nome}
-                          </span>
                         </div>
                       )}
-                      <div className="space-y-1">
-                        <div className="flex justify-between text-xs text-slate-600">
-                          <span>Progresso</span>
-                          <span>{Math.round(progressoPercentual)}%</span>
-                        </div>
-                        <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
-                          <div
-                            className="h-full bg-gradient-to-r from-blue-500 to-indigo-500 transition-all"
-                            style={{ width: `${progressoPercentual}%` }}
-                          />
-                        </div>
-                      </div>
                     </div>
                   </div>
                 </CardContent>
@@ -287,6 +279,55 @@ export function DashboardPage() {
           );
         })}
       </div>
+
+      {/* Paginação */}
+      {solicitacoesFiltradas.length > 0 && (
+        <div className="flex items-center justify-between mt-6">
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-slate-600">Itens por página:</span>
+            <Select 
+              value={itensPorPagina.toString()} 
+              onValueChange={(v) => setItensPorPagina(Number(v))}
+            >
+              <SelectTrigger className="w-[80px] h-8 text-sm">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="5">5</SelectItem>
+                <SelectItem value="10">10</SelectItem>
+                <SelectItem value="15">15</SelectItem>
+                <SelectItem value="20">20</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          {totalPaginas > 1 && (
+            <div className="flex items-center gap-4">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setPaginaAtual((p) => Math.max(1, p - 1))}
+                disabled={paginaAtual === 1}
+              >
+                <ChevronLeft className="w-4 h-4 mr-1" />
+                Anterior
+              </Button>
+              <span className="text-sm text-slate-600">
+                Página {paginaAtual} de {totalPaginas}
+              </span>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setPaginaAtual((p) => Math.min(totalPaginas, p + 1))}
+                disabled={paginaAtual === totalPaginas}
+              >
+                Próxima
+                <ChevronRight className="w-4 h-4 ml-1" />
+              </Button>
+            </div>
+          )}
+        </div>
+      )}
 
       {solicitacoesFiltradas.length === 0 && (
         <Card>

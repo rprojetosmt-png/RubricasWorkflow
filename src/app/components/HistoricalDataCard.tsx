@@ -1,23 +1,14 @@
-import React from 'react';
-import {
-  Accordion,
-  AccordionSummary,
-  AccordionDetails,
-  Typography,
-  Chip,
-  Box,
-  Icon,
-  Button
-} from '@mui/material';
-import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
-import DownloadIcon from '@mui/icons-material/Download';
-import AttachFileIcon from '@mui/icons-material/AttachFile';
+import React, { useState } from "react";
+import { ChevronDown, FileText, Paperclip, Download } from "lucide-react";
+import { Badge } from "./ui/badge";
+import { Button } from "./ui/button";
+import { cn } from "./ui/utils";
 
 export interface HistoricalField {
   label: string;
   value: string | string[];
-  icon?: string;
-  type?: 'badge-success' | 'badge-warning' | 'badge-info' | 'text' | 'disabled';
+  icon?: React.ReactNode;
+  type?: "badge-success" | "badge-warning" | "badge-info" | "text" | "disabled";
 }
 
 export interface HistoricalSection {
@@ -40,206 +31,172 @@ export interface HistoricalDataCardProps {
   attachments?: HistoricalAttachment[];
 }
 
+function FieldValue({ field }: { field: HistoricalField }) {
+  if (Array.isArray(field.value)) {
+    if (field.value.length === 0)
+      return <span className="text-sm italic text-slate-400">Não informado</span>;
+    return (
+      <div className="flex flex-wrap gap-1 mt-0.5">
+        {field.value.map((v, i) => (
+          <span
+            key={i}
+            className="inline-flex items-center px-2 py-0.5 rounded border border-slate-200 bg-white text-xs font-medium text-slate-700"
+          >
+            {v}
+          </span>
+        ))}
+      </div>
+    );
+  }
+
+  if (field.type === "badge-success")
+    return (
+      <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-lime-100 text-lime-700">
+        {field.value || "Sim"}
+      </span>
+    );
+
+  if (field.type === "badge-warning")
+    return (
+      <span className="inline-flex items-center px-2 py-0.5 rounded border border-yellow-300 text-xs font-semibold bg-yellow-50 text-yellow-700">
+        {field.value}
+      </span>
+    );
+
+  if (field.type === "badge-info")
+    return (
+      <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-blue-100 text-blue-700">
+        {field.value}
+      </span>
+    );
+
+  if (field.type === "disabled")
+    return <span className="text-sm italic text-slate-400">{field.value || "Não informado"}</span>;
+
+  return <span className="text-sm font-semibold text-slate-800">{field.value || "—"}</span>;
+}
+
 export function HistoricalDataCard({
   id,
   title,
   subtitle,
   status,
-  readOnly,
   sections,
   attachments,
 }: HistoricalDataCardProps) {
-  const [expanded, setExpanded] = React.useState(true);
+  const [expanded, setExpanded] = useState(false);
 
   return (
-    <Accordion
-      expanded={expanded}
-      onChange={(_, isExpanded) => setExpanded(isExpanded)}
-      disableGutters
-      sx={{
-        backgroundColor: '#FFFFFF',
-        border: '1px solid #E0E0E0',
-        borderRadius: '8px !important',
-        '&:before': { display: 'none' }, // Remove divider
-        boxShadow: 'none',
-        overflow: 'hidden',
-        mb: 3,
-        pointerEvents: readOnly ? 'auto' : 'auto', 
-      }}
-    >
-      <AccordionSummary
-        sx={{
-          padding: '16px 24px',
-          borderBottom: expanded ? '1px solid #E0E0E0' : 'none',
-          minHeight: 'auto',
-          '& .MuiAccordionSummary-content': { margin: 0, alignItems: 'flex-start', justifyContent: 'space-between' },
-        }}
+    <div className="border border-slate-200 rounded-xl bg-white shadow-sm overflow-hidden">
+      {/* Header / Trigger */}
+      <button
+        type="button"
+        onClick={() => setExpanded((v) => !v)}
+        className="w-full flex items-center justify-between px-5 py-4 hover:bg-slate-50 transition-colors"
       >
-        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-            <Typography variant="h6" fontWeight="bold">
-              {id} — {title}
-            </Typography>
-            <Chip label={status} size="small" sx={{ fontWeight: 'bold', backgroundColor: '#EFF6FF', color: '#1D4ED8', borderRadius: '4px' }} />
-          </Box>
-          {subtitle && (
-            <Typography variant="body2" color="grey.500" fontWeight={500}>
-              {subtitle}
-            </Typography>
-          )}
-        </Box>
-        <Button 
-          variant="outlined" 
-          size="small" 
-          sx={{ ml: 2, mt: 0.5, borderRadius: '6px', textTransform: 'none', borderColor: '#E2E8F0', color: '#0F172A', fontWeight: 600, height: 32 }}
-          endIcon={<ExpandMoreIcon sx={{ transform: expanded ? 'rotate(180deg)' : 'none', transition: '0.2s' }} />}
-        >
-          {expanded ? 'Ocultar' : 'Mostrar'}
-        </Button>
-      </AccordionSummary>
+        <div className="flex items-start gap-3 min-w-0">
+          <div className="p-2 bg-blue-50 rounded-lg text-blue-600 shrink-0 mt-0.5">
+            <FileText className="w-4 h-4" />
+          </div>
+          <div className="text-left min-w-0">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="font-mono text-xs text-slate-500">{id}</span>
+              <span className="font-semibold text-slate-900 truncate">{title}</span>
+              <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-blue-100 text-blue-700">
+                {status}
+              </span>
+            </div>
+            {subtitle && (
+              <p className="text-xs text-slate-500 mt-0.5 truncate">{subtitle}</p>
+            )}
+          </div>
+        </div>
+        <div className="flex items-center gap-2 shrink-0 ml-4">
+          <span className="text-xs font-medium text-slate-500">
+            {expanded ? "Ocultar" : "Ver dados da solicitação"}
+          </span>
+          <ChevronDown
+            className={cn(
+              "w-4 h-4 text-slate-400 transition-transform duration-200",
+              expanded && "rotate-180"
+            )}
+          />
+        </div>
+      </button>
 
-      <AccordionDetails sx={{ padding: '24px' }}>
-        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(5, 1fr)' }, gap: 2, pointerEvents: readOnly ? 'none' : 'auto' }}>
-          {sections.map((section, idx) => (
-            <Box key={idx} sx={{ border: '1px solid #E2E8F0', borderRadius: '8px', p: 2, backgroundColor: '#FAFAF9' }}>
-              <Typography
-                variant="caption"
-                fontWeight={700}
-                color="text.secondary"
-                sx={{ mb: 3, display: 'block', letterSpacing: '0.8px', textTransform: 'uppercase' }}
+      {/* Collapsible Content */}
+      {expanded && (
+        <div className="border-t border-slate-100 px-5 py-5 space-y-5 bg-slate-50/50">
+          {/* Sections Grid */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {sections.map((section, idx) => (
+              <div
+                key={idx}
+                className="bg-white border border-slate-100 rounded-lg p-4 space-y-3 shadow-sm"
               >
-                {section.title}
-              </Typography>
-              
-              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-                {section.fields.map((field, fIdx) => (
-                  <Box key={fIdx} sx={{ display: 'flex', alignItems: 'flex-start', gap: 1.5 }}>
-                    {field.icon && (
-                      <Icon sx={{ color: 'grey.500', fontSize: 20, mt: '2px' }}>
-                        {field.icon}
-                      </Icon>
-                    )}
-                    <Box sx={{ flex: 1 }}>
-                      <Typography
-                        variant="caption"
-                        sx={{
-                          color: 'grey.600',
-                          fontSize: '11px',
-                          fontWeight: 600,
-                          textTransform: 'uppercase',
-                          display: 'block',
-                          mb: 0.5,
-                          letterSpacing: '0.5px'
-                        }}
-                      >
-                        {field.label}
-                      </Typography>
-                      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-                        {Array.isArray(field.value) ? (
-                            field.value.length > 0 ? (
-                              field.value.map((v, i) => (
-                                <Chip key={i} label={v} size="small" variant="outlined" sx={{ height: 22, fontSize: '12px', borderColor: '#E2E8F0', backgroundColor: '#FFFFFF', mb: 0.5, fontWeight: 500 }} />
-                              ))
-                            ) : (
-                              <Typography variant="body2" sx={{ fontSize: '14px', fontStyle: 'italic', color: 'grey.500' }}>Não informado</Typography>
-                            )
-                        ) : field.type === 'badge-success' ? (
-                          <Chip 
-                            label={field.value || 'Sim'} 
-                            size="small" 
-                            sx={{ height: 22, fontSize: '12px', backgroundColor: '#ECFCCB', color: '#4D7C0F', fontWeight: 600, borderRadius: '4px' }} 
-                          />
-                        ) : field.type === 'badge-warning' ? (
-                          <Chip 
-                            label={field.value} 
-                            size="small" 
-                            variant="outlined"
-                            sx={{ height: 22, fontSize: '12px', borderColor: '#FDE047', color: '#CA8A04', backgroundColor: '#FEFCE8', fontWeight: 600, borderRadius: '4px' }} 
-                          />
-                        ) : field.type === 'badge-info' ? (
-                           <Chip 
-                            label={field.value} 
-                            size="small" 
-                            sx={{ height: 22, fontSize: '12px', backgroundColor: '#DBEAFE', color: '#1D4ED8', fontWeight: 600, borderRadius: '4px' }} 
-                          />
-                        ) : field.type === 'disabled' ? (
-                           <Typography variant="body2" sx={{ fontSize: '14px', fontStyle: 'italic', color: 'grey.500' }}>
-                            {field.value}
-                          </Typography>
-                        ) : (
-                          <Typography
-                            variant="body2"
-                            sx={{ fontSize: '13px', fontWeight: 600, color: '#1E293B', cursor: readOnly ? 'default' : 'text' }}
-                          >
-                            {field.value}
-                          </Typography>
-                        )}
-                      </Box>
-                    </Box>
-                  </Box>
+                {/* Section title */}
+                <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 pb-1 border-b border-slate-100">
+                  {section.title}
+                </p>
+
+                {/* Fields */}
+                <div className="space-y-3">
+                  {section.fields.map((field, fIdx) => (
+                    <div key={fIdx} className="flex items-start gap-2">
+                      {field.icon && (
+                        <span className="text-slate-400 mt-0.5 shrink-0 w-4 h-4">
+                          {field.icon}
+                        </span>
+                      )}
+                      <div className="min-w-0">
+                        <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400 mb-0.5">
+                          {field.label}
+                        </p>
+                        <FieldValue field={field} />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Attachments */}
+          {attachments && attachments.length > 0 && (
+            <div className="bg-white border border-slate-100 rounded-lg p-4 shadow-sm">
+              <div className="flex items-center gap-2 mb-3">
+                <Paperclip className="w-4 h-4 text-slate-400" />
+                <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">
+                  Documentos Anexados
+                </p>
+              </div>
+              <div className="space-y-2">
+                {attachments.map((file, idx) => (
+                  <a
+                    key={idx}
+                    href={`/assets/${file.name}`}
+                    download
+                    target="_blank"
+                    rel="noreferrer"
+                    className="flex items-center justify-between p-3 border border-slate-100 rounded-lg bg-slate-50 hover:bg-slate-100 hover:border-slate-200 transition-colors group"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="p-1.5 bg-blue-100 rounded text-blue-600">
+                        <FileText className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-slate-700">{file.name}</p>
+                        <p className="text-xs text-slate-400">{file.size}</p>
+                      </div>
+                    </div>
+                    <Download className="w-4 h-4 text-slate-400 group-hover:text-blue-600 transition-colors" />
+                  </a>
                 ))}
-              </Box>
-            </Box>
-          ))}
-        </Box>
-
-        {attachments && attachments.length > 0 && (
-          <Box sx={{ mt: 3, border: '1px solid #E2E8F0', borderRadius: '8px', p: 3, backgroundColor: '#FAFAF9' }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 3 }}>
-              <AttachFileIcon sx={{ color: 'grey.600', fontSize: 20 }} />
-              <Typography
-                variant="caption"
-                fontWeight={700}
-                color="text.secondary"
-                sx={{ letterSpacing: '0.8px', textTransform: 'uppercase' }}
-              >
-                DOCUMENTOS ANEXADOS
-              </Typography>
-            </Box>
-            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-              {attachments.map((file, idx) => (
-                <Box
-                  key={idx}
-                  component="a"
-                  href={`/assets/${file.name}`}
-                  download
-                  target="_blank"
-                  sx={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    p: 2,
-                    border: '1px solid #E2E8F0',
-                    borderRadius: '8px',
-                    textDecoration: 'none',
-                    backgroundColor: '#FFFFFF',
-                    color: 'inherit',
-                    '&:hover': {
-                      backgroundColor: '#F8FAFC',
-                      borderColor: '#CBD5E1',
-                    }
-                  }}
-                >
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                    <Box sx={{ color: 'primary.main', display: 'flex' }}>
-                       <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>
-                    </Box>
-                    <Box sx={{ overflow: 'hidden' }}>
-                      <Typography variant="body2" fontWeight={600} color="#334155">
-                        {file.name}
-                      </Typography>
-                      <Typography variant="caption" color="text.secondary">
-                        {file.size}
-                      </Typography>
-                    </Box>
-                  </Box>
-                  <DownloadIcon sx={{ color: '#94a3b8', fontSize: 20 }} />
-                </Box>
-              ))}
-            </Box>
-          </Box>
-        )}
-      </AccordionDetails>
-    </Accordion>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
   );
 }
