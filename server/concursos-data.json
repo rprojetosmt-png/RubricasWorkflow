@@ -1,0 +1,45 @@
+[
+  {
+    "id": "con-001",
+    "nomeConcurso": "Concurso Público de Analista de Gestão 2026",
+    "sigla": "CPAG-2026",
+    "numeroEdital": "EDITAL 01/2026",
+    "tipoConcurso": "Concurso",
+    "regimeJuridico": "Estatutário",
+    "tipoVinculo": "Efetivo",
+    "abrangencia": "Estadual",
+    "orgaosEnvolvidos": [
+      "SEPLAG",
+      "SEFAZ",
+      "SEDUC"
+    ],
+    "instituicaoRealizadora": "Fundação Cesgranrio",
+    "setorResponsavel": "Coordenadoria de Gestão de Pessoas",
+    "dataPublicacaoEdital": "2026-03-01",
+    "dataInicioInscricao": "2026-03-10",
+    "dataFimInscricao": "2026-04-10",
+    "dataProva": "2026-05-18",
+    "dataResultado": "2026-06-25",
+    "dataValidade": "2028-06-25",
+    "dataCancelamento": null,
+    "objetivo": "Formar cadastro de reserva e prover cargos estratégicos de analista para órgãos da administração estadual.",
+    "observacoes": "Aplicação em Cuiabá e polos regionais.",
+    "motivo": "",
+    "publicacoes": [
+      {
+        "id": "pub-001",
+        "tipo": "Edital",
+        "titulo": "Edital de Abertura",
+        "numero": "01/2026",
+        "dataPublicacao": "2026-03-01",
+        "arquivoNome": "edital_01_2026.pdf",
+        "arquivoUrl": "",
+        "observacao": "Publicação inicial",
+        "createdAt": "2026-04-16T13:28:45.162Z"
+      }
+    ],
+    "createdAt": "2026-04-16T13:28:45.162Z",
+    "updatedAt": "2026-04-16T13:28:45.162Z",
+    "situacao": "ATIVO"
+  }
+]

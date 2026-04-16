@@ -4,6 +4,15 @@ import cors from "cors";
 import fs from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import {
+  seedConcursosIfEmpty,
+  readConcursos,
+  getConcursoById,
+  createConcurso,
+  updateConcurso,
+  addPublicacaoConcurso,
+} from "./concursos/concursosRepository.js";
+import { validarConcurso } from "./concursos/concursosSchema.js";
 
 const app = express();
 
@@ -95,6 +104,153 @@ const nextCodigo = async () => {
   const nextSeq = String(maxSeq + 1).padStart(3, "0");
   return `${prefix}${nextSeq}`;
 };
+
+
+const sortConcursos = (a, b) => {
+  const aTime = new Date(a.updatedAt || a.createdAt || 0).getTime();
+  const bTime = new Date(b.updatedAt || b.createdAt || 0).getTime();
+  return bTime - aTime;
+};
+
+app.get("/api/concursos", async (_req, res, next) => {
+  try {
+    const rows = await readConcursos();
+    rows.sort(sortConcursos);
+    res.json(rows);
+  } catch (err) {
+    next(err);
+  }
+});
+
+app.get("/api/concursos/:id", async (req, res, next) => {
+  try {
+    const concurso = await getConcursoById(req.params.id);
+    if (!concurso) {
+      res.status(404).json({ message: "Concurso não encontrado" });
+      return;
+    }
+
+    res.json(concurso);
+  } catch (err) {
+    next(err);
+  }
+});
+
+app.post("/api/concursos", async (req, res, next) => {
+  try {
+    const payload = req.body || {};
+    const validation = validarConcurso(payload);
+
+    if (!validation.valid) {
+      res.status(400).json({
+        message: "Dados de concurso inválidos",
+        errors: validation.errors,
+      });
+      return;
+    }
+
+    const created = await createConcurso({
+      ...payload,
+      id: payload.id || "con-" + Date.now(),
+    });
+
+    res.status(201).json(created);
+  } catch (err) {
+    next(err);
+  }
+});
+
+app.put("/api/concursos/:id", async (req, res, next) => {
+  try {
+    const existing = await getConcursoById(req.params.id);
+    if (!existing) {
+      res.status(404).json({ message: "Concurso não encontrado" });
+      return;
+    }
+
+    const merged = {
+      ...existing,
+      ...req.body,
+      id: existing.id,
+      createdAt: existing.createdAt,
+    };
+
+    const validation = validarConcurso(merged);
+    if (!validation.valid) {
+      res.status(400).json({
+        message: "Dados de concurso inválidos",
+        errors: validation.errors,
+      });
+      return;
+    }
+
+    const updated = await updateConcurso(req.params.id, merged);
+    res.json(updated);
+  } catch (err) {
+    next(err);
+  }
+});
+
+app.patch("/api/concursos/:id/cancelar", async (req, res, next) => {
+  try {
+    const existing = await getConcursoById(req.params.id);
+    if (!existing) {
+      res.status(404).json({ message: "Concurso não encontrado" });
+      return;
+    }
+
+    const motivo = req.body?.motivo ? String(req.body.motivo).trim() : "";
+    const dataCancelamento = req.body?.dataCancelamento || toDateOnly(new Date());
+
+    const updated = await updateConcurso(req.params.id, {
+      ...existing,
+      dataCancelamento,
+      motivo,
+    });
+
+    res.json(updated);
+  } catch (err) {
+    next(err);
+  }
+});
+
+app.get("/api/concursos/:id/publicacoes", async (req, res, next) => {
+  try {
+    const concurso = await getConcursoById(req.params.id);
+    if (!concurso) {
+      res.status(404).json({ message: "Concurso não encontrado" });
+      return;
+    }
+
+    res.json(concurso.publicacoes || []);
+  } catch (err) {
+    next(err);
+  }
+});
+
+app.post("/api/concursos/:id/publicacoes", async (req, res, next) => {
+  try {
+    const concurso = await getConcursoById(req.params.id);
+    if (!concurso) {
+      res.status(404).json({ message: "Concurso não encontrado" });
+      return;
+    }
+
+    const payload = req.body || {};
+    if (!payload.tipo || !payload.titulo || !payload.dataPublicacao) {
+      res.status(400).json({
+        message: "Dados incompletos da publicação",
+        errors: ["tipo, titulo e dataPublicacao são obrigatórios"],
+      });
+      return;
+    }
+
+    const updated = await addPublicacaoConcurso(req.params.id, payload);
+    res.status(201).json(updated?.publicacoes || []);
+  } catch (err) {
+    next(err);
+  }
+});
 
 app.get("/api/health", (_req, res) => {
   res.json({ ok: true });
@@ -197,7 +353,7 @@ app.use((err, _req, res, _next) => {
 
 const port = Number(process.env.PORT || 3001);
 
-seedIfEmpty()
+Promise.all([seedIfEmpty(), seedConcursosIfEmpty()])
   .then(() => {
     app.listen(port, () => {
       console.log(`API listening on http://localhost:${port}`);
