@@ -53,7 +53,7 @@ import {
   type Usuario,
   historicalDataMock,
 } from "../data/mockData";
-import { addSolicitacaoCompleta, getNextCodigo } from "../data/solicitacoesStore";
+import { addSolicitacaoCompleta, getNextCodigo, updateSolicitacao } from "../data/solicitacoesStore";
 import { getEsteiraConfig, subscribeEsteiraConfig } from "../data/esteiraStore";
 import { cn } from "../components/ui/utils";
 import { toast } from "sonner";
@@ -83,6 +83,7 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
 interface SolicitacaoFormData {
+  codigoRubrica: string;
   nomeRubrica: string;
   classificacao: string;
   natureza?: "Remuneratória" | "Indenizatória";
@@ -125,6 +126,7 @@ export function NovaSolicitacaoPage() {
     formState: { errors },
   } = useForm<SolicitacaoFormData>({
     defaultValues: {
+      codigoRubrica: "",
       nomeRubrica: "",
       classificacao: "",
       natureza: undefined,
@@ -237,6 +239,7 @@ export function NovaSolicitacaoPage() {
 
 
   const podeEnviar =
+    !!watch("codigoRubrica") &&
     !!watch("nomeRubrica") &&
     !!watch("classificacao") &&
     !!watch("natureza") &&
@@ -268,6 +271,7 @@ export function NovaSolicitacaoPage() {
     const grupoId = gruposTrabalhistasEsocial[0]?.id ?? "";
     const categoriaId = (categoriasPorGrupo[grupoId] ?? [])[0]?.codigo ?? "";
 
+    setValue("codigoRubrica", Math.floor(Math.random() * 9000 + 1000).toString(), { shouldValidate: true });
     setValue("nomeRubrica", `Nova Rubrica ${Date.now()}`, { shouldValidate: true });
     setValue("classificacao", classificacoes[0], { shouldValidate: true });
     setValue("natureza", "Remuneratória", { shouldValidate: true });
@@ -293,7 +297,7 @@ export function NovaSolicitacaoPage() {
     toast.info("Dados de teste preenchidos!");
   };
 
-  const handleAprovarEtapa = () => {
+  const handleAprovarEtapa = async () => {
     const dataAgora = new Date().toISOString();
 
     let atualizado = upsertHistorico(historico, etapaAtual.id, {
@@ -310,13 +314,26 @@ export function NovaSolicitacaoPage() {
         data: dataAgora,
         usuario: usuarioAtual,
       });
+
+      if (solicitacaoId) {
+        try {
+          await updateSolicitacao(solicitacaoId, (current) => ({
+            ...current,
+            etapaAtual: proximaEtapa.id,
+            historico: atualizado,
+          }));
+        } catch (err) {
+          console.error("Erro ao persistir aprovação intermediária:", err);
+        }
+      }
+
       setHistorico(atualizado);
       setEtapaIndex((prevIndex) => prevIndex + 1);
       setComentario("");
       toast.success("Etapa aprovada com sucesso!");
     } else {
       // Se for a última etapa, finaliza a solicitação
-      onFormSubmit(watch());
+      void handleSubmit(onFormSubmit)();
     }
   };
 
@@ -327,26 +344,19 @@ export function NovaSolicitacaoPage() {
   const [isRejectRubricaDialogOpen, setIsRejectRubricaDialogOpen] = useState(false);
   const [motivoRejeicaoRubrica, setMotivoRejeicaoRubrica] = useState("");
   const [historico, setHistorico] = useState<HistoricoEtapa[]>([]);
-  const [codigoPreview, setCodigoPreview] = useState("RUB-YYYY-000");
+  const [solicitacaoId, setSolicitacaoId] = useState<string | null>(null);
   const [arquivosAnexados, setArquivosAnexados] = useState<File[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const etapaAtual = etapas[etapaIndex];
   const etapaAtualIndex = etapaIndex + 1;
 
-  useEffect(() => {
-    let isActive = true;
-    getNextCodigo()
-      .then((codigo) => {
-        if (isActive) setCodigoPreview(codigo);
-      })
-      .catch((err) => {
-        console.error(err);
-      });
-    return () => {
-      isActive = false;
-    };
-  }, []);
+  const codigoRubricaWatch = watch("codigoRubrica");
+  const codigoPreview = useMemo(() => {
+    const year = new Date().getFullYear();
+    const suffix = codigoRubricaWatch || "000";
+    return `RUB-${year}-${suffix}`;
+  }, [codigoRubricaWatch]);
 
 
   const getStatusIcon = (status: string, size: string = "w-5 h-5") => {
@@ -416,7 +426,7 @@ export function NovaSolicitacaoPage() {
       });
 
       const novaSolicitacao: Solicitacao = {
-        id: `sol-${Date.now()}`,
+        id: solicitacaoId || `sol-${Date.now()}`,
         codigo: codigoPreview,
         titulo: data.nomeRubrica || "Nova Solicitação",
         tipo: "Nova Rubrica",
@@ -424,12 +434,18 @@ export function NovaSolicitacaoPage() {
         dataSolicitacao: new Date().toISOString().slice(0, 10),
         statusGeral: "em_andamento",
         etapaAtual: proximaEtapa.id,
-        descricao: data.justificativa || "Solicitação sem justificativa detalhada.",
+        descricao: data.justificativaLegal || data.justificativa || "Solicitação sem justificativa detalhada.",
         historico: atualizado,
       };
 
       try {
-        await addSolicitacaoCompleta(novaSolicitacao);
+        if (solicitacaoId) {
+          await updateSolicitacao(solicitacaoId, () => novaSolicitacao);
+        } else {
+          const created = await addSolicitacaoCompleta(novaSolicitacao);
+          setSolicitacaoId(created.id);
+        }
+
         toast.success("Solicitação enviada", {
           description: "Solicitação enviada para Análise Documental.",
         });
@@ -444,7 +460,7 @@ export function NovaSolicitacaoPage() {
     }
 
     const novaSolicitacao: Solicitacao = {
-      id: `sol-${Date.now()}`,
+      id: solicitacaoId || `sol-${Date.now()}`,
       codigo: codigoPreview,
       titulo: data.nomeRubrica || "Nova Solicitação",
       tipo: "Nova Rubrica",
@@ -452,16 +468,24 @@ export function NovaSolicitacaoPage() {
       dataSolicitacao: new Date().toISOString().slice(0, 10),
       statusGeral: "aprovado",
       etapaAtual: etapaAtual.id,
-      descricao: data.justificativa || "Solicitação sem justificativa detalhada.",
+      descricao: data.justificativaLegal || data.justificativa || "Solicitação sem justificativa detalhada.",
       historico: atualizado,
     };
 
     try {
-      const created = await addSolicitacaoCompleta(novaSolicitacao);
-      toast.success("Solicitação concluída", {
-        description: "A solicitação passou por todas as etapas.",
-      });
-      navigate(`/solicitacao/${created.id}`);
+      if (solicitacaoId) {
+        await updateSolicitacao(solicitacaoId, () => novaSolicitacao);
+        toast.success("Solicitação concluída", {
+          description: "A solicitação passou por todas as etapas.",
+        });
+        navigate(`/solicitacao/${solicitacaoId}`);
+      } else {
+        const created = await addSolicitacaoCompleta(novaSolicitacao);
+        toast.success("Solicitação concluída", {
+          description: "A solicitação passou por todas as etapas.",
+        });
+        navigate(`/solicitacao/${created.id}`);
+      }
     } catch (err) {
       console.error(err);
       toast.error("Não foi possível salvar a solicitação");
@@ -471,7 +495,7 @@ export function NovaSolicitacaoPage() {
     setIsRejectDialogOpen(true);
   };
 
-  const handleConfirmarRejeicao = () => {
+  const handleConfirmarRejeicao = async () => {
     if (!motivoRejeicao.trim()) {
       toast.error("Informe o motivo da rejeição");
       return;
@@ -486,13 +510,29 @@ export function NovaSolicitacaoPage() {
       usuario: usuarioAtual,
     });
 
+    let novaEtapaId = etapaAtual.id;
+
     if (etapaIndex > 0) {
       const etapaAnterior = etapas[etapaIndex - 1];
+      novaEtapaId = etapaAnterior.id;
       atualizado = upsertHistorico(atualizado, etapaAnterior.id, {
         status: "em_analise",
         data: dataAgora,
         usuario: usuarioAtual,
       });
+
+      if (solicitacaoId) {
+        try {
+          await updateSolicitacao(solicitacaoId, (current) => ({
+            ...current,
+            etapaAtual: novaEtapaId,
+            historico: atualizado,
+          }));
+        } catch (err) {
+          console.error("Erro ao persistir reprovação intermediária:", err);
+        }
+      }
+
       setEtapaIndex((prevIndex) => Math.max(prevIndex - 1, 0));
     }
 
@@ -522,8 +562,8 @@ export function NovaSolicitacaoPage() {
       usuario: usuarioAtual,
     });
 
-    const novaSolicitacao = {
-      id: `sol-${Date.now()}`,
+    const novaSolicitacao: Solicitacao = {
+      id: solicitacaoId || `sol-${Date.now()}`,
       codigo: codigoPreview,
       titulo: watch("nomeRubrica") || "Nova Solicitação",
       tipo: "Nova Rubrica",
@@ -536,7 +576,11 @@ export function NovaSolicitacaoPage() {
     };
 
     try {
-      await addSolicitacaoCompleta(novaSolicitacao);
+      if (solicitacaoId) {
+        await updateSolicitacao(solicitacaoId, () => novaSolicitacao);
+      } else {
+        await addSolicitacaoCompleta(novaSolicitacao);
+      }
       toast.error("Rubrica rejeitada", {
         description: `A solicitação foi encerrada. Motivo: ${motivoRejeicaoRubrica.trim()}`,
       });
@@ -553,6 +597,7 @@ export function NovaSolicitacaoPage() {
     const grupoId = gruposTrabalhistasEsocial[0]?.id ?? "";
     const categoriaId = (categoriasPorGrupo[grupoId] ?? [])[0]?.codigo ?? "";
 
+    setValue("codigoRubrica", "1234", { shouldValidate: true, shouldDirty: true });
     setValue("nomeRubrica", `DEBUG Rubrica ${Date.now()}`, { shouldValidate: true, shouldDirty: true });
     setValue("classificacao", classificacoes[0] ?? "Vantagem", { shouldValidate: true, shouldDirty: true });
     setValue("natureza", "Remuneratória", { shouldValidate: true, shouldDirty: true });
@@ -607,7 +652,7 @@ export function NovaSolicitacaoPage() {
     const catStr = categoriasFiltradas.find(c => c.codigo === watch("categoriaTrabalhistaCodigo"))?.descricao || "Não informado";
     const baseLegalStr = (watch("baseLegalIds") || []).map((id: string) => baseLegalDocumentos.find(b => b.id === id)?.titulo).filter(Boolean).join(", ") || "Não informado";
     const tipo = watch("classificacao") || "Vantagem";
-    const esocialStr = naturezaRubricaEsocial.find(n => n.id === watch("naturezaEsocial"))?.nome || "Não informado";
+    const esocialStr = naturezaRubricaEsocial.find(n => n.codigo === watch("naturezaEsocial"))?.descricao || "Não informado";
     const outrasIncVal = (watch("outrasIncidencias") || []).map((id: string) => outrasIncidencias.find(o => o.id === id)?.nome).filter(Boolean);
     const justificativaVal = watch("justificativaLegal")?.trim() || "Não informado";
 
@@ -621,6 +666,7 @@ export function NovaSolicitacaoPage() {
         {
           title: "INFORMAÇÕES GERAIS",
           fields: [
+            { label: "Código da Rubrica", value: watch("codigoRubrica") || "Não informado", icon: <Tag strokeWidth={1.5} /> },
             { label: "Órgão", value: orgsStr, icon: <Building2 strokeWidth={1.5} /> },
             { label: "Setores", value: setoresStr, icon: <Building2 strokeWidth={1.5} /> },
             { label: "Servidor Responsável", value: watch("servidorResponsavel") || "Não informado", icon: <User strokeWidth={1.5} /> },
@@ -728,7 +774,20 @@ export function NovaSolicitacaoPage() {
                 const isRejeitado = status === "rejeitado";
 
                 return (
-                  <div key={etapa.id} className="w-36 shrink-0 text-center cursor-pointer hover:opacity-80 transition-opacity" onClick={() => setEtapaIndex(index)}>
+                  <div 
+                    key={etapa.id} 
+                    className={cn(
+                      "w-36 shrink-0 text-center transition-opacity",
+                      (index <= etapaIndex || isCompleto) ? "cursor-pointer hover:opacity-80" : "cursor-not-allowed opacity-60"
+                    )} 
+                    onClick={() => {
+                      if (index <= etapaIndex || isCompleto) {
+                        setEtapaIndex(index);
+                      } else {
+                        toast.info("Conclua a etapa atual para avançar.");
+                      }
+                    }}
+                  >
                     <div
                       className={cn(
                         "mx-auto h-8 w-8 rounded-full border-2 bg-white flex items-center justify-center relative z-10 font-semibold text-xs",
@@ -789,7 +848,27 @@ export function NovaSolicitacaoPage() {
       </Button>
     </CardHeader>
     <CardContent className="grid grid-cols-2 gap-4">
-      <div className="col-span-2 space-y-2">
+      <div className="space-y-2">
+        <Label>Código da Rubrica <span className="text-red-500">*</span></Label>
+        <Controller
+          name="codigoRubrica"
+          control={control}
+          rules={{ 
+            required: "Campo obrigatório", 
+            pattern: { value: /^\d+$/, message: "Apenas números inteiros" } 
+          }}
+          render={({ field }) => (
+            <Input 
+              {...field} 
+              placeholder="Ex: 1001" 
+              className={cn("border-2 h-10", errors.codigoRubrica && "border-red-500")} 
+            />
+          )}
+        />
+        <p className="text-xs text-slate-500">Somente números inteiros.</p>
+      </div>
+
+      <div className="space-y-2">
         <Label>Nome da Rubrica <span className="text-red-500">*</span></Label>
         <Controller
           name="nomeRubrica"
