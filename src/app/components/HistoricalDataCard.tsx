@@ -84,7 +84,7 @@ export function HistoricalDataCard({
   sections,
   attachments,
 }: HistoricalDataCardProps) {
-  const [expanded, setExpanded] = useState(false);
+  const [expanded, setExpanded] = useState(true);
 
   return (
     <div className="border border-slate-200 rounded-xl bg-white shadow-sm overflow-hidden">

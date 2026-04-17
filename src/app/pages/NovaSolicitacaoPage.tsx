@@ -123,6 +123,7 @@ export function NovaSolicitacaoPage() {
     handleSubmit,
     watch,
     setValue,
+    getValues,
     formState: { errors },
   } = useForm<SolicitacaoFormData>({
     defaultValues: {
@@ -644,17 +645,35 @@ export function NovaSolicitacaoPage() {
   };
 
   const buildHistoricalDataConfig = () => {
-    const orgsStr = (watch("orgaosSolicitantes") || []).map((id: string) => orgaos.find(o => o.id === id)?.nome).filter(Boolean).join(", ") || "Não informado";
-    const setoresStr = (watch("setorIds") || []).map((id: string) => todosSetores.find(s => s.id === id)?.nome).filter(Boolean).join(", ") || "Não informado";
-    const inicioStr = watch("vigenciaInicio") ? new Date(watch("vigenciaInicio")).toLocaleDateString("pt-BR") : "Não informado";
-    const fimStr = watch("vigenciaFim") ? new Date(watch("vigenciaFim")).toLocaleDateString("pt-BR") : "Não informado";
-    const grupoStr = gruposTrabalhistasEsocial.find(g => g.id === watch("grupoTrabalhistaIds")?.[0])?.nome || "Não informado";
-    const catStr = categoriasFiltradas.find(c => c.codigo === watch("categoriaTrabalhistaCodigo"))?.descricao || "Não informado";
-    const baseLegalStr = (watch("baseLegalIds") || []).map((id: string) => baseLegalDocumentos.find(b => b.id === id)?.titulo).filter(Boolean).join(", ") || "Não informado";
-    const tipo = watch("classificacao") || "Vantagem";
-    const esocialStr = naturezaRubricaEsocial.find(n => n.codigo === watch("naturezaEsocial"))?.descricao || "Não informado";
-    const outrasIncVal = (watch("outrasIncidencias") || []).map((id: string) => outrasIncidencias.find(o => o.id === id)?.nome).filter(Boolean);
-    const justificativaVal = watch("justificativaLegal")?.trim() || "Não informado";
+    const values = getValues();
+    const orgaosIds = values.orgaosSolicitantes || [];
+    const orgsStr = orgaosIds.map((id: string) => orgaos.find(o => o.id === id)?.nome).filter(Boolean).join(", ") || "Não informado";
+    
+    const setorIds = values.setorIds || [];
+    const setoresStr = setorIds.map((id: string) => todosSetores.find(s => s.id === id)?.nome).filter(Boolean).join(", ") || "Não informado";
+    
+    const vigInicio = values.vigenciaInicio;
+    const inicioStr = (vigInicio instanceof Date && !isNaN(vigInicio.getTime())) 
+      ? vigInicio.toLocaleDateString("pt-BR") 
+      : "Não informado";
+      
+    const vigFim = values.vigenciaFim;
+    const fimStr = (vigFim instanceof Date && !isNaN(vigFim.getTime())) 
+      ? vigFim.toLocaleDateString("pt-BR") 
+      : "Não informado";
+    
+    const grupoTrabalhistaIds = values.grupoTrabalhistaIds || [];
+    const grupoStr = gruposTrabalhistasEsocial.find(g => g.id === grupoTrabalhistaIds[0])?.nome || "Não informado";
+    
+    const catStr = categoriasFiltradas.find(c => c.codigo === values.categoriaTrabalhistaCodigo)?.descricao || "Não informado";
+    
+    const baseLegalIds = values.baseLegalIds || [];
+    const baseLegalStr = baseLegalIds.map((id: string) => baseLegalDocumentos.find(b => b.id === id)?.titulo).filter(Boolean).join(", ") || "Não informado";
+    
+    const tipo = values.classificacao || "Vantagem";
+    const esocialStr = naturezaRubricaEsocial.find(n => n.codigo === values.naturezaEsocial)?.descricao || "Não informado";
+    const outrasIncVal = (values.outrasIncidencias || []).map((id: string) => outrasIncidencias.find(o => o.id === id)?.nome).filter(Boolean);
+    const justificativaVal = values.justificativaLegal?.trim() || "Não informado";
 
     return {
       id: codigoPreview,
