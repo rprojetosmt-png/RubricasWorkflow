@@ -47,6 +47,7 @@ import {
   SelectValue,
 } from "../components/ui/select";
 import { Avatar, AvatarFallback } from "../components/ui/avatar";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "../components/ui/tabs";
 import {
   type HistoricoEtapa,
   type Solicitacao,
@@ -349,8 +350,15 @@ export function NovaSolicitacaoPage() {
   const [arquivosAnexados, setArquivosAnexados] = useState<File[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  const [activeTab, setActiveTab] = useState("solicitacao");
   const etapaAtual = etapas[etapaIndex];
   const etapaAtualIndex = etapaIndex + 1;
+
+  useEffect(() => {
+    if (etapaIndex === 1) {
+      setActiveTab("criacao");
+    }
+  }, [etapaIndex]);
 
   const codigoRubricaWatch = watch("codigoRubrica");
   const codigoPreview = useMemo(() => {
@@ -745,115 +753,42 @@ export function NovaSolicitacaoPage() {
 
   return (
     <div className="space-y-6 max-w-screen-2xl mx-auto">
-      {/* Contexto + Fluxo */}
-      <Card className="border border-slate-200 shadow-sm">
-        <CardHeader className="py-3 pb-2 space-y-3">
-          <div className="flex items-start justify-between gap-4">
-            <div className="flex items-start gap-3">
-              <Link to="/">
-                <Button variant="outline" size="icon" className="h-9 w-9">
-                  <ArrowLeft className="w-4 h-4" />
-                </Button>
-              </Link>
-              <div className="min-w-0">
-                <div className="flex flex-wrap items-center gap-2 mb-1">
-                  <span className="font-mono text-sm text-slate-600">{codigoPreview}</span>
-                  <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
-                    {tipo}
-                  </Badge>
-                </div>
-                <h2 className="text-slate-900 mb-1">{titulo || "Nova Solicitação"}</h2>
-                <div className="flex flex-wrap items-center gap-4 text-sm text-slate-600">
-                  <div className="flex items-center gap-2">
-                    <User className="w-4 h-4" />
-                    {usuarioAtual.nome}
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Calendar className="w-4 h-4" />
-                    {new Date().toLocaleDateString("pt-BR")}
-                  </div>
-                </div>
-              </div>
-            </div>
-            <Badge className="bg-amber-50 text-amber-700 border border-amber-200 hover:bg-amber-50">
-              Rubrica em edição
-            </Badge>
-          </div>
-        </CardHeader>
-        <CardContent className="pt-0 pb-3 space-y-3">
-          <div className="relative overflow-x-auto pb-1">
-            <div className="absolute top-4 left-3 right-3 h-px bg-slate-300" />
-            <div className="relative flex min-w-[940px] items-start justify-between gap-4 px-1">
-              {etapas.map((etapa, index) => {
-                const status =
-                  historico.find((h) => h.etapaId === etapa.id)?.status ??
-                  (index === etapaIndex ? "em_analise" : "pendente");
-                const isAtual = index === etapaIndex;
-                const isCompleto = status === "aprovado";
-                const isRejeitado = status === "rejeitado";
+      {/* Tabs Layout */}
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+        <div className="flex items-center justify-between bg-white p-2 rounded-lg border border-slate-200 shadow-sm">
+          <TabsList className="bg-slate-100">
+            <TabsTrigger value="solicitacao" className="px-8 flex items-center gap-2">
+              <FileText className="w-4 h-4" />
+              Solicitação
+            </TabsTrigger>
+            <TabsTrigger 
+              value="criacao" 
+              className="px-8 flex items-center gap-2"
+              disabled={etapaIndex === 0}
+            >
+              <Plus className="w-4 h-4" />
+              Criação
+            </TabsTrigger>
+          </TabsList>
 
-                return (
-                  <div 
-                    key={etapa.id} 
-                    className={cn(
-                      "w-36 shrink-0 text-center transition-opacity",
-                      (index <= etapaIndex || isCompleto) ? "cursor-pointer hover:opacity-80" : "cursor-not-allowed opacity-60"
-                    )} 
-                    onClick={() => {
-                      if (index <= etapaIndex || isCompleto) {
-                        setEtapaIndex(index);
-                      } else {
-                        toast.info("Conclua a etapa atual para avançar.");
-                      }
-                    }}
-                  >
-                    <div
-                      className={cn(
-                        "mx-auto h-8 w-8 rounded-full border-2 bg-white flex items-center justify-center relative z-10 font-semibold text-xs",
-                        isCompleto && "border-blue-700 bg-blue-700 text-white",
-                        isRejeitado && "border-red-500 bg-red-50 text-red-600",
-                        isAtual && !isCompleto && "border-blue-700 text-blue-700 ring-2 ring-blue-100",
-                        !isCompleto && !isRejeitado && !isAtual && "border-slate-300 text-slate-500"
-                      )}
-                    >
-                      {isCompleto ? <CheckCircle2 className="w-4 h-4" /> : index + 1}
-                    </div>
-                    <p
-                      className={cn(
-                        "mt-1 text-sm font-semibold leading-tight",
-                        isAtual && "text-blue-800",
-                        isCompleto && "text-slate-800",
-                        isRejeitado && "text-red-700",
-                        !isCompleto && !isRejeitado && !isAtual && "text-slate-600"
-                      )}
-                    >
-                      {etapa.nome}
-                    </p>
-                    <p className="text-[11px] text-slate-500 truncate">{etapa.descricao}</p>
-                  </div>
-                );
-              })}
+          <div className="flex items-center gap-3 px-2">
+            <div className="flex flex-col items-end">
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Status Atual</span>
+              <Badge className={cn(
+                "h-6",
+                etapaIndex === 0 ? "bg-blue-50 text-blue-700 border-blue-200" : "bg-amber-50 text-amber-700 border-amber-200"
+              )}>
+                {etapaAtual.nome}
+              </Badge>
             </div>
           </div>
+        </div>
 
-          <div className="px-3 py-2 bg-slate-50 rounded-md border border-slate-200 flex flex-wrap items-center gap-2 text-sm">
-            <Badge className="bg-blue-700 text-white hover:bg-blue-700">
-              {etapaAtualIndex} de {etapas.length}
-            </Badge>
-            <span className="font-medium text-slate-800">Etapa Atual: {etapaAtual.nome}</span>
-            <span className="text-slate-600">{etapaAtual.descricao}</span>
-            <span className="text-slate-700 flex items-center gap-1">
-              <User className="w-4 h-4" />
-              {etapaAtual.gruposResponsaveis.map((g) => g.nome).join(", ")}
-            </span>
-          </div>
-        </CardContent>
-      </Card>
-
-      <div className="grid grid-cols-3 gap-6 pb-20">
-        <div className="col-span-2 space-y-6">
-          {etapaIndex === 0 ? (
-            <form onSubmit={handleSubmit(onFormSubmit)} className="space-y-6">
+        <div className="grid grid-cols-3 gap-6 pb-20">
+          <div className="col-span-2 space-y-6">
+            <TabsContent value="solicitacao" className="mt-0 space-y-6">
+              {etapaIndex === 0 ? (
+                <form onSubmit={handleSubmit(onFormSubmit)} className="space-y-6">
   <Card className="border-none shadow-md overflow-hidden">
     <div className="h-1 bg-blue-600 w-full" />
     <CardHeader className="flex flex-row items-center justify-between gap-3">
@@ -1163,11 +1098,14 @@ export function NovaSolicitacaoPage() {
     </CardContent>
   </Card>
 </form>
+              ) : (
+                <HistoricalDataCard {...buildHistoricalDataConfig()} />
+              )}
+            </TabsContent>
 
-          ) : (
-            <div className="space-y-6">
-              {/* Visualização de Análise (Etapas > 0) */}
-              <HistoricalDataCard {...buildHistoricalDataConfig()} />
+            <TabsContent value="criacao" className="mt-0 space-y-6">
+              {etapaIndex === 1 && (
+                <div className="space-y-6">
 
               {/* Card Documentos Anexados */}
               <Card className="border-none shadow-md">
@@ -1288,9 +1226,10 @@ export function NovaSolicitacaoPage() {
                   </div>
                 </CardContent>
               </Card>
-            </div>
-          )}
-        </div>
+                </div>
+              )}
+            </TabsContent>
+          </div>
 
         <div className="space-y-6">
 
@@ -1447,6 +1386,7 @@ export function NovaSolicitacaoPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      </Tabs>
     </div>
   );
 }
