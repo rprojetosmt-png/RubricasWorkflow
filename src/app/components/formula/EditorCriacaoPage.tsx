@@ -13,7 +13,11 @@ import { Button } from "../ui/button";
 import { toast } from "sonner";
 import { cn } from "../ui/utils";
 
-export function EditorCriacaoPage() {
+interface EditorCriacaoPageProps {
+  children?: React.ReactNode;
+}
+
+export function EditorCriacaoPage({ children }: EditorCriacaoPageProps) {
   // Estado principal
   const [tokens, setTokens] = useState<FormulaToken[]>([]);
   const [history, setHistory] = useState<FormulaToken[][]>([]);
@@ -122,6 +126,34 @@ export function EditorCriacaoPage() {
     toast.success("Regras de cálculo salvas com sucesso!");
   };
 
+  const actionBar = (
+    <div className="flex items-center justify-between bg-white rounded-xl border border-slate-200 shadow-sm px-4 py-3">
+      <Button type="button" variant="outline" className="h-10 gap-2">
+        <ArrowLeft className="w-4 h-4" />
+        Voltar para Solicitação
+      </Button>
+      <div className="flex items-center gap-3">
+        <span className="text-xs text-slate-400">
+          {tokens.length} tokens • {excecoes.length} exceções
+        </span>
+        <Button
+          type="button"
+          className={cn(
+            "h-10 gap-2",
+            tokens.length > 0
+              ? "bg-blue-700 hover:bg-blue-800"
+              : "bg-slate-400 cursor-not-allowed"
+          )}
+          disabled={tokens.length === 0}
+          onClick={handleSalvarRegras}
+        >
+          <Save className="w-4 h-4" />
+          Salvar Regras de Cálculo
+        </Button>
+      </div>
+    </div>
+  );
+
   return (
     <>
       {/* Título da Etapa */}
@@ -197,32 +229,11 @@ export function EditorCriacaoPage() {
         </div>
       </div>
 
-      {/* Barra de Ações */}
-      <div className="flex items-center justify-between bg-white rounded-xl border border-slate-200 shadow-sm px-4 py-3">
-        <Button type="button" variant="outline" className="h-10 gap-2">
-          <ArrowLeft className="w-4 h-4" />
-          Voltar para Solicitação
-        </Button>
-        <div className="flex items-center gap-3">
-          <span className="text-xs text-slate-400">
-            {tokens.length} tokens • {excecoes.length} exceções
-          </span>
-          <Button
-            type="button"
-            className={cn(
-              "h-10 gap-2",
-              tokens.length > 0
-                ? "bg-blue-700 hover:bg-blue-800"
-                : "bg-slate-400 cursor-not-allowed"
-            )}
-            disabled={tokens.length === 0}
-            onClick={handleSalvarRegras}
-          >
-            <Save className="w-4 h-4" />
-            Salvar Regras de Cálculo
-          </Button>
-        </div>
-      </div>
+      {/* Conteúdo externo (ex: Documentos Anexados) */}
+      {children}
+
+      {/* Barra de Ações — sempre por último */}
+      {actionBar}
 
       {/* Modal de Exceção */}
       <ModalExcecao

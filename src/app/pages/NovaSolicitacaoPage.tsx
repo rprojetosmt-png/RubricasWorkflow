@@ -1111,62 +1111,62 @@ export function NovaSolicitacaoPage() {
               {/* Resumo da Solicitação (colapsável) */}
               <HistoricalDataCard {...buildHistoricalDataConfig()} />
 
-              {/* Card Documentos Anexados */}
-              <Card className="border-none shadow-md">
-                <CardHeader>
-                  <CardTitle className="text-lg">Documentos Anexados</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  {arquivosAnexados.length === 0 ? (
-                    <p className="text-sm text-slate-400 italic">Nenhum documento anexado.</p>
-                  ) : (
-                    arquivosAnexados.map((file, idx) => (
-                      <div key={idx} className="flex items-center justify-between p-3 bg-slate-50 rounded-xl border border-slate-100 group hover:border-blue-200 transition-colors">
-                        <div className="flex items-center gap-3">
-                          <div className="p-2 bg-blue-100 rounded-lg text-blue-600">
-                            <FileText className="w-5 h-5" />
+              {/* Editor de Fórmulas — com Documentos como children (antes do botão Salvar) */}
+              <EditorCriacaoPage>
+                {/* Card Documentos Anexados */}
+                <Card className="border-none shadow-md">
+                  <CardHeader>
+                    <CardTitle className="text-lg">Documentos Anexados</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    {arquivosAnexados.length === 0 ? (
+                      <p className="text-sm text-slate-400 italic">Nenhum documento anexado.</p>
+                    ) : (
+                      arquivosAnexados.map((file, idx) => (
+                        <div key={idx} className="flex items-center justify-between p-3 bg-slate-50 rounded-xl border border-slate-100 group hover:border-blue-200 transition-colors">
+                          <div className="flex items-center gap-3">
+                            <div className="p-2 bg-blue-100 rounded-lg text-blue-600">
+                              <FileText className="w-5 h-5" />
+                            </div>
+                            <div>
+                              <span className="text-sm font-medium text-slate-700">{file.name}</span>
+                              <p className="text-xs text-slate-400">{(file.size / 1024).toFixed(1)} KB</p>
+                            </div>
                           </div>
-                          <div>
-                            <span className="text-sm font-medium text-slate-700">{file.name}</span>
-                            <p className="text-xs text-slate-400">{(file.size / 1024).toFixed(1)} KB</p>
-                          </div>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="text-slate-400 hover:text-red-500 hover:bg-red-50"
+                            onClick={() => setArquivosAnexados((prev) => prev.filter((_, i) => i !== idx))}
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
                         </div>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="text-slate-400 hover:text-red-500 hover:bg-red-50"
-                          onClick={() => setArquivosAnexados((prev) => prev.filter((_, i) => i !== idx))}
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      </div>
-                    ))
-                  )}
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    multiple
-                    className="hidden"
-                    onChange={(e) => {
-                      const files = Array.from(e.target.files || []);
-                      setArquivosAnexados((prev) => [...prev, ...files]);
-                      if (fileInputRef.current) fileInputRef.current.value = "";
-                    }}
-                  />
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="w-full border-dashed border-slate-300 text-slate-600 hover:border-blue-400 hover:text-blue-600 hover:bg-blue-50 gap-2"
-                    onClick={() => fileInputRef.current?.click()}
-                  >
-                    <Paperclip className="w-4 h-4" />
-                    Anexar documento
-                  </Button>
-                </CardContent>
-              </Card>
-
-              {/* Editor de Fórmulas */}
-              <EditorCriacaoPage />
+                      ))
+                    )}
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      multiple
+                      className="hidden"
+                      onChange={(e) => {
+                        const files = Array.from(e.target.files || []);
+                        setArquivosAnexados((prev) => [...prev, ...files]);
+                        if (fileInputRef.current) fileInputRef.current.value = "";
+                      }}
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="w-full border-dashed border-slate-300 text-slate-600 hover:border-blue-400 hover:text-blue-600 hover:bg-blue-50 gap-2"
+                      onClick={() => fileInputRef.current?.click()}
+                    >
+                      <Paperclip className="w-4 h-4" />
+                      Anexar documento
+                    </Button>
+                  </CardContent>
+                </Card>
+              </EditorCriacaoPage>
 
                 </div>
               )}
