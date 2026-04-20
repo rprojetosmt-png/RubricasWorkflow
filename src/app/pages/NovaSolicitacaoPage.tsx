@@ -48,6 +48,7 @@ import {
 } from "../components/ui/select";
 import { Avatar, AvatarFallback } from "../components/ui/avatar";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "../components/ui/tabs";
+import { EditorCriacaoPage } from "../components/formula/EditorCriacaoPage";
 import {
   type HistoricoEtapa,
   type Solicitacao,
@@ -1107,6 +1108,9 @@ export function NovaSolicitacaoPage() {
               {etapaIndex === 1 && (
                 <div className="space-y-6">
 
+              {/* Resumo da Solicitação (colapsável) */}
+              <HistoricalDataCard {...buildHistoricalDataConfig()} />
+
               {/* Card Documentos Anexados */}
               <Card className="border-none shadow-md">
                 <CardHeader>
@@ -1161,71 +1165,9 @@ export function NovaSolicitacaoPage() {
                 </CardContent>
               </Card>
 
-              {/* Card Parecer Técnico (ex-Ações) */}
-              <Card className="border-none shadow-md">
-                <CardHeader className="pb-3 border-b border-slate-50">
-                  <div className="flex flex-col gap-1">
-                    <CardTitle className="text-lg">Parecer Técnico</CardTitle>
-                    <CardDescription className="flex items-center gap-1.5 text-xs font-semibold text-slate-500 uppercase tracking-tight">
-                      <Users className="w-3.5 h-3.5" />
-                      Responsabilidade: {etapaAtual.gruposResponsaveis.map((g) => g.nome).join(", ")}
-                    </CardDescription>
-                  </div>
-                </CardHeader>
-                <CardContent className="space-y-4 pt-5">
-                  <div className="space-y-2">
-                    <Textarea
-                      placeholder="Descreva o parecer técnico desta etapa... *"
-                      value={comentario}
-                      onChange={(e) => setComentario(e.target.value)}
-                      rows={4}
-                      className="border-slate-200 focus:border-blue-500 focus:ring-blue-100"
-                    />
-                    {comentario.trim() === "" && (
-                      <p className="text-xs text-red-500">O parecer técnico é obrigatório para aprovar ou reprovar a etapa.</p>
-                    )}
-                  </div>
-                  <div className="flex flex-col gap-3 pt-2">
-                    <div className="flex gap-3">
-                      <Button
-                        onClick={() => {
-                          if (!comentario.trim()) {
-                            toast.error("Preencha o parecer técnico antes de aprovar.");
-                            return;
-                          }
-                          handleAprovarEtapa();
-                        }}
-                        className="flex-1 h-12 bg-green-600 hover:bg-green-700 shadow-lg shadow-green-200 font-bold"
-                      >
-                        <CheckCircle2 className="mr-2 w-5 h-5" />
-                        Aprovar Etapa
-                      </Button>
-                      <Button
-                        onClick={() => {
-                          if (!comentario.trim()) {
-                            toast.error("Preencha o parecer técnico antes de reprovar.");
-                            return;
-                          }
-                          handleRejeitar();
-                        }}
-                        variant="outline"
-                        className="flex-1 h-12 border-orange-500 text-orange-600 hover:bg-orange-50 font-bold"
-                      >
-                        <XCircle className="mr-2 w-5 h-5" />
-                        Reprovar Etapa
-                      </Button>
-                    </div>
-                    <Button
-                      onClick={handleRejeitarRubrica}
-                      variant="outline"
-                      className="w-full h-12 border-red-600 text-red-600 hover:bg-red-50 font-bold"
-                    >
-                      <AlertTriangle className="mr-2 w-5 h-5" />
-                      Rejeitar Rubrica
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
+              {/* Editor de Fórmulas */}
+              <EditorCriacaoPage />
+
                 </div>
               )}
             </TabsContent>

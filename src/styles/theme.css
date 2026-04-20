@@ -31,6 +31,18 @@
   --chart-4: oklch(0.828 0.189 84.429);
   --chart-5: oklch(0.769 0.188 70.08);
   --radius: 0.625rem;
+
+  /* Tokens de fórmula */
+  --token-variable: oklch(0.92 0.06 240);
+  --token-variable-fg: oklch(0.25 0.14 240);
+  --token-operator: oklch(0.92 0.06 155);
+  --token-operator-fg: oklch(0.25 0.12 155);
+  --token-logic: oklch(0.92 0.05 290);
+  --token-logic-fg: oklch(0.30 0.14 290);
+  --token-value: oklch(0.93 0.06 55);
+  --token-value-fg: oklch(0.35 0.12 55);
+  --token-rubrica: oklch(0.92 0.05 20);
+  --token-rubrica-fg: oklch(0.30 0.12 20);
   --sidebar: oklch(0.985 0 0);
   --sidebar-foreground: oklch(0.145 0 0);
   --sidebar-primary: #030213;
