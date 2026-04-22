@@ -7,9 +7,10 @@ import { cn } from "../ui/utils";
 
 interface BibliotecaElementosProps {
   onAddToken: (token: FormulaToken) => void;
+  hideTitle?: boolean;
 }
 
-export function BibliotecaElementos({ onAddToken }: BibliotecaElementosProps) {
+export function BibliotecaElementos({ onAddToken, hideTitle = false }: BibliotecaElementosProps) {
   const [activeTab, setActiveTab] = useState<"variaveis" | "rubricas">("variaveis");
   const [search, setSearch] = useState("");
 
@@ -49,15 +50,15 @@ export function BibliotecaElementos({ onAddToken }: BibliotecaElementosProps) {
   };
 
   return (
-    <div className="space-y-3">
-      <p className="panel-section-title">Biblioteca de Elementos</p>
+    <div className="space-y-4">
+      {!hideTitle && <p className="panel-section-title">Biblioteca de Elementos</p>}
 
-      {/* Segmented Control */}
-      <div className="flex rounded-lg p-1" style={{ backgroundColor: "#F3F5F7" }}>
+      {/* Segmented Control with Badges (Matched to image) */}
+      <div className="flex rounded-xl p-1 bg-[#F1F5F9] mx-4 mt-2">
         <button
           type="button"
           className={cn(
-            "flex-1 py-1.5 text-sm font-medium rounded-md transition-all",
+            "flex-1 py-2 text-sm font-semibold rounded-lg transition-all flex items-center justify-center gap-2",
             activeTab === "variaveis"
               ? "bg-white shadow-sm text-slate-900"
               : "text-slate-500 hover:text-slate-700"
@@ -65,11 +66,14 @@ export function BibliotecaElementos({ onAddToken }: BibliotecaElementosProps) {
           onClick={() => handleTabChange("variaveis")}
         >
           Variáveis
+          <span className={cn("px-1.5 py-0.5 rounded text-[10px]", activeTab === "variaveis" ? "bg-slate-100 text-slate-600" : "bg-slate-200/50 text-slate-400")}>
+            {variaveis.length}
+          </span>
         </button>
         <button
           type="button"
           className={cn(
-            "flex-1 py-1.5 text-sm font-medium rounded-md transition-all",
+            "flex-1 py-2 text-sm font-semibold rounded-lg transition-all flex items-center justify-center gap-2",
             activeTab === "rubricas"
               ? "bg-white shadow-sm text-slate-900"
               : "text-slate-500 hover:text-slate-700"
@@ -77,32 +81,35 @@ export function BibliotecaElementos({ onAddToken }: BibliotecaElementosProps) {
           onClick={() => handleTabChange("rubricas")}
         >
           Rubricas
+          <span className={cn("px-1.5 py-0.5 rounded text-[10px]", activeTab === "rubricas" ? "bg-slate-100 text-slate-600" : "bg-slate-200/50 text-slate-400")}>
+            {rubricasRef.length}
+          </span>
         </button>
       </div>
 
       {/* Search */}
-      <div className="relative">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+      <div className="relative px-4">
+        <Search className="absolute left-7 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
         <Input
-          placeholder="Buscar..."
+          placeholder={activeTab === "variaveis" ? "Buscar variável..." : "Buscar rubrica..."}
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="pl-9 h-9 border-2"
+          className="pl-10 h-10 border-slate-200 bg-white"
         />
       </div>
 
       {/* Content */}
-      <div className="max-h-[300px] overflow-y-auto space-y-1 pr-1">
+      <div className="max-h-[300px] overflow-y-auto space-y-1 px-4 pb-4 scrollbar-thin scrollbar-thumb-slate-200 scrollbar-track-transparent">
         {activeTab === "variaveis" && (
           <>
             {filteredVariaveis.length === 0 ? (
-              <p className="text-sm text-slate-400 text-center py-4">Nenhuma variável encontrada</p>
+              <p className="text-sm text-slate-400 text-center py-8 italic">Nenhuma variável encontrada</p>
             ) : (
               filteredVariaveis.map((v) => (
                 <button
                   key={v.id}
                   type="button"
-                  className="w-full text-left px-3 py-2 rounded-lg hover:bg-blue-50 border border-transparent hover:border-blue-200 transition-all group"
+                  className="w-full text-left px-4 py-3 rounded-xl hover:bg-slate-50 border border-transparent hover:border-slate-100 transition-all group"
                   onClick={() =>
                     onAddToken({
                       id: generateId(),
@@ -113,15 +120,12 @@ export function BibliotecaElementos({ onAddToken }: BibliotecaElementosProps) {
                     })
                   }
                 >
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium text-slate-800 group-hover:text-blue-700">
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-sm font-bold text-slate-800 group-hover:text-blue-600">
                       {v.nome}
                     </span>
-                    <code className="text-xs font-mono text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded">
-                      {v.simbolo}
-                    </code>
                   </div>
-                  <p className="text-xs text-slate-400 mt-0.5">{v.descricao}</p>
+                  <p className="text-xs text-slate-500 leading-relaxed">{v.descricao}</p>
                 </button>
               ))
             )}
@@ -131,24 +135,24 @@ export function BibliotecaElementos({ onAddToken }: BibliotecaElementosProps) {
         {activeTab === "rubricas" && (
           <>
             {filteredRubricas.length === 0 ? (
-              <p className="text-sm text-slate-400 text-center py-4">Nenhuma rubrica encontrada</p>
+              <p className="text-sm text-slate-400 text-center py-8 italic">Nenhuma rubrica encontrada</p>
             ) : (
               (Object.keys(rubricasByType) as Array<keyof typeof rubricasByType>).map((tipo) => {
                 const items = rubricasByType[tipo];
                 if (items.length === 0) return null;
                 return (
-                  <div key={tipo} className="space-y-1">
-                    <div className="flex items-center gap-2 px-2 pt-2">
-                      <Badge variant="outline" className={cn("text-xs", tipoBadgeStyle[tipo])}>
+                  <div key={tipo} className="space-y-1 mb-4">
+                    <div className="flex items-center gap-2 px-2 py-1 sticky top-0 bg-white z-10">
+                      <Badge variant="outline" className={cn("text-[10px] uppercase font-bold tracking-wider", tipoBadgeStyle[tipo])}>
                         {tipoLabel[tipo]}
                       </Badge>
-                      <span className="text-xs text-slate-400">{items.length}</span>
+                      <span className="text-[10px] text-slate-400 font-bold">{items.length}</span>
                     </div>
                     {items.map((r) => (
                       <button
                         key={r.codigo}
                         type="button"
-                        className="w-full text-left px-3 py-2 rounded-lg hover:bg-orange-50 border border-transparent hover:border-orange-200 transition-all group"
+                        className="w-full text-left px-4 py-3 rounded-xl hover:bg-slate-50 border border-transparent hover:border-slate-100 transition-all group"
                         onClick={() =>
                           onAddToken({
                             id: generateId(),
@@ -159,11 +163,11 @@ export function BibliotecaElementos({ onAddToken }: BibliotecaElementosProps) {
                           })
                         }
                       >
-                        <div className="flex items-center gap-2">
-                          <code className="text-xs font-mono text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded">
+                        <div className="flex items-center gap-3">
+                          <code className="text-[10px] font-mono font-bold text-slate-500 bg-slate-100 px-2 py-1 rounded">
                             {r.codigo}
                           </code>
-                          <span className="text-sm font-medium text-slate-800 group-hover:text-orange-700">
+                          <span className="text-sm font-bold text-slate-800 group-hover:text-blue-600">
                             {r.nome}
                           </span>
                         </div>

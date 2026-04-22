@@ -785,8 +785,8 @@ export function NovaSolicitacaoPage() {
           </div>
         </div>
 
-        <div className="grid grid-cols-3 gap-6 pb-20">
-          <div className="col-span-2 space-y-6">
+        <div className="max-w-7xl mx-auto pb-20">
+          <div className="space-y-6">
             <TabsContent value="solicitacao" className="mt-0 space-y-6">
               {etapaIndex === 0 ? (
                 <form onSubmit={handleSubmit(onFormSubmit)} className="space-y-6">
@@ -802,7 +802,7 @@ export function NovaSolicitacaoPage() {
         Preencher dados fictícios
       </Button>
     </CardHeader>
-    <CardContent className="grid grid-cols-2 gap-4">
+    <CardContent className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
       <div className="space-y-2">
         <Label>Código da Rubrica <span className="text-red-500">*</span></Label>
         <Controller
@@ -864,7 +864,7 @@ export function NovaSolicitacaoPage() {
         />
       </div>
 
-      <div className="col-span-2 space-y-2">
+      <div className="col-span-1 md:col-span-2 xl:col-span-3 space-y-2">
         <Label>Tabela 03 - Natureza das Rubricas (eSocial) <span className="text-red-500">*</span></Label>
         <Controller
           name="naturezaEsocial"
@@ -899,7 +899,7 @@ export function NovaSolicitacaoPage() {
         />
       </div>
 
-      <div className="col-span-2 space-y-2">
+      <div className="col-span-1 md:col-span-2 xl:col-span-3 space-y-2">
         <Label>Projeto/Atividade (PAOE) <span className="text-red-500">*</span></Label>
         <Controller
           name="paoe"
@@ -919,8 +919,8 @@ export function NovaSolicitacaoPage() {
   <Card className="border-none shadow-md overflow-hidden">
     <div className="h-1 bg-cyan-600 w-full" />
     <CardHeader><CardTitle className="flex items-center gap-2"><User className="w-5 h-5 text-cyan-600" />Etapa 2: Abrangência e Público</CardTitle></CardHeader>
-    <CardContent className="grid grid-cols-2 gap-4">
-      <div className="col-span-2 space-y-2">
+    <CardContent className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+      <div className="col-span-1 md:col-span-2 xl:col-span-3 space-y-2">
         <Label>Órgãos Solicitantes <span className="text-red-500">*</span></Label>
         <Controller name="orgaosSolicitantes" control={control} rules={{ validate: (v) => (Array.isArray(v) && v.length > 0) || "Selecione pelo menos um órgão" }} render={({ field }) => {
           const selected = Array.isArray(field.value) ? field.value : [];
@@ -978,7 +978,7 @@ export function NovaSolicitacaoPage() {
         <Controller name="outrosGruposDescricao" control={control} rules={{ validate: (v) => existeOutrosGrupos !== "Sim" || !!v?.trim() || "Informe os outros grupos" }} render={({ field }) => <Input {...field} disabled={existeOutrosGrupos !== "Sim"} className={cn("border-2 h-10", errors.outrosGruposDescricao && "border-red-500")} />} />
       </div>
 
-      <div className="col-span-2 space-y-2">
+      <div className="col-span-1 md:col-span-2 xl:col-span-3 space-y-2">
         <Label>Cargos que utilizarão a rubrica <span className="text-red-500">*</span></Label>
         <Controller name="cargosAplicaveis" control={control} rules={{ validate: (v) => (Array.isArray(v) && v.length > 0) || "Selecione pelo menos um cargo" }} render={({ field }) => {
           const selected = Array.isArray(field.value) ? field.value : [];
@@ -991,7 +991,7 @@ export function NovaSolicitacaoPage() {
   <Card className="border-none shadow-md overflow-hidden">
     <div className="h-1 bg-amber-500 w-full" />
     <CardHeader><CardTitle className="flex items-center gap-2"><CheckCircle2 className="w-5 h-5 text-amber-500" />Etapa 3: Incidências e Regras</CardTitle></CardHeader>
-    <CardContent className="grid grid-cols-2 gap-4">
+    <CardContent className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
       {naturezaSelecionada === "Remuneratória" && (
         <>
           <div className="space-y-2">
@@ -1173,83 +1173,7 @@ export function NovaSolicitacaoPage() {
             </TabsContent>
           </div>
 
-        <div className="space-y-6">
 
-
-          <Card className="border-none shadow-md">
-            <CardHeader className="pb-3 border-b border-slate-100">
-              <CardTitle className="text-lg">Histórico de Atividades</CardTitle>
-            </CardHeader>
-            <CardContent className="pt-6">
-              {historico.length === 0 ? (
-                <div className="text-sm text-slate-500">
-                  Ainda não há atividades registradas.
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  {historico
-                    .filter((h) => h.status !== "pendente")
-                    .sort((a, b) => {
-                      if (!a.data || !b.data) return 0;
-                      return new Date(b.data).getTime() - new Date(a.data).getTime();
-                    })
-                    .map((hist, index) => {
-                      const etapa = etapas.find((e) => e.id === hist.etapaId);
-                      if (!etapa) return null;
-
-                      return (
-                        <div key={index} className="relative">
-                          {index !== historico.length - 1 && (
-                            <div className="absolute left-5 top-10 bottom-0 w-0.5 bg-slate-200" />
-                          )}
-                          <div className="flex gap-3">
-                            <Avatar className="w-10 h-10 border-2 border-white shadow-sm">
-                              <AvatarFallback
-                                className="text-xs"
-                                style={{ backgroundColor: etapa.cor + "20" }}
-                              >
-                                {hist.usuario ? getInitials(hist.usuario.nome) : "SYS"}
-                              </AvatarFallback>
-                            </Avatar>
-                            <div className="flex-1 pb-4">
-                              <div className="flex items-start justify-between mb-1">
-                                <p className="text-sm font-medium text-slate-900">
-                                  {etapa.nome}
-                                </p>
-                                {getStatusIcon(hist.status, "w-4 h-4")}
-                              </div>
-                              {hist.usuario && (
-                                <p className="text-xs text-slate-600 mb-1">
-                                  {hist.usuario.nome}
-                                </p>
-                              )}
-                              {hist.data && (
-                                <p className="text-xs text-slate-500">
-                                  {new Date(hist.data).toLocaleDateString("pt-BR", {
-                                    day: "2-digit",
-                                    month: "long",
-                                    year: "numeric",
-                                    hour: "2-digit",
-                                    minute: "2-digit",
-                                  })}
-                                </p>
-                              )}
-                              {hist.comentario && (
-                                <div className="mt-2 p-2 bg-slate-50 rounded text-xs text-slate-700 border border-slate-200">
-                                  <MessageSquare className="w-3 h-3 inline mr-1" />
-                                  {hist.comentario}
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    })}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </div>
       </div>
 
       {/* Dialog: Reprovar Etapa */}

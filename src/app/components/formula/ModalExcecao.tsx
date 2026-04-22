@@ -2,27 +2,26 @@ import { useState, useCallback } from "react";
 import {
   Dialog,
   DialogContent,
-  DialogHeader,
-  DialogTitle,
 } from "../ui/dialog";
 import { Button } from "../ui/button";
 import { Label } from "../ui/label";
 import { Input } from "../ui/input";
-import { RadioGroup, RadioGroupItem } from "../ui/radio-group";
-import { Checkbox } from "../ui/checkbox";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "../ui/select";
 import {
   type Excecao,
   type TipoPessoa,
-  orgaosExcecao,
-  tiposVinculo,
-  categoriasExcecao,
   cargosExcecao,
   situacoesFuncionais,
   servidores,
 } from "../../data/excecao-data";
 import {
   type FormulaToken,
-  generateId,
   buildDescriptiveFormula,
 } from "../../data/rubrica-data";
 import { OperadoresMatematicos } from "./OperadoresMatematicos";
@@ -31,6 +30,7 @@ import { PainelValorFixo } from "./PainelValorFixo";
 import { EditorFormula } from "./EditorFormula";
 import { BibliotecaElementos } from "./BibliotecaElementos";
 import { ScrollArea } from "../ui/scroll-area";
+import { X, CheckCircle2, Calculator } from "lucide-react";
 
 interface ModalExcecaoProps {
   open: boolean;
@@ -39,41 +39,8 @@ interface ModalExcecaoProps {
   editData?: Excecao | null;
 }
 
-function MultiCheckSelect({
-  label,
-  options,
-  value,
-  onChange,
-}: {
-  label: string;
-  options: { id: string; label: string }[];
-  value: string[];
-  onChange: (v: string[]) => void;
-}) {
-  return (
-    <div className="space-y-2">
-      <Label className="text-sm font-semibold">{label}</Label>
-      <div className="rounded-md border border-slate-200 p-2 max-h-[140px] overflow-y-auto space-y-1">
-        {options.map((opt) => (
-          <label key={opt.id} className="flex items-center gap-2 text-sm cursor-pointer hover:bg-slate-50 px-1 py-0.5 rounded">
-            <Checkbox
-              checked={value.includes(opt.id)}
-              onCheckedChange={(checked) =>
-                checked
-                  ? onChange([...value, opt.id])
-                  : onChange(value.filter((v) => v !== opt.id))
-              }
-            />
-            <span className="text-slate-700">{opt.label}</span>
-          </label>
-        ))}
-      </div>
-    </div>
-  );
-}
-
 export function ModalExcecao({ open, onClose, onSave, editData }: ModalExcecaoProps) {
-  const [tipoPessoa, setTipoPessoa] = useState<TipoPessoa>(editData?.tipoPessoa ?? "servidor");
+  const [tipoPessoa] = useState<TipoPessoa>(editData?.tipoPessoa ?? "servidor");
   const [filtros, setFiltros] = useState(
     editData?.filtros ?? {
       orgaos: [] as string[],
@@ -119,133 +86,155 @@ export function ModalExcecao({ open, onClose, onSave, editData }: ModalExcecaoPr
 
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="max-w-[95vw] max-h-[95vh] overflow-hidden flex flex-col">
-        <DialogHeader>
-          <DialogTitle>{editData ? "Editar Exceção" : "Cadastrar Exceção"}</DialogTitle>
-        </DialogHeader>
+      <DialogContent className="max-w-[1400px] w-[95vw] max-h-[90vh] p-0 overflow-hidden flex flex-col bg-white border-none shadow-2xl">
+        {/* Header Personalizado conforme imagem */}
+        <div className="px-6 py-5 flex items-start justify-between border-b border-slate-100">
+          <div className="space-y-1">
+            <h2 className="text-xl font-bold text-slate-900">Cadastrar Nova Exceção</h2>
+            <p className="text-sm text-slate-500">Defina os filtros e a fórmula de cálculo específica para esta exceção.</p>
+          </div>
+          <Button variant="ghost" size="icon" onClick={onClose} className="text-slate-400 hover:text-slate-600 rounded-full h-8 w-8 -mt-1">
+            <X className="w-5 h-5" />
+          </Button>
+        </div>
 
-        <ScrollArea className="flex-1 pr-4">
-          <div className="space-y-6 pb-4">
-            {/* Tipo de Pessoa */}
-            <div className="space-y-2">
-              <Label className="text-sm font-bold">Tipo de Pessoa</Label>
-              <RadioGroup
-                value={tipoPessoa}
-                onValueChange={(v) => setTipoPessoa(v as TipoPessoa)}
-                className="flex gap-4"
-              >
-                <div className="flex items-center gap-2">
-                  <RadioGroupItem value="servidor" id="exc-servidor" />
-                  <Label htmlFor="exc-servidor" className="font-normal cursor-pointer">Servidor</Label>
+        <div className="flex-1 overflow-y-auto p-6 space-y-8">
+            
+            {/* Seção de Filtros (Top) - Fundo cinza conforme imagem */}
+            <div className="bg-[#f8fafc] rounded-xl border border-slate-200 p-6 space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+                <div className="space-y-1.5">
+                  <Select onValueChange={(v) => updateFiltro("cargos", [v])} value={filtros.cargos[0]}>
+                    <SelectTrigger className="bg-white border-slate-200 h-11 text-slate-600">
+                      <SelectValue placeholder="Selecione cargo(s)..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {cargosExcecao.map(c => <SelectItem key={c.id} value={c.id}>{c.label}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
                 </div>
-                <div className="flex items-center gap-2">
-                  <RadioGroupItem value="pessoa_fisica" id="exc-pf" />
-                  <Label htmlFor="exc-pf" className="font-normal cursor-pointer">Pessoa Física</Label>
-                </div>
-              </RadioGroup>
-            </div>
 
-            {/* Filtros */}
-            <div className="space-y-3">
-              <Label className="text-sm font-bold">Filtros</Label>
-              <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
-                <MultiCheckSelect
-                  label="Órgão"
-                  options={orgaosExcecao}
-                  value={filtros.orgaos}
-                  onChange={(v) => updateFiltro("orgaos", v)}
-                />
-                {tipoPessoa === "servidor" && (
-                  <>
-                    <MultiCheckSelect
-                      label="Tipo de Vínculo"
-                      options={tiposVinculo}
-                      value={filtros.tiposVinculo}
-                      onChange={(v) => updateFiltro("tiposVinculo", v)}
-                    />
-                    <MultiCheckSelect
-                      label="Categoria"
-                      options={categoriasExcecao}
-                      value={filtros.categorias}
-                      onChange={(v) => updateFiltro("categorias", v)}
-                    />
-                    <MultiCheckSelect
-                      label="Cargo"
-                      options={cargosExcecao}
-                      value={filtros.cargos}
-                      onChange={(v) => updateFiltro("cargos", v)}
-                    />
-                  </>
-                )}
-                <MultiCheckSelect
-                  label="Situação Funcional"
-                  options={situacoesFuncionais}
-                  value={filtros.situacoesFuncionais}
-                  onChange={(v) => updateFiltro("situacoesFuncionais", v)}
-                />
-                {tipoPessoa === "servidor" && (
-                  <MultiCheckSelect
-                    label="Pessoa"
-                    options={servidores.map((s) => ({ id: s.id, label: `${s.matricula} - ${s.nome}` }))}
-                    value={filtros.servidores}
-                    onChange={(v) => updateFiltro("servidores", v)}
-                  />
-                )}
+                <div className="space-y-1.5">
+                  <Select onValueChange={(v) => updateFiltro("situacoesFuncionais", [v])} value={filtros.situacoesFuncionais[0]}>
+                    <SelectTrigger className="bg-white border-slate-200 h-11 text-slate-600">
+                      <SelectValue placeholder="Selecione situação(ões)..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {situacoesFuncionais.map(s => <SelectItem key={s.id} value={s.id}>{s.label}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-1.5">
+                  <Select onValueChange={(v) => updateFiltro("servidores", [v])} value={filtros.servidores[0]}>
+                    <SelectTrigger className="bg-white border-slate-200 h-11 text-slate-600">
+                      <SelectValue placeholder="Selecione servidor(es)..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {servidores.map(s => <SelectItem key={s.id} value={s.id}>{s.matricula} - {s.nome}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                 <div className="space-y-2">
-                  <Label className="text-sm font-semibold">Data Início</Label>
+                  <Label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">DATA INÍCIO</Label>
                   <Input
                     type="date"
                     value={filtros.dataInicio}
                     onChange={(e) => updateFiltro("dataInicio", e.target.value)}
-                    className="h-9 border-2"
+                    className="bg-white border-slate-200 h-11"
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label className="text-sm font-semibold">Data Fim</Label>
+                  <Label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">DATA FIM</Label>
                   <Input
                     type="date"
                     value={filtros.dataFim}
                     onChange={(e) => updateFiltro("dataFim", e.target.value)}
-                    className="h-9 border-2"
+                    className="bg-white border-slate-200 h-11"
                   />
                 </div>
               </div>
             </div>
 
-            {/* Editor de Fórmula */}
-            <div className="space-y-3">
-              <Label className="text-sm font-bold">Fórmula da Exceção</Label>
-              <div className="grid grid-cols-1 lg:grid-cols-[320px_1fr] gap-4">
-                <div className="space-y-4">
-                  <OperadoresMatematicos onAddToken={addToken} />
-                  <PainelLogica onAddToken={addToken} />
-                  <PainelValorFixo onAddToken={addToken} />
+            {/* Grid Inferior (2 Colunas) */}
+            <div className="grid grid-cols-1 lg:grid-cols-[320px_1fr] gap-8 items-start min-w-0">
+              
+              {/* Esquerda: Painéis de Ferramentas */}
+              <div className="space-y-6">
+                <div className="bg-white rounded-xl border border-slate-200 shadow-sm">
+                  <div className="px-5 py-3 border-b border-slate-100">
+                    <h3 className="text-[11px] font-bold text-slate-500 uppercase tracking-widest">OPERADORES MATEMÁTICOS</h3>
+                  </div>
+                  <div className="p-5">
+                    <OperadoresMatematicos onAddToken={addToken} />
+                  </div>
                 </div>
-                <div className="space-y-4">
-                  <EditorFormula
-                    tokens={tokens}
-                    onRemoveToken={removeToken}
-                    onClear={clearTokens}
-                    onReorderTokens={reorderTokens}
-                  />
-                  <BibliotecaElementos onAddToken={addToken} />
+
+                <div className="bg-white rounded-xl border border-slate-200 shadow-sm">
+                  <div className="px-5 py-3 border-b border-slate-100">
+                    <h3 className="text-[11px] font-bold text-slate-500 uppercase tracking-widest">LÓGICA</h3>
+                  </div>
+                  <div className="p-5">
+                    <PainelLogica onAddToken={addToken} />
+                  </div>
+                </div>
+
+                <div className="bg-white rounded-xl border border-slate-200 shadow-sm">
+                  <div className="px-5 py-3 border-b border-slate-100">
+                    <h3 className="text-[11px] font-bold text-slate-500 uppercase tracking-widest">VALOR FIXO</h3>
+                  </div>
+                  <div className="p-5">
+                    <PainelValorFixo onAddToken={addToken} />
+                  </div>
                 </div>
               </div>
-            </div>
-          </div>
-        </ScrollArea>
 
-        {/* Actions */}
-        <div className="flex justify-end gap-3 pt-4 border-t border-slate-200">
-          <Button type="button" variant="outline" onClick={onClose}>
+              {/* Direita: Editor e Biblioteca */}
+              <div className="space-y-6">
+                <div className="bg-white rounded-xl border border-slate-200 shadow-sm min-h-[300px] flex flex-col">
+                  <div className="px-5 py-3 border-b border-slate-100 flex items-center gap-2">
+                    <Calculator className="w-5 h-5 text-blue-600" />
+                    <h3 className="text-sm font-bold text-slate-800">Fórmula de Exceção</h3>
+                  </div>
+                  <div className="p-5 flex-1">
+                    <EditorFormula
+                      tokens={tokens}
+                      onRemoveToken={removeToken}
+                      onClear={clearTokens}
+                      onReorderTokens={reorderTokens}
+                      hideTitle={true}
+                    />
+                  </div>
+                </div>
+
+                <div className="bg-white rounded-xl border border-slate-200 shadow-sm">
+                  <div className="px-5 py-3 border-b border-slate-100">
+                    <h3 className="text-[11px] font-bold text-slate-500 uppercase tracking-widest">BIBLIOTECA DE ELEMENTOS</h3>
+                  </div>
+                  <div className="p-0">
+                    <BibliotecaElementos onAddToken={addToken} hideTitle={true} />
+                  </div>
+                </div>
+              </div>
+
+            </div>
+        </div>
+
+        {/* Footer conforme imagem */}
+        <div className="px-6 py-5 border-t border-slate-100 bg-white flex justify-end gap-3">
+          <Button variant="outline" onClick={onClose} className="h-10 px-8 border-slate-200 text-slate-600 font-medium">
             Cancelar
           </Button>
           <Button
-            type="button"
-            className="bg-blue-700 hover:bg-blue-800"
-            disabled={tokens.length === 0}
             onClick={handleSave}
+            disabled={tokens.length === 0}
+            className="h-10 px-8 bg-slate-500 hover:bg-slate-600 text-white gap-2 font-medium"
+            style={{ backgroundColor: tokens.length > 0 ? '#7c8fa1' : undefined }}
           >
+            <CheckCircle2 className="w-4 h-4" />
             Salvar Exceção
           </Button>
         </div>

@@ -12,6 +12,7 @@ interface EditorFormulaProps {
   onReorderTokens?: (tokens: FormulaToken[]) => void;
   onCadastrarExcecao?: () => void;
   excecaoDisabled?: boolean;
+  hideTitle?: boolean;
 }
 
 export function EditorFormula({
@@ -21,6 +22,7 @@ export function EditorFormula({
   onReorderTokens,
   onCadastrarExcecao,
   excecaoDisabled = true,
+  hideTitle = false,
 }: EditorFormulaProps) {
   const [dragIndex, setDragIndex] = useState<number | null>(null);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
@@ -77,21 +79,23 @@ export function EditorFormula({
   return (
     <div className="space-y-3">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <p className="panel-section-title mb-0">Fórmula de Cálculo</p>
-        {!isEmpty && (
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            className="text-xs text-red-500 hover:text-red-700 hover:bg-red-50 h-7 gap-1"
-            onClick={onClear}
-          >
-            <Trash2 className="w-3 h-3" />
-            Limpar
-          </Button>
-        )}
-      </div>
+      {!hideTitle && (
+        <div className="flex items-center justify-between">
+          <p className="panel-section-title mb-0">Fórmula de Cálculo</p>
+          {!isEmpty && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="text-xs text-red-500 hover:text-red-700 hover:bg-red-50 h-7 gap-1"
+              onClick={onClear}
+            >
+              <Trash2 className="w-3 h-3" />
+              Limpar
+            </Button>
+          )}
+        </div>
+      )}
 
       {/* Canvas */}
       <div
@@ -102,10 +106,10 @@ export function EditorFormula({
         )}
       >
         {isEmpty ? (
-          <div className="flex flex-col items-center gap-2 text-center py-4">
-            <Lightbulb className="w-8 h-8 text-amber-400" />
-            <p className="text-sm text-slate-500">
-              Clique nos operadores, variáveis ou rubricas para montar a fórmula
+          <div className="flex flex-col items-center gap-2 text-center py-8">
+            <Lightbulb className="w-10 h-10 text-slate-300" />
+            <p className="text-sm text-slate-400">
+              Clique nos elementos para construir a fórmula de exceção
             </p>
           </div>
         ) : (
@@ -133,15 +137,15 @@ export function EditorFormula({
         )}
       </div>
 
-      {/* Fórmula descritiva */}
-      {!isEmpty && (
-        <div className="bg-slate-100/60 rounded-lg p-3 border border-slate-200">
-          <p className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-1">
-            Fórmula Descritiva
-          </p>
-          <p className="font-mono text-sm text-slate-700 break-all">{descriptive}</p>
-        </div>
-      )}
+      {/* DESCRIÇÃO (Fórmula descritiva) */}
+      <div className="bg-[#f8fafc] rounded-xl p-4 border border-slate-100">
+        <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-2">
+          DESCRIÇÃO
+        </p>
+        <p className="text-sm text-slate-600 min-h-[1.5rem]">
+          {isEmpty ? "—" : descriptive}
+        </p>
+      </div>
 
       {/* Status de validação */}
       {!isEmpty && (

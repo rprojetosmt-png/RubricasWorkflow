@@ -408,8 +408,8 @@ export function SolicitacaoDetailPage() {
         </Card>
       )}
 
-      <div className="grid grid-cols-3 gap-6">
-        <div className="col-span-2 space-y-6">
+      <div className="max-w-7xl mx-auto space-y-6 pb-12">
+        <div className="space-y-6">
           <Card>
             <CardHeader>
               <CardTitle>Descrição</CardTitle>
@@ -508,64 +508,6 @@ export function SolicitacaoDetailPage() {
               </CardContent>
             </Card>
           )}
-        </div>
-
-        <div className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Histórico de Atividades</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {solicitacao.historico
-                  .filter((h) => h.status !== "pendente")
-                  .sort((a, b) => {
-                    if (!a.data || !b.data) return 0;
-                    return new Date(b.data).getTime() - new Date(a.data).getTime();
-                  })
-                  .map((hist, index) => {
-                    const etapa = etapas.find((e) => e.id === hist.etapaId);
-                    if (!etapa) return null;
-
-                    return (
-                      <div key={`${hist.etapaId}-${index}`} className="relative">
-                        <div className="flex gap-3">
-                          <Avatar className="w-10 h-10 border-2 border-white shadow-sm">
-                            <AvatarFallback className="text-xs" style={{ backgroundColor: etapa.cor + "20" }}>
-                              {hist.usuario ? getInitials(hist.usuario.nome) : "SYS"}
-                            </AvatarFallback>
-                          </Avatar>
-                          <div className="flex-1 pb-4">
-                            <div className="flex items-start justify-between mb-1">
-                              <p className="text-sm font-medium text-slate-900">{etapa.nome}</p>
-                              {getStatusIcon(hist.status, "w-4 h-4")}
-                            </div>
-                            {hist.usuario && <p className="text-xs text-slate-600 mb-1">{hist.usuario.nome}</p>}
-                            {hist.data && (
-                              <p className="text-xs text-slate-500">
-                                {new Date(hist.data).toLocaleDateString("pt-BR", {
-                                  day: "2-digit",
-                                  month: "long",
-                                  year: "numeric",
-                                  hour: "2-digit",
-                                  minute: "2-digit",
-                                })}
-                              </p>
-                            )}
-                            {hist.comentario && (
-                              <div className="mt-2 p-2 bg-slate-50 rounded text-xs text-slate-700 border border-slate-200">
-                                <MessageSquare className="w-3 h-3 inline mr-1" />
-                                {hist.comentario}
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
-              </div>
-            </CardContent>
-          </Card>
         </div>
       </div>
 
