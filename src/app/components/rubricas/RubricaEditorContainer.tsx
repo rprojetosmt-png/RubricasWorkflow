@@ -93,54 +93,56 @@ export function RubricaEditorContainer() {
     <div className="flex flex-col h-full animate-in fade-in slide-in-from-bottom-4 duration-500">
       <InformacoesGeraisCard />
       
-      <div className="flex items-center justify-between mb-4">
-        <h2 className="text-lg font-bold text-slate-800">Etapa 4 — Fórmula de Cálculo</h2>
-        <Button 
-          variant="outline" 
-          size="sm" 
-          onClick={handleUndo} 
-          disabled={history.length === 0}
-          className="border-slate-300 text-slate-600 hover:bg-slate-100"
-        >
-          <Undo2 className="w-4 h-4 mr-2" />
-          Desfazer
-        </Button>
+      <div className="flex items-center justify-between mb-4 mt-2">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 bg-slate-900 rounded-xl flex items-center justify-center text-white shrink-0">
+            <span className="font-mono font-bold text-lg">{'<>'}</span>
+          </div>
+          <div>
+            <h2 className="text-lg font-bold text-slate-800 leading-tight">Etapa 4 — Fórmula de Cálculo</h2>
+            <p className="text-sm text-slate-500">Construa visualmente a regra de cálculo desta rubrica sem necessidade de programação.</p>
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={handleUndo} 
+            disabled={history.length === 0}
+            className="border-slate-300 text-slate-600 hover:bg-slate-100 h-9 px-4"
+          >
+            <Undo2 className="w-4 h-4 mr-2" />
+            Desfazer
+          </Button>
+          <Button variant="outline" size="icon" className="h-9 w-9 border-slate-300 text-slate-600">
+            <span className="font-bold">?</span>
+          </Button>
+        </div>
       </div>
 
-      <div className="grid grid-cols-1 xl:grid-cols-[360px_1fr_320px] gap-6 flex-1 min-h-[600px] mb-6">
-        <div className="flex flex-col gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-[300px_1fr] xl:grid-cols-[320px_1fr] gap-4 flex-1 mb-6 items-start">
+        <div className="flex flex-col gap-4">
           <OperadoresMatematicos onAddToken={handleAddToken} />
           <PainelLogica onAddToken={handleAddToken} />
           <PainelValorFixo onAddToken={handleAddToken} />
-          <div className="bg-amber-50 p-4 rounded-xl border border-amber-200">
-            <h4 className="text-amber-800 font-bold text-sm mb-1">Dica de Uso</h4>
-            <p className="text-amber-700 text-xs leading-relaxed">
-              Clique nos botões ou arraste os elementos da biblioteca para construir a fórmula da rubrica principal.
-            </p>
-          </div>
         </div>
 
-        <div className="flex flex-col gap-6">
-          <div className="flex-1">
-            <EditorFormula 
-              tokens={tokens}
-              onRemoveToken={handleRemoveToken}
-              onClear={handleClear}
-              onCadastrarExcecao={handleOpenExcecao}
-              excecaoDisabled={tokens.length === 0}
-              onReorder={handleReorder}
-            />
-          </div>
+        <div className="flex flex-col gap-4">
+          <EditorFormula 
+            tokens={tokens}
+            onRemoveToken={handleRemoveToken}
+            onClear={handleClear}
+            onCadastrarExcecao={handleOpenExcecao}
+            excecaoDisabled={tokens.length === 0}
+            onReorder={handleReorder}
+          />
+          <BibliotecaElementos onAddToken={handleAddToken} />
           <ExcecoesContainer 
             excecoes={excecoes} 
             onView={handleViewExcecao}
             onEdit={handleEditExcecao}
             onDelete={handleDeleteExcecao}
           />
-        </div>
-
-        <div className="hidden xl:block">
-          <BibliotecaElementos onAddToken={handleAddToken} />
         </div>
       </div>
 

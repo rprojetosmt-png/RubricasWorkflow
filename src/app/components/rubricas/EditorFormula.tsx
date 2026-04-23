@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Lightbulb, Trash2, Plus } from "lucide-react";
+import { Lightbulb, Trash2, Plus, Sigma, Circle } from "lucide-react";
 import { Button } from "../ui/button";
 import { cn } from "../ui/utils";
 import type { FormulaToken } from "../../data/rubrica-data";
@@ -51,9 +51,12 @@ export function EditorFormula({
   const formulaDescritiva = tokens.map((t) => t.symbol).join(" ");
 
   return (
-    <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-sm flex flex-col h-full">
-      <div className="flex items-center justify-between mb-4">
-        <p className="panel-section-title !mb-0">Fórmula Principal</p>
+    <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-sm flex flex-col h-full">
+      <div className="flex items-center justify-between mb-4 border-b border-slate-100 pb-3">
+        <div className="flex items-center gap-2 text-blue-700">
+          <Sigma className="w-5 h-5" />
+          <p className="font-bold">Fórmula Atual</p>
+        </div>
         <div className="flex gap-2">
           {onClear && tokens.length > 0 && (
             <Button variant="ghost" size="sm" onClick={onClear} className="text-red-500 hover:text-red-600 hover:bg-red-50 h-8 text-xs">
@@ -65,15 +68,14 @@ export function EditorFormula({
 
       <div 
         className={cn(
-          "formula-canvas mb-4 flex-1",
+          "formula-canvas mb-4",
           tokens.length > 0 ? "active" : "empty"
         )}
       >
         {tokens.length === 0 ? (
-          <div className="flex flex-col items-center justify-center text-slate-400 gap-2 h-full py-6">
-            <Lightbulb className="w-8 h-8 text-amber-300 opacity-50" />
-            <p className="text-sm font-medium">Clique nos painéis para adicionar elementos</p>
-            <p className="text-xs text-slate-400 text-center max-w-[200px]">Arraste os elementos para reordenar a fórmula</p>
+          <div className="flex flex-col items-center justify-center text-slate-400 gap-2 h-full py-8">
+            <Lightbulb className="w-8 h-8 text-slate-300 opacity-70" />
+            <p className="text-sm font-medium">Clique nos elementos e operadores para construir sua fórmula</p>
           </div>
         ) : (
           tokens.map((token, idx) => (
@@ -100,28 +102,38 @@ export function EditorFormula({
         )}
       </div>
 
-      {tokens.length > 0 && (
-        <div className="bg-slate-50 p-3 rounded-lg border border-slate-100 mb-4">
-          <p className="text-[10px] font-bold text-slate-500 tracking-wider uppercase mb-1">Pré-visualização da Regra</p>
-          <p className="font-mono text-sm text-slate-800 break-words leading-relaxed">{formulaDescritiva}</p>
-        </div>
-      )}
+      <div className="flex items-center gap-2 mb-3 text-sm text-slate-500 font-medium">
+        <Circle className="w-4 h-4" />
+        {tokens.length === 0 ? "Fórmula Vazia" : "Fórmula Preenchida"}
+      </div>
+
+      <div className="bg-slate-50 p-4 rounded-lg border border-slate-200 mb-4">
+        <p className="text-xs font-bold text-slate-500 tracking-wider uppercase mb-2">Fórmula Descritiva</p>
+        <p className="font-mono text-sm text-slate-800 break-words leading-relaxed min-h-[20px]">
+          {tokens.length === 0 ? "—" : formulaDescritiva}
+        </p>
+      </div>
+
+      <div className="bg-amber-50/50 p-3 rounded-lg border border-amber-100 mb-6 flex gap-3 items-start">
+        <Lightbulb className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
+        <p className="text-amber-800 text-xs leading-relaxed font-medium">
+          <strong className="font-bold text-amber-900">Dica:</strong> Use as variáveis do sistema (ex: Salário Base), operadores matemáticos (+, -, *, /) e condicionais (SE/ENTÃO) para montar a regra de cálculo desta rubrica.
+        </p>
+      </div>
 
       {onCadastrarExcecao && (
-        <Button
-          type="button"
-          variant="outline"
-          disabled={excecaoDisabled || tokens.length === 0}
-          onClick={onCadastrarExcecao}
-          title={tokens.length === 0 ? "Crie a regra principal antes de adicionar exceções" : "Criar regra específica para um público"}
-          className={cn(
-            "w-full h-11 border-dashed",
-            tokens.length > 0 ? "border-amber-400 text-amber-700 hover:bg-amber-50" : "opacity-50 cursor-not-allowed text-slate-400"
-          )}
-        >
-          <Plus className="w-4 h-4 mr-2" />
-          Cadastrar Nova Exceção
-        </Button>
+        <div className="mt-auto pt-2">
+          <Button
+            type="button"
+            variant="outline"
+            disabled={excecaoDisabled || tokens.length === 0}
+            onClick={onCadastrarExcecao}
+            className="w-full h-11 border-slate-300 text-slate-600 hover:bg-slate-50 font-medium"
+          >
+            <Plus className="w-4 h-4 mr-2" />
+            Cadastrar Nova Exceção
+          </Button>
+        </div>
       )}
     </div>
   );

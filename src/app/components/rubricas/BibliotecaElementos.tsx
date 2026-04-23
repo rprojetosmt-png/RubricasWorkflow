@@ -20,22 +20,26 @@ export function BibliotecaElementos({ onAddToken }: { onAddToken: (token: any) =
   );
 
   return (
-    <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-sm flex flex-col h-full max-h-[600px]">
-      <p className="panel-section-title">Biblioteca de Elementos</p>
+    <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-sm flex flex-col h-full max-h-[600px]">
+      <p className="text-xs font-bold text-slate-500 tracking-wider uppercase mb-4">Biblioteca de Elementos</p>
       
-      <Tabs value={activeTab} onValueChange={(v) => { setActiveTab(v); setBusca(""); }} className="flex-1 flex flex-col min-h-0 mt-2">
-        <TabsList className="w-full bg-[#F3F5F7] p-1">
-          <TabsTrigger value="variaveis" className="flex-1 data-[state=active]:bg-white data-[state=active]:shadow-sm">Variáveis</TabsTrigger>
-          <TabsTrigger value="rubricas" className="flex-1 data-[state=active]:bg-white data-[state=active]:shadow-sm">Rubricas</TabsTrigger>
+      <Tabs value={activeTab} onValueChange={(v) => { setActiveTab(v); setBusca(""); }} className="flex-1 flex flex-col min-h-0 mt-0">
+        <TabsList className="w-full bg-slate-50 p-1 rounded-full border border-slate-200">
+          <TabsTrigger value="variaveis" className="flex-1 rounded-full data-[state=active]:bg-white data-[state=active]:shadow-sm text-sm font-semibold h-8">
+            Variáveis <span className="ml-2 bg-slate-200 text-slate-600 px-2 py-0.5 rounded-full text-xs">{variaveis.length}</span>
+          </TabsTrigger>
+          <TabsTrigger value="rubricas" className="flex-1 rounded-full data-[state=active]:bg-white data-[state=active]:shadow-sm text-sm font-semibold h-8">
+            Rubricas <span className="ml-2 bg-slate-200 text-slate-600 px-2 py-0.5 rounded-full text-xs">{rubricasRef.length}</span>
+          </TabsTrigger>
         </TabsList>
 
-        <div className="relative mt-3 mb-2">
+        <div className="relative mt-4 mb-3">
           <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
           <Input 
             value={busca}
             onChange={(e) => setBusca(e.target.value)}
-            placeholder="Pesquisar..." 
-            className="pl-9 h-9 bg-slate-50 border-slate-200"
+            placeholder={activeTab === "variaveis" ? "Buscar variável..." : "Buscar rubrica..."} 
+            className="pl-9 h-10 bg-white border-slate-200"
           />
         </div>
 

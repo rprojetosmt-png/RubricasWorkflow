@@ -9,7 +9,7 @@ export function PainelLogica({ onAddToken }: { onAddToken: (token: any) => void 
         {logicaItems.map((item) => (
           <button
             key={item.symbol}
-            className="chip-btn chip-btn-logic"
+            className="chip-btn chip-btn-logic h-10 w-full"
             onClick={() =>
               onAddToken({
                 id: nanoid(),
@@ -21,7 +21,14 @@ export function PainelLogica({ onAddToken }: { onAddToken: (token: any) => void 
             }
             title={item.description}
           >
-            {item.symbol}
+            {item.symbol === item.label ? (
+              <span className="font-bold text-sm tracking-wide">{item.symbol}</span>
+            ) : (
+              <div className="flex items-center gap-1.5 font-bold text-sm">
+                <span className="font-mono">{item.symbol}</span>
+                <span className="font-sans font-medium">{item.label}</span>
+              </div>
+            )}
           </button>
         ))}
       </div>

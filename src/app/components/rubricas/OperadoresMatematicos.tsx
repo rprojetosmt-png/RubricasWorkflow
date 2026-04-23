@@ -9,7 +9,7 @@ export function OperadoresMatematicos({ onAddToken }: { onAddToken: (token: any)
         {operadores.map((op) => (
           <button
             key={op.symbol}
-            className="chip-btn chip-btn-operator"
+            className="chip-btn chip-btn-operator flex flex-col h-[72px] justify-center items-center gap-0.5 rounded-md"
             onClick={() =>
               onAddToken({
                 id: nanoid(),
@@ -21,7 +21,8 @@ export function OperadoresMatematicos({ onAddToken }: { onAddToken: (token: any)
             }
             title={op.description}
           >
-            {op.symbol}
+            <span className="text-xl font-bold font-mono leading-none">{op.symbol}</span>
+            <span className="text-[10px] font-bold tracking-tight">{op.label}</span>
           </button>
         ))}
       </div>
