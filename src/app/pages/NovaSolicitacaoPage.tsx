@@ -59,6 +59,7 @@ import { cn } from "../components/ui/utils";
 import { toast } from "sonner";
 import { useForm, Controller } from "react-hook-form";
 import { HistoricalDataCard } from "../components/HistoricalDataCard";
+import { RubricaEditorContainer } from "../components/rubricas/RubricaEditorContainer";
 import {
   classificacoes,
   orgaos,
@@ -1069,7 +1070,11 @@ export function NovaSolicitacaoPage() {
           ) : (
             <div className="space-y-6">
               {/* Visualização de Análise (Etapas > 0) */}
-              <HistoricalDataCard {...buildHistoricalDataConfig()} />
+              {etapaIndex === 3 ? (
+                <RubricaEditorContainer />
+              ) : (
+                <HistoricalDataCard {...buildHistoricalDataConfig()} />
+              )}
 
               {/* Card Documentos Anexados */}
               <Card className="border-none shadow-md">

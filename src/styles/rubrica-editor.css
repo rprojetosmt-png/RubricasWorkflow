@@ -1,0 +1,86 @@
+/* client/src/index.css / rubrica-editor.css */
+@theme inline {
+  --font-sans: "IBM Plex Sans", sans-serif;
+  --font-mono: "IBM Plex Mono", monospace;
+ 
+  /* Paleta principal — azul governo */
+  --color-primary-rubrica: oklch(0.45 0.18 255);
+  --color-primary-rubrica-foreground: oklch(0.98 0 0);
+ 
+  /* Backgrounds */
+  --color-background-rubrica: oklch(0.97 0.005 240);
+  --color-card-rubrica: oklch(1 0 0);
+  --color-muted-rubrica: oklch(0.94 0.008 240);
+  --color-border-rubrica: oklch(0.90 0.008 240);
+ 
+  /* Texto */
+  --color-foreground-rubrica: oklch(0.15 0.02 255);
+  --color-muted-foreground-rubrica: oklch(0.52 0.02 255);
+ 
+  /* Tokens de fórmula */
+  --token-variable:    oklch(0.92 0.06 240);
+  --token-variable-fg: oklch(0.25 0.14 240);
+  --token-operator:    oklch(0.92 0.06 155);
+  --token-operator-fg: oklch(0.25 0.12 155);
+  --token-logic:       oklch(0.92 0.05 290);
+  --token-logic-fg:    oklch(0.30 0.14 290);
+  --token-value:       oklch(0.93 0.06 55);
+  --token-value-fg:    oklch(0.35 0.12 55);
+  --token-rubrica:     oklch(0.92 0.05 20);
+  --token-rubrica-fg:  oklch(0.30 0.12 20);
+}
+ 
+@layer components {
+  /* Título de seção dos painéis */
+  .panel-section-title {
+    @apply text-sm font-bold tracking-widest text-slate-500 uppercase mb-2;
+  }
+ 
+  /* Chip de operador/lógica */
+  .chip-btn {
+    @apply inline-flex items-center gap-1 px-3 py-1.5 rounded text-base font-semibold border transition-all duration-150 cursor-pointer select-none justify-center;
+  }
+  .chip-btn:hover  { @apply scale-105 shadow-sm; }
+  .chip-btn:active { @apply scale-95; }
+ 
+  /* Verde — operadores matemáticos */
+  .chip-btn-operator {
+    @apply bg-[oklch(0.92_0.06_155)] text-[oklch(0.28_0.12_155)] border-[oklch(0.82_0.09_155)];
+  }
+  .chip-btn-operator:hover { @apply bg-[oklch(0.88_0.08_155)]; }
+ 
+  /* Roxo — lógica condicional */
+  .chip-btn-logic {
+    @apply bg-[oklch(0.92_0.05_290)] text-[oklch(0.35_0.14_290)] border-[oklch(0.82_0.08_290)];
+  }
+  .chip-btn-logic:hover { @apply bg-[oklch(0.88_0.07_290)]; }
+ 
+  /* Âmbar — valor fixo */
+  .chip-btn-value {
+    @apply bg-[oklch(0.93_0.06_55)] text-[oklch(0.38_0.12_55)] border-[oklch(0.83_0.09_55)];
+  }
+ 
+  /* Token de fórmula */
+  .formula-token {
+    @apply inline-flex items-center gap-1.5 px-2.5 py-1 rounded text-sm font-medium select-none transition-all duration-150 cursor-pointer;
+  }
+  .formula-token-variable { background-color: var(--token-variable); color: var(--token-variable-fg); border: 1px solid oklch(0.82 0.08 240); }
+  .formula-token-operator  { background-color: var(--token-operator); color: var(--token-operator-fg); border: 1px solid oklch(0.82 0.09 155); }
+  .formula-token-logic     { background-color: var(--token-logic);    color: var(--token-logic-fg);    border: 1px solid oklch(0.82 0.08 290); }
+  .formula-token-value     { background-color: var(--token-value);    color: var(--token-value-fg);    border: 1px solid oklch(0.83 0.09 55);  }
+  .formula-token-rubrica   { background-color: var(--token-rubrica);  color: var(--token-rubrica-fg);  border: 1px solid oklch(0.82 0.07 20);  }
+ 
+  /* Canvas de drop */
+  .formula-canvas {
+    @apply min-h-[120px] rounded-lg border-2 border-dashed border-slate-300 flex flex-wrap gap-2 p-4 transition-all duration-200;
+  }
+  .formula-canvas.active { @apply border-blue-500/50 bg-blue-50/50; }
+  .formula-canvas.empty  { @apply items-center justify-center; }
+}
+ 
+/* Animação de entrada dos tokens */
+@keyframes token-enter {
+  from { opacity: 0; transform: scale(0.8) translateY(4px); }
+  to   { opacity: 1; transform: scale(1)   translateY(0);   }
+}
+.token-enter { animation: token-enter 0.18s ease-out forwards; }
