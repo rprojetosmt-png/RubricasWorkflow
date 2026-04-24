@@ -78,7 +78,7 @@ export function ModalExcecao({ open, onClose, onSave, editData, readOnly }: Moda
 
   return (
     <Dialog open={open} onOpenChange={(val) => !val && onClose()}>
-      <DialogContent className="max-w-[95vw] w-[1400px] max-h-[95vh] flex flex-col p-0 gap-0 overflow-hidden bg-slate-50">
+      <DialogContent className="max-w-[95vw] w-full xl:max-w-[1600px] max-h-[95vh] flex flex-col p-0 gap-0 overflow-hidden bg-slate-50">
         <DialogHeader className="px-6 py-4 bg-white border-b border-slate-200">
           <DialogTitle className="text-xl text-slate-800">
             {readOnly ? "Visualizar Exceção" : editData ? "Editar Exceção" : "Cadastrar Nova Exceção"}
@@ -168,16 +168,19 @@ export function ModalExcecao({ open, onClose, onSave, editData, readOnly }: Moda
             </div>
           </div>
 
-          <div className="flex-1 grid grid-cols-1 lg:grid-cols-[360px_1fr] gap-4 min-h-[500px]">
-            <div className="flex flex-col gap-4 overflow-y-auto pr-1">
-              {!readOnly && (
-                <>
-                  <OperadoresMatematicos onAddToken={handleAddToken} />
-                  <PainelLogica onAddToken={handleAddToken} />
-                  <PainelValorFixo onAddToken={handleAddToken} />
-                </>
-              )}
-            </div>
+          <div className={`flex-1 grid gap-6 min-h-[500px] ${
+            readOnly 
+              ? "grid-cols-1" 
+              : "grid-cols-1 lg:grid-cols-[300px_1fr] xl:grid-cols-[300px_1fr_320px]"
+          }`}>
+            {!readOnly && (
+              <div className="flex flex-col gap-4 overflow-y-auto pr-1">
+                <OperadoresMatematicos onAddToken={handleAddToken} />
+                <PainelLogica onAddToken={handleAddToken} />
+                <PainelValorFixo onAddToken={handleAddToken} />
+              </div>
+            )}
+
             <div className="flex flex-col gap-4 overflow-y-auto pr-1">
               <div className="flex-1 h-full">
                 <EditorFormula 
@@ -188,8 +191,9 @@ export function ModalExcecao({ open, onClose, onSave, editData, readOnly }: Moda
                 />
               </div>
             </div>
+
             {!readOnly && (
-              <div className="hidden xl:block overflow-y-auto pr-1 absolute right-6 top-[280px] w-[320px] bottom-[80px]">
+              <div className="hidden xl:block overflow-y-auto pr-1">
                 <BibliotecaElementos onAddToken={handleAddToken} />
               </div>
             )}
