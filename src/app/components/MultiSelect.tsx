@@ -106,13 +106,21 @@ export function MultiSelect({
                 {options.map((option) => (
                   <CommandItem
                     key={option.value}
+                    value={option.label}
                     onSelect={() => handleSelect(option.value)}
                     className="flex items-center gap-2 cursor-pointer"
                   >
-                    <Checkbox
-                      checked={selectedValues.includes(option.value)}
-                      className="border-slate-300"
-                    />
+                    <div className={cn(
+                      "mr-2 flex h-4 w-4 items-center justify-center rounded-sm border border-primary",
+                      selectedValues.includes(option.value)
+                        ? "bg-primary text-primary-foreground"
+                        : "opacity-50 [&_svg]:invisible"
+                    )}>
+                      <Checkbox
+                        checked={selectedValues.includes(option.value)}
+                        className="pointer-events-none border-none"
+                      />
+                    </div>
                     <span className="flex-1">{option.label}</span>
                   </CommandItem>
                 ))}

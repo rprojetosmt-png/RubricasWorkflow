@@ -910,10 +910,20 @@ export function NovaSolicitacaoPage() {
     <CardContent className="grid grid-cols-2 gap-4">
       <div className="col-span-2 space-y-2">
         <Label>Órgãos Solicitantes <span className="text-red-500">*</span></Label>
-        <Controller name="orgaosSolicitantes" control={control} rules={{ validate: (v) => (Array.isArray(v) && v.length > 0) || "Selecione pelo menos um órgão" }} render={({ field }) => {
-          const selected = Array.isArray(field.value) ? field.value : [];
-          return <div className={cn("rounded-md border p-3 grid grid-cols-2 gap-2", errors.orgaosSolicitantes && "border-red-500")}>{orgaos.map((o) => <label key={o.id} className="flex items-center gap-2 text-sm cursor-pointer"><Checkbox checked={selected.includes(o.id)} onCheckedChange={(checked) => checked ? field.onChange([...selected, o.id]) : field.onChange(selected.filter((id: string) => id !== o.id))} /><span>{o.nome}</span></label>)}</div>;
-        }} />
+        <Controller 
+          name="orgaosSolicitantes" 
+          control={control} 
+          rules={{ validate: (v) => (Array.isArray(v) && v.length > 0) || "Selecione pelo menos um órgão" }} 
+          render={({ field }) => (
+            <MultiSelect
+              options={orgaos.map(o => ({ label: o.nome, value: o.id }))}
+              selected={field.value}
+              onChange={field.onChange}
+              placeholder="Selecione os órgãos..."
+              error={!!errors.orgaosSolicitantes}
+            />
+          )} 
+        />
       </div>
 
       <div className="space-y-2">
@@ -926,10 +936,7 @@ export function NovaSolicitacaoPage() {
         )} />
       </div>
 
-      <div className="space-y-2">
-        <Label>Servidor responsável <span className="text-red-500">*</span></Label>
-        <Controller name="servidorResponsavel" control={control} rules={{ required: "Campo obrigatório" }} render={({ field }) => <Input {...field} className={cn("border-2 h-10", errors.servidorResponsavel && "border-red-500")} />} />
-      </div>
+
 
       <div className="space-y-2">
         <Label>Grupo Trabalhista (eSocial) <span className="text-red-500">*</span></Label>
@@ -968,10 +975,20 @@ export function NovaSolicitacaoPage() {
 
       <div className="col-span-2 space-y-2">
         <Label>Cargos que utilizarão a rubrica <span className="text-red-500">*</span></Label>
-        <Controller name="cargosAplicaveis" control={control} rules={{ validate: (v) => (Array.isArray(v) && v.length > 0) || "Selecione pelo menos um cargo" }} render={({ field }) => {
-          const selected = Array.isArray(field.value) ? field.value : [];
-          return <div className={cn("rounded-md border p-3 grid grid-cols-2 gap-2", errors.cargosAplicaveis && "border-red-500")}>{cargosAplicaveis.map((cargo) => <label key={cargo} className="flex items-center gap-2 text-sm cursor-pointer"><Checkbox checked={selected.includes(cargo)} onCheckedChange={(checked) => checked ? field.onChange([...selected, cargo]) : field.onChange(selected.filter((v: string) => v !== cargo))} /><span>{cargo}</span></label>)}</div>;
-        }} />
+        <Controller 
+          name="cargosAplicaveis" 
+          control={control} 
+          rules={{ validate: (v) => (Array.isArray(v) && v.length > 0) || "Selecione pelo menos um cargo" }} 
+          render={({ field }) => (
+            <MultiSelect
+              options={cargosAplicaveis.map(c => ({ label: c, value: c }))}
+              selected={field.value}
+              onChange={field.onChange}
+              placeholder="Selecione os cargos..."
+              error={!!errors.cargosAplicaveis}
+            />
+          )} 
+        />
       </div>
     </CardContent>
   </Card>
