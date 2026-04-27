@@ -139,7 +139,7 @@ export function RootLayout() {
                                   : "bg-white/20"
                               )}
                             />
-                            Rubrica
+                            Solicitação de Rubrica
                           </Link>
                         </li>
                         <li>
