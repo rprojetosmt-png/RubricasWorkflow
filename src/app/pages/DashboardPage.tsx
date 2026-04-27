@@ -12,6 +12,11 @@ import {
   SelectValue,
 } from "../components/ui/select";
 import { Card, CardContent } from "../components/ui/card";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "../components/ui/tooltip";
 import { getEsteiraConfig, subscribeEsteiraConfig } from "../data/esteiraStore";
 import { getSolicitacoes, subscribeSolicitacoes } from "../data/solicitacoesStore";
 import { cn } from "../components/ui/utils";
@@ -127,68 +132,104 @@ export function DashboardPage() {
 
       {/* Stats */}
       <div className="grid grid-cols-4 gap-4">
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-slate-600">Total</p>
-                <p className="text-2xl font-semibold text-slate-900 mt-1">
-                  {stats.total}
-                </p>
-              </div>
-              <div className="w-12 h-12 bg-slate-100 rounded-lg flex items-center justify-center">
-                <Filter className="w-6 h-6 text-slate-600" />
-              </div>
-            </div>
-          </CardContent>
+        <Card className="hover:shadow-md transition-shadow">
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <CardContent className="pt-6 cursor-help">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-slate-600">
+                      Total
+                    </p>
+                    <p className="text-2xl font-semibold text-slate-900 mt-1">
+                      {stats.total}
+                    </p>
+                  </div>
+                  <div className="w-12 h-12 bg-slate-100 rounded-lg flex items-center justify-center">
+                    <Filter className="w-6 h-6 text-slate-600" />
+                  </div>
+                </div>
+              </CardContent>
+            </TooltipTrigger>
+            <TooltipContent>
+              Total de solicitações registradas no sistema
+            </TooltipContent>
+          </Tooltip>
         </Card>
 
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-slate-600">Em Andamento</p>
-                <p className="text-2xl font-semibold text-blue-600 mt-1">
-                  {stats.emAndamento}
-                </p>
-              </div>
-              <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-                <Clock className="w-6 h-6 text-blue-600" />
-              </div>
-            </div>
-          </CardContent>
+        <Card className="hover:shadow-md transition-shadow">
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <CardContent className="pt-6 cursor-help">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-slate-600">
+                      Em Andamento
+                    </p>
+                    <p className="text-2xl font-semibold text-blue-600 mt-1">
+                      {stats.emAndamento}
+                    </p>
+                  </div>
+                  <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
+                    <Clock className="w-6 h-6 text-blue-600" />
+                  </div>
+                </div>
+              </CardContent>
+            </TooltipTrigger>
+            <TooltipContent>
+              Solicitações que estão sendo processadas nas etapas da esteira
+            </TooltipContent>
+          </Tooltip>
         </Card>
 
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-slate-600">Aprovados</p>
-                <p className="text-2xl font-semibold text-green-600 mt-1">
-                  {stats.aprovados}
-                </p>
-              </div>
-              <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
-                <CheckCircle2 className="w-6 h-6 text-green-600" />
-              </div>
-            </div>
-          </CardContent>
+        <Card className="hover:shadow-md transition-shadow">
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <CardContent className="pt-6 cursor-help">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-slate-600">
+                      Aprovados
+                    </p>
+                    <p className="text-2xl font-semibold text-green-600 mt-1">
+                      {stats.aprovados}
+                    </p>
+                  </div>
+                  <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
+                    <CheckCircle2 className="w-6 h-6 text-green-600" />
+                  </div>
+                </div>
+              </CardContent>
+            </TooltipTrigger>
+            <TooltipContent>
+              Solicitações que concluíram todas as etapas e foram aprovadas
+            </TooltipContent>
+          </Tooltip>
         </Card>
 
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-slate-600">Rejeitados</p>
-                <p className="text-2xl font-semibold text-red-600 mt-1">
-                  {stats.rejeitados}
-                </p>
-              </div>
-              <div className="w-12 h-12 bg-red-100 rounded-lg flex items-center justify-center">
-                <XCircle className="w-6 h-6 text-red-600" />
-              </div>
-            </div>
-          </CardContent>
+        <Card className="hover:shadow-md transition-shadow">
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <CardContent className="pt-6 cursor-help">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-slate-600">
+                      Rejeitados
+                    </p>
+                    <p className="text-2xl font-semibold text-red-600 mt-1">
+                      {stats.rejeitados}
+                    </p>
+                  </div>
+                  <div className="w-12 h-12 bg-red-100 rounded-lg flex items-center justify-center">
+                    <XCircle className="w-6 h-6 text-red-600" />
+                  </div>
+                </div>
+              </CardContent>
+            </TooltipTrigger>
+            <TooltipContent>
+              Solicitações que foram canceladas ou indeferidas
+            </TooltipContent>
+          </Tooltip>
         </Card>
       </div>
 
