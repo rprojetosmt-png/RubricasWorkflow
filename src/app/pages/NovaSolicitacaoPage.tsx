@@ -100,8 +100,6 @@ interface SolicitacaoFormData {
   servidorResponsavel: string;
   carater?: "Contínuo" | "Temporário";
   reterTetoRemuneratorio?: "Sim" | "Não";
-  incideNatalina?: "Sim" | "Não";
-  incideFerias?: "Sim" | "Não";
   temIncidenciaTributaria?: "Sim" | "Não";
   incidenciasTributarias: string[];
   outrasIncidencias: string[];
@@ -141,8 +139,6 @@ export function NovaSolicitacaoPage() {
       servidorResponsavel: usuarioAtual.nome,
       carater: undefined,
       reterTetoRemuneratorio: undefined,
-      incideNatalina: undefined,
-      incideFerias: undefined,
       temIncidenciaTributaria: undefined,
       incidenciasTributarias: [],
       outrasIncidencias: [],
@@ -252,8 +248,6 @@ export function NovaSolicitacaoPage() {
     (watch("categoriaTrabalhistaCodigos") || []).length > 0 &&
     (watch("cargosAplicaveis") || []).length > 0 &&
     !!watch("servidorResponsavel") &&
-    !!watch("incideNatalina") &&
-    !!watch("incideFerias") &&
     !!watch("temIncidenciaTributaria") &&
     (watch("baseLegalIds") || []).length > 0 &&
     !!watch("aceiteTermos") &&
@@ -281,8 +275,6 @@ export function NovaSolicitacaoPage() {
     setValue("grupoTrabalhistaIds", grupoIds, { shouldValidate: true });
     setValue("categoriaTrabalhistaCodigos", categoriaIds, { shouldValidate: true });
     setValue("cargosAplicaveis", [cargosAplicaveis[0]], { shouldValidate: true });
-    setValue("incideNatalina", "Sim", { shouldValidate: true });
-    setValue("incideFerias", "Sim", { shouldValidate: true });
     setValue("carater", "Contínuo", { shouldValidate: true });
     setValue("reterTetoRemuneratorio", "Sim", { shouldValidate: true });
     setValue("temIncidenciaTributaria", "Sim", { shouldValidate: true });
@@ -1024,25 +1016,7 @@ export function NovaSolicitacaoPage() {
         </>
       )}
 
-      <div className="space-y-2">
-        <Label>Incidirá gratificação natalina? <span className="text-red-500">*</span></Label>
-        <Controller name="incideNatalina" control={control} rules={{ required: "Selecione uma opção" }} render={({ field }) => (
-          <RadioGroup onValueChange={field.onChange} value={field.value} className="flex gap-4 pt-2">
-            <div className="flex items-center gap-2"><RadioGroupItem value="Sim" id="natalina-sim" /><Label htmlFor="natalina-sim" className="font-normal">Sim</Label></div>
-            <div className="flex items-center gap-2"><RadioGroupItem value="Não" id="natalina-nao" /><Label htmlFor="natalina-nao" className="font-normal">Não</Label></div>
-          </RadioGroup>
-        )} />
-      </div>
 
-      <div className="space-y-2">
-        <Label>Incidirá 1/3 de férias? <span className="text-red-500">*</span></Label>
-        <Controller name="incideFerias" control={control} rules={{ required: "Selecione uma opção" }} render={({ field }) => (
-          <RadioGroup onValueChange={field.onChange} value={field.value} className="flex gap-4 pt-2">
-            <div className="flex items-center gap-2"><RadioGroupItem value="Sim" id="ferias-sim" /><Label htmlFor="ferias-sim" className="font-normal">Sim</Label></div>
-            <div className="flex items-center gap-2"><RadioGroupItem value="Não" id="ferias-nao" /><Label htmlFor="ferias-nao" className="font-normal">Não</Label></div>
-          </RadioGroup>
-        )} />
-      </div>
 
       <div className="col-span-2 space-y-2">
         <Label>Terá incidência tributária? <span className="text-red-500">*</span></Label>
