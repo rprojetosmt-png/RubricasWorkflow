@@ -27,6 +27,7 @@ import {
   AlertTriangle,
 } from "lucide-react";
 import { Button } from "../components/ui/button";
+import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "../components/ui/accordion";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "../components/ui/card";
 import { Badge } from "../components/ui/badge";
 import { Textarea } from "../components/ui/textarea";
@@ -321,6 +322,23 @@ export function NovaSolicitacaoPage() {
   const [arquivosAnexados, setArquivosAnexados] = useState<File[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Estado do Formulário FTER (Análise Técnica - Etapa 2)
+  const [analiseTecnica, setAnaliseTecnica] = useState<{
+    impactoFolha?: "Sim" | "Não";
+    permiteLancamentoManual?: "Sim" | "Não";
+    geraReflexos?: "Sim" | "Não";
+    compoeCalculoRescisorio?: "Sim" | "Não";
+    riscosOperacionais: string;
+  }>({
+    riscosOperacionais: "",
+  });
+
+  const fterPreenchido =
+    !!analiseTecnica.impactoFolha &&
+    !!analiseTecnica.permiteLancamentoManual &&
+    !!analiseTecnica.geraReflexos &&
+    !!analiseTecnica.compoeCalculoRescisorio;
+
   const etapaAtual = etapas[etapaIndex];
   const etapaAtualIndex = etapaIndex + 1;
 
@@ -540,8 +558,8 @@ export function NovaSolicitacaoPage() {
   const preencherDebugEtapa1 = () => {
     const orgaoId = orgaos[0]?.id ?? "";
     const setorId = todosSetores.find((s) => s.orgaoId === orgaoId)?.id ?? "";
-    const grupoId = gruposTrabalhistasEsocial[0]?.id ?? "";
-    const categoriaId = (categoriasPorGrupo[grupoId] ?? [])[0]?.codigo ?? "";
+    const grupoIds = [gruposTrabalhistasEsocial[0]?.id ?? ""];
+    const categoriaIds = [(categoriasPorGrupo[grupoIds[0]] ?? [])[0]?.codigo ?? ""];
 
     setValue("codigoRubrica", `RUB-DEBUG-${Math.floor(Math.random() * 900) + 100}`, { shouldValidate: true, shouldDirty: true });
     setValue("nomeRubrica", `DEBUG Rubrica ${Date.now()}`, { shouldValidate: true, shouldDirty: true });
@@ -554,20 +572,15 @@ export function NovaSolicitacaoPage() {
 
     setValue("orgaosSolicitantes", orgaoId ? [orgaoId] : [], { shouldValidate: true, shouldDirty: true });
     setValue("setorIds", setorId ? [setorId] : [], { shouldValidate: true, shouldDirty: true });
-    setValue("grupoTrabalhistaIds", grupoId ? [grupoId] : [], { shouldValidate: true, shouldDirty: true });
-    setValue("categoriaTrabalhistaCodigo", categoriaId, { shouldValidate: true, shouldDirty: true });
-    setValue("existeOutrosGrupos", "Não", { shouldValidate: true, shouldDirty: true });
-    setValue("outrosGruposDescricao", "", { shouldValidate: true, shouldDirty: true });
+    setValue("grupoTrabalhistaIds", grupoIds, { shouldValidate: true, shouldDirty: true });
+    setValue("categoriaTrabalhistaCodigos", categoriaIds, { shouldValidate: true, shouldDirty: true });
     setValue("cargosAplicaveis", [cargosAplicaveis[0] ?? "Analista Administrativo"], { shouldValidate: true, shouldDirty: true });
     setValue("servidorResponsavel", usuarioAtual.nome, { shouldValidate: true, shouldDirty: true });
 
     setValue("carater", "Contínuo", { shouldValidate: true, shouldDirty: true });
     setValue("reterTetoRemuneratorio", "Não", { shouldValidate: true, shouldDirty: true });
-    setValue("incideNatalina", "Sim", { shouldValidate: true, shouldDirty: true });
-    setValue("incideFerias", "Sim", { shouldValidate: true, shouldDirty: true });
     setValue("temIncidenciaTributaria", "Sim", { shouldValidate: true, shouldDirty: true });
-    setValue("incidenciasTributarias", [incidenciasTributariasPrincipais[0]?.id ?? "irrf"], { shouldValidate: true, shouldDirty: true });
-    setValue("outrasIncidencias", [outrasIncidencias[0]?.id ?? "rpps"], { shouldValidate: true, shouldDirty: true });
+    setValue("incidenciasTributarias", [listaIncidenciasTributarias[0]?.id ?? "irpf"], { shouldValidate: true, shouldDirty: true });
 
     setValue("baseLegalIds", [baseLegalDocumentos[0]?.id ?? "doc-lei-compl-01"], { shouldValidate: true, shouldDirty: true });
     setValue("justificativa", "Preenchimento automático de debug para validar gravação e avanço da etapa de solicitação.", { shouldValidate: true, shouldDirty: true });
@@ -594,12 +607,11 @@ export function NovaSolicitacaoPage() {
     const setoresStr = (watch("setorIds") || []).map((id: string) => todosSetores.find(s => s.id === id)?.nome).filter(Boolean).join(", ") || "Não informado";
     const inicioStr = watch("vigenciaInicio") ? new Date(watch("vigenciaInicio")).toLocaleDateString("pt-BR") : "Não informado";
     const fimStr = watch("vigenciaFim") ? new Date(watch("vigenciaFim")).toLocaleDateString("pt-BR") : "Não informado";
-    const grupoStr = gruposTrabalhistasEsocial.find(g => g.id === watch("grupoTrabalhistaIds")?.[0])?.nome || "Não informado";
-    const catStr = categoriasFiltradas.find(c => c.codigo === watch("categoriaTrabalhistaCodigo"))?.descricao || "Não informado";
+    const gruposStr = (watch("grupoTrabalhistaIds") || []).map((id: string) => gruposTrabalhistasEsocial.find(g => g.id === id)?.nome).filter(Boolean).join(", ") || "Não informado";
+    const catsStr = (watch("categoriaTrabalhistaCodigos") || []).map((codigo: string) => categoriasFiltradas.find(c => c.codigo === codigo)?.descricao).filter(Boolean).join(", ") || "Não informado";
     const baseLegalStr = (watch("baseLegalIds") || []).map((id: string) => baseLegalDocumentos.find(b => b.id === id)?.titulo).filter(Boolean).join(", ") || "Não informado";
     const tipo = watch("classificacao") || "Vantagem";
-    const esocialStr = naturezaRubricaEsocial.find(n => n.id === watch("naturezaEsocial"))?.nome || "Não informado";
-    const outrasIncVal = (watch("outrasIncidencias") || []).map((id: string) => outrasIncidencias.find(o => o.id === id)?.nome).filter(Boolean);
+    const esocialStr = naturezaRubricaEsocial.find(n => n.codigo === watch("naturezaEsocial"))?.descricao || "Não informado";
     const justificativaVal = watch("justificativaLegal")?.trim() || "Não informado";
 
     return {
@@ -624,18 +636,10 @@ export function NovaSolicitacaoPage() {
         {
           title: "GRUPOS E CARGOS",
           fields: [
-            { label: "Grupo Trabalhista", value: grupoStr, icon: <Users strokeWidth={1.5} /> },
-            { label: "Categoria Trabalhista", value: catStr, icon: <Users strokeWidth={1.5} /> },
-            { label: "Outros Grupos", value: watch("existeOutrosGrupos") === "Sim" ? watch("outrosGruposDescricao") || "Sim" : "Não informado", icon: <Users strokeWidth={1.5} />, type: watch("existeOutrosGrupos") !== "Sim" ? ("disabled" as const) : undefined },
+            { label: "Grupo Trabalhista", value: gruposStr, icon: <Users strokeWidth={1.5} /> },
+            { label: "Categoria Trabalhista", value: catsStr, icon: <Users strokeWidth={1.5} /> },
             { label: "Cargos Vinculados", value: watch("cargosAplicaveis") || [], icon: <Briefcase strokeWidth={1.5} /> },
             { label: "Base Legal", value: baseLegalStr, icon: <Scale strokeWidth={1.5} /> },
-          ]
-        },
-        {
-          title: "INCIDÊNCIAS",
-          fields: [
-            { label: "Gratificação Natalina", value: watch("incideNatalina") || "Não informado", icon: <Star strokeWidth={1.5} />, type: watch("incideNatalina") === "Sim" ? ("badge-success" as const) : undefined },
-            { label: "1/3 de Férias", value: watch("incideFerias") || "Não informado", icon: <Star strokeWidth={1.5} />, type: watch("incideFerias") === "Sim" ? ("badge-success" as const) : undefined },
           ]
         },
         {
@@ -652,7 +656,6 @@ export function NovaSolicitacaoPage() {
           fields: [
             { label: "Tem Incidência", value: watch("temIncidenciaTributaria") || "Não", icon: <CircleDollarSign strokeWidth={1.5} />, type: watch("temIncidenciaTributaria") === "Sim" ? ("badge-warning" as const) : undefined },
             { label: "Tributos", value: (watch("incidenciasTributarias") || []).map((id: string) => tributosAplicaveis.find(t => t.id === id)?.nome).filter(Boolean), icon: <CircleDollarSign strokeWidth={1.5} />, type: (watch("incidenciasTributarias") || []).length > 0 ? ("badge-warning" as const) : undefined },
-            { label: "Outras Incidências", value: outrasIncVal, icon: <CircleDollarSign strokeWidth={1.5} />, type: outrasIncVal.length > 0 ? ("badge-warning" as const) : ("disabled" as const) },
           ]
         },
         {
@@ -1091,6 +1094,112 @@ export function NovaSolicitacaoPage() {
               {/* Visualização de Análise (Etapas > 0) */}
               {etapaIndex === 3 ? (
                 <RubricaEditorContainer />
+              ) : etapaIndex === 1 ? (
+                /* ═══ ETAPA 2: ANÁLISE DOCUMENTAL ═══ */
+                <>
+                  {/* Sessão A: Resumo Colapsável da Etapa 1 */}
+                  <Card className="border-none shadow-md overflow-hidden">
+                    <div className="h-1 bg-violet-600 w-full" />
+                    <Accordion type="single" collapsible>
+                      <AccordionItem value="resumo-etapa1" className="border-none">
+                        <AccordionTrigger className="px-6 py-4 hover:no-underline">
+                          <div className="flex items-center gap-2 text-base font-semibold text-slate-800">
+                            <FileText className="w-5 h-5 text-violet-600" />
+                            Resumo da Solicitação (Etapa 1)
+                          </div>
+                        </AccordionTrigger>
+                        <AccordionContent className="px-6 pb-6">
+                          <HistoricalDataCard {...buildHistoricalDataConfig()} />
+                        </AccordionContent>
+                      </AccordionItem>
+                    </Accordion>
+                  </Card>
+
+                  {/* Sessão B: Formulário FTER */}
+                  <Card className="border-none shadow-md overflow-hidden">
+                    <div className="h-1 bg-violet-600 w-full" />
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2">
+                        <Scale className="w-5 h-5 text-violet-600" />
+                        Formulário de Análise Técnica (FTER)
+                      </CardTitle>
+                      <CardDescription>Preencha os campos abaixo com base na avaliação técnica da rubrica solicitada.</CardDescription>
+                    </CardHeader>
+                    <CardContent className="grid grid-cols-2 gap-6">
+                      {/* 1. Impacto na Folha */}
+                      <div className="space-y-2">
+                        <Label className="text-sm font-medium">Impacto na Folha? <span className="text-red-500">*</span></Label>
+                        <RadioGroup
+                          value={analiseTecnica.impactoFolha}
+                          onValueChange={(v) => setAnaliseTecnica((prev) => ({ ...prev, impactoFolha: v as "Sim" | "Não" }))}
+                          className="flex gap-4 pt-1"
+                        >
+                          <div className="flex items-center gap-2"><RadioGroupItem value="Sim" id="fter-impacto-sim" /><Label htmlFor="fter-impacto-sim" className="font-normal">Sim</Label></div>
+                          <div className="flex items-center gap-2"><RadioGroupItem value="Não" id="fter-impacto-nao" /><Label htmlFor="fter-impacto-nao" className="font-normal">Não</Label></div>
+                        </RadioGroup>
+                      </div>
+
+                      {/* 2. Permite Lançamento Manual */}
+                      <div className="space-y-2">
+                        <Label className="text-sm font-medium">Permite lançamento manual? <span className="text-red-500">*</span></Label>
+                        <RadioGroup
+                          value={analiseTecnica.permiteLancamentoManual}
+                          onValueChange={(v) => setAnaliseTecnica((prev) => ({ ...prev, permiteLancamentoManual: v as "Sim" | "Não" }))}
+                          className="flex gap-4 pt-1"
+                        >
+                          <div className="flex items-center gap-2"><RadioGroupItem value="Sim" id="fter-manual-sim" /><Label htmlFor="fter-manual-sim" className="font-normal">Sim</Label></div>
+                          <div className="flex items-center gap-2"><RadioGroupItem value="Não" id="fter-manual-nao" /><Label htmlFor="fter-manual-nao" className="font-normal">Não</Label></div>
+                        </RadioGroup>
+                      </div>
+
+                      {/* 3. Gera Reflexos */}
+                      <div className="space-y-2">
+                        <Label className="text-sm font-medium">Gera Reflexos? <span className="text-red-500">*</span></Label>
+                        <RadioGroup
+                          value={analiseTecnica.geraReflexos}
+                          onValueChange={(v) => setAnaliseTecnica((prev) => ({ ...prev, geraReflexos: v as "Sim" | "Não" }))}
+                          className="flex gap-4 pt-1"
+                        >
+                          <div className="flex items-center gap-2"><RadioGroupItem value="Sim" id="fter-reflexos-sim" /><Label htmlFor="fter-reflexos-sim" className="font-normal">Sim</Label></div>
+                          <div className="flex items-center gap-2"><RadioGroupItem value="Não" id="fter-reflexos-nao" /><Label htmlFor="fter-reflexos-nao" className="font-normal">Não</Label></div>
+                        </RadioGroup>
+                      </div>
+
+                      {/* 4. Compõe Cálculo Rescisório */}
+                      <div className="space-y-2">
+                        <Label className="text-sm font-medium">Compõe Cálculo Rescisório? <span className="text-red-500">*</span></Label>
+                        <RadioGroup
+                          value={analiseTecnica.compoeCalculoRescisorio}
+                          onValueChange={(v) => setAnaliseTecnica((prev) => ({ ...prev, compoeCalculoRescisorio: v as "Sim" | "Não" }))}
+                          className="flex gap-4 pt-1"
+                        >
+                          <div className="flex items-center gap-2"><RadioGroupItem value="Sim" id="fter-rescisorio-sim" /><Label htmlFor="fter-rescisorio-sim" className="font-normal">Sim</Label></div>
+                          <div className="flex items-center gap-2"><RadioGroupItem value="Não" id="fter-rescisorio-nao" /><Label htmlFor="fter-rescisorio-nao" className="font-normal">Não</Label></div>
+                        </RadioGroup>
+                      </div>
+
+                      {/* 5. Riscos Operacionais */}
+                      <div className="col-span-2 space-y-2">
+                        <Label className="text-sm font-medium">Riscos Operacionais Identificados</Label>
+                        <Textarea
+                          placeholder="Descreva os riscos operacionais identificados nesta rubrica (opcional)..."
+                          value={analiseTecnica.riscosOperacionais}
+                          onChange={(e) => setAnaliseTecnica((prev) => ({ ...prev, riscosOperacionais: e.target.value }))}
+                          rows={3}
+                          className="border-2"
+                        />
+                      </div>
+
+                      {/* Indicador de preenchimento */}
+                      {!fterPreenchido && (
+                        <div className="col-span-2 flex items-center gap-2 text-amber-600 bg-amber-50 rounded-lg p-3 border border-amber-200">
+                          <AlertTriangle className="w-4 h-4 flex-shrink-0" />
+                          <p className="text-xs">Todos os campos com <span className="text-red-500 font-bold">*</span> devem ser preenchidos antes de aprovar a etapa.</p>
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                </>
               ) : (
                 <HistoricalDataCard {...buildHistoricalDataConfig()} />
               )}
@@ -1179,6 +1288,10 @@ export function NovaSolicitacaoPage() {
                         onClick={() => {
                           if (!comentario.trim()) {
                             toast.error("Preencha o parecer técnico antes de aprovar.");
+                            return;
+                          }
+                          if (etapaIndex === 1 && !fterPreenchido) {
+                            toast.error("Preencha todos os campos do Formulário de Análise Técnica (FTER) antes de aprovar.");
                             return;
                           }
                           handleAprovarEtapa();
