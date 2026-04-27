@@ -84,6 +84,7 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
 interface SolicitacaoFormData {
+  codigoRubrica: string;
   nomeRubrica: string;
   classificacao: string;
   natureza?: "Remuneratória" | "Indenizatória";
@@ -126,6 +127,7 @@ export function NovaSolicitacaoPage() {
     formState: { errors },
   } = useForm<SolicitacaoFormData>({
     defaultValues: {
+      codigoRubrica: "",
       nomeRubrica: "",
       classificacao: "",
       natureza: undefined,
@@ -238,6 +240,7 @@ export function NovaSolicitacaoPage() {
 
 
   const podeEnviar =
+    !!watch("codigoRubrica") &&
     !!watch("nomeRubrica") &&
     !!watch("classificacao") &&
     !!watch("natureza") &&
@@ -269,6 +272,7 @@ export function NovaSolicitacaoPage() {
     const grupoId = gruposTrabalhistasEsocial[0]?.id ?? "";
     const categoriaId = (categoriasPorGrupo[grupoId] ?? [])[0]?.codigo ?? "";
 
+    setValue("codigoRubrica", `R-${Math.floor(Math.random() * 9000) + 1000}`, { shouldValidate: true });
     setValue("nomeRubrica", `Nova Rubrica ${Date.now()}`, { shouldValidate: true });
     setValue("classificacao", classificacoes[0], { shouldValidate: true });
     setValue("natureza", "Remuneratória", { shouldValidate: true });
@@ -418,7 +422,7 @@ export function NovaSolicitacaoPage() {
 
       const novaSolicitacao: Solicitacao = {
         id: `sol-${Date.now()}`,
-        codigo: codigoPreview,
+        codigo: data.codigoRubrica,
         titulo: data.nomeRubrica || "Nova Solicitação",
         tipo: "Nova Rubrica",
         solicitante: usuarioAtual,
@@ -446,7 +450,7 @@ export function NovaSolicitacaoPage() {
 
     const novaSolicitacao: Solicitacao = {
       id: `sol-${Date.now()}`,
-      codigo: codigoPreview,
+      codigo: data.codigoRubrica,
       titulo: data.nomeRubrica || "Nova Solicitação",
       tipo: "Nova Rubrica",
       solicitante: usuarioAtual,
@@ -525,7 +529,7 @@ export function NovaSolicitacaoPage() {
 
     const novaSolicitacao = {
       id: `sol-${Date.now()}`,
-      codigo: codigoPreview,
+      codigo: watch("codigoRubrica") || codigoPreview,
       titulo: watch("nomeRubrica") || "Nova Solicitação",
       tipo: "Nova Rubrica",
       solicitante: usuarioAtual,
@@ -554,6 +558,7 @@ export function NovaSolicitacaoPage() {
     const grupoId = gruposTrabalhistasEsocial[0]?.id ?? "";
     const categoriaId = (categoriasPorGrupo[grupoId] ?? [])[0]?.codigo ?? "";
 
+    setValue("codigoRubrica", `RUB-DEBUG-${Math.floor(Math.random() * 900) + 100}`, { shouldValidate: true, shouldDirty: true });
     setValue("nomeRubrica", `DEBUG Rubrica ${Date.now()}`, { shouldValidate: true, shouldDirty: true });
     setValue("classificacao", classificacoes[0] ?? "Vantagem", { shouldValidate: true, shouldDirty: true });
     setValue("natureza", "Remuneratória", { shouldValidate: true, shouldDirty: true });
@@ -613,7 +618,7 @@ export function NovaSolicitacaoPage() {
     const justificativaVal = watch("justificativaLegal")?.trim() || "Não informado";
 
     return {
-      id: codigoPreview,
+      id: watch("codigoRubrica") || "0000",
       title: watch("nomeRubrica") || "Nova Rubrica",
       subtitle: orgsStr,
       status: tipo,
@@ -693,7 +698,7 @@ export function NovaSolicitacaoPage() {
               </Link>
               <div className="min-w-0">
                 <div className="flex flex-wrap items-center gap-2 mb-1">
-                  <span className="font-mono text-sm text-slate-600">{codigoPreview}</span>
+                  <span className="font-mono text-sm text-slate-600">{watch("codigoRubrica") || "---"}</span>
                   <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
                     {tipo}
                   </Badge>
@@ -790,7 +795,23 @@ export function NovaSolicitacaoPage() {
       </Button>
     </CardHeader>
     <CardContent className="grid grid-cols-2 gap-4">
-      <div className="col-span-2 space-y-2">
+      <div className="space-y-2">
+        <Label>Código da Rubrica <span className="text-red-500">*</span></Label>
+        <Controller
+          name="codigoRubrica"
+          control={control}
+          rules={{ required: "Campo obrigatório" }}
+          render={({ field }) => (
+            <Input 
+              {...field} 
+              placeholder="Ex: 8055" 
+              className={cn("border-2 h-10 font-mono uppercase", errors.codigoRubrica && "border-red-500")} 
+            />
+          )}
+        />
+      </div>
+
+      <div className="space-y-2">
         <Label>Nome da Rubrica <span className="text-red-500">*</span></Label>
         <Controller
           name="nomeRubrica"
