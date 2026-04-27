@@ -95,9 +95,7 @@ interface SolicitacaoFormData {
   orgaosSolicitantes: string[];
   setorIds: string[];
   grupoTrabalhistaIds: string[];
-  categoriaTrabalhistaCodigo: string;
-  existeOutrosGrupos?: "Sim" | "Não";
-  outrosGruposDescricao: string;
+  categoriaTrabalhistaCodigos: string[];
   cargosAplicaveis: string[];
   servidorResponsavel: string;
   carater?: "Contínuo" | "Temporário";
@@ -138,9 +136,7 @@ export function NovaSolicitacaoPage() {
       orgaosSolicitantes: [],
       setorIds: [],
       grupoTrabalhistaIds: [],
-      categoriaTrabalhistaCodigo: "",
-      existeOutrosGrupos: "Não",
-      outrosGruposDescricao: "",
+      categoriaTrabalhistaCodigos: [],
       cargosAplicaveis: [],
       servidorResponsavel: usuarioAtual.nome,
       carater: undefined,
@@ -161,10 +157,9 @@ export function NovaSolicitacaoPage() {
   const selectedSetorIds = watch("setorIds");
   const naturezaSelecionada = watch("natureza");
   const vigenciaInicio = watch("vigenciaInicio");
-  const grupoTrabalhistaIds = watch("grupoTrabalhistaIds");
-  const categoriaTrabalhistaCodigo = watch("categoriaTrabalhistaCodigo");
-  const grupoTrabalhistaPrincipalId = grupoTrabalhistaIds[0] ?? "";
-  const existeOutrosGrupos = watch("existeOutrosGrupos");
+  const categoriaTrabalhistaCodigos = watch("categoriaTrabalhistaCodigos") || [];
+  const grupoTrabalhistaIds = watch("grupoTrabalhistaIds") || [];
+  const selectedGrupoIds = watch("grupoTrabalhistaIds") || [];
   const temIncidenciaTributaria = watch("temIncidenciaTributaria");
   const baseLegalSelecionada = watch("baseLegalIds");
 
@@ -173,9 +168,16 @@ export function NovaSolicitacaoPage() {
   }, [selectedOrgaos]);
 
   const categoriasFiltradas = useMemo(() => {
-    if (!grupoTrabalhistaPrincipalId) return [];
-    return categoriasPorGrupo[grupoTrabalhistaPrincipalId] ?? [];
-  }, [grupoTrabalhistaPrincipalId]);
+    if (grupoTrabalhistaIds.length === 0) return [];
+    const allCats = grupoTrabalhistaIds.flatMap((id) => categoriasPorGrupo[id] ?? []);
+    // Remover duplicatas por código
+    const seen = new Set();
+    return allCats.filter((cat) => {
+      if (seen.has(cat.codigo)) return false;
+      seen.add(cat.codigo);
+      return true;
+    });
+  }, [grupoTrabalhistaIds]);
 
   const temRetroatividade = useMemo(() => {
     if (!vigenciaInicio) return false;
@@ -196,28 +198,25 @@ export function NovaSolicitacaoPage() {
     setValue("servidorResponsavel", usuarioAtual.nome);
   }, [setValue]);
 
-  useEffect(() => {
-    if (existeOutrosGrupos !== "Sim") {
-      setValue("outrosGruposDescricao", "");
-    }
-  }, [existeOutrosGrupos, setValue]);
+
 
   useEffect(() => {
-    if (!grupoTrabalhistaPrincipalId) {
-      if (categoriaTrabalhistaCodigo) {
-        setValue("categoriaTrabalhistaCodigo", "");
+    if (grupoTrabalhistaIds.length === 0) {
+      if (watch("categoriaTrabalhistaCodigos")?.length > 0) {
+        setValue("categoriaTrabalhistaCodigos", []);
       }
       return;
     }
 
-    const categoriaValida = (categoriasPorGrupo[grupoTrabalhistaPrincipalId] ?? []).some(
-      (cat) => cat.codigo === categoriaTrabalhistaCodigo
+    const currentCodigos = watch("categoriaTrabalhistaCodigos") || [];
+    const codigosValidos = currentCodigos.filter((codigo) =>
+      categoriasFiltradas.some((cat) => cat.codigo === codigo)
     );
 
-    if (!categoriaValida && categoriaTrabalhistaCodigo) {
-      setValue("categoriaTrabalhistaCodigo", "");
+    if (codigosValidos.length !== currentCodigos.length) {
+      setValue("categoriaTrabalhistaCodigos", codigosValidos);
     }
-  }, [grupoTrabalhistaPrincipalId, categoriaTrabalhistaCodigo, setValue]);
+  }, [grupoTrabalhistaIds, categoriasFiltradas, setValue, watch]);
 
   useEffect(() => {
     if (naturezaSelecionada !== "Remuneratória") {
@@ -250,7 +249,7 @@ export function NovaSolicitacaoPage() {
     (selectedOrgaos || []).length > 0 &&
     (watch("setorIds") || []).length > 0 &&
     (watch("grupoTrabalhistaIds") || []).length > 0 &&
-    !!watch("categoriaTrabalhistaCodigo") &&
+    (watch("categoriaTrabalhistaCodigos") || []).length > 0 &&
     (watch("cargosAplicaveis") || []).length > 0 &&
     !!watch("servidorResponsavel") &&
     !!watch("incideNatalina") &&
@@ -259,9 +258,7 @@ export function NovaSolicitacaoPage() {
     (watch("baseLegalIds") || []).length > 0 &&
     !!watch("aceiteTermos") &&
     (naturezaSelecionada !== "Remuneratória" || (!!watch("carater") && !!watch("reterTetoRemuneratorio"))) &&
-    (temIncidenciaTributaria !== "Sim" || (watch("incidenciasTributarias") || []).length > 0) &&
-    (existeOutrosGrupos !== "Sim" || !!watch("outrosGruposDescricao")?.trim());
-
+    (temIncidenciaTributaria !== "Sim" || (watch("incidenciasTributarias") || []).length > 0);
 
   const etapas = useSyncExternalStore(subscribeEsteiraConfig, getEsteiraConfig, getEsteiraConfig);
   const [etapaIndex, setEtapaIndex] = useState(0);
@@ -269,8 +266,8 @@ export function NovaSolicitacaoPage() {
   const preencherDadosTeste = () => {
     const orgaoId = orgaos[0]?.id ?? "";
     const setorId = todosSetores.find((s) => s.orgaoId === orgaoId)?.id ?? "";
-    const grupoId = gruposTrabalhistasEsocial[0]?.id ?? "";
-    const categoriaId = (categoriasPorGrupo[grupoId] ?? [])[0]?.codigo ?? "";
+    const grupoIds = [gruposTrabalhistasEsocial[0]?.id ?? ""];
+    const categoriaIds = [(categoriasPorGrupo[grupoIds[0]] ?? [])[0]?.codigo ?? ""];
 
     setValue("codigoRubrica", `R-${Math.floor(Math.random() * 9000) + 1000}`, { shouldValidate: true });
     setValue("nomeRubrica", `Nova Rubrica ${Date.now()}`, { shouldValidate: true });
@@ -281,8 +278,8 @@ export function NovaSolicitacaoPage() {
     setValue("paoe", listaPAOE[0], { shouldValidate: true });
     setValue("orgaosSolicitantes", [orgaoId], { shouldValidate: true });
     setValue("setorIds", [setorId], { shouldValidate: true });
-    setValue("grupoTrabalhistaIds", [grupoId], { shouldValidate: true });
-    setValue("categoriaTrabalhistaCodigo", categoriaId, { shouldValidate: true });
+    setValue("grupoTrabalhistaIds", grupoIds, { shouldValidate: true });
+    setValue("categoriaTrabalhistaCodigos", categoriaIds, { shouldValidate: true });
     setValue("cargosAplicaveis", [cargosAplicaveis[0]], { shouldValidate: true });
     setValue("incideNatalina", "Sim", { shouldValidate: true });
     setValue("incideFerias", "Sim", { shouldValidate: true });
@@ -837,20 +834,7 @@ export function NovaSolicitacaoPage() {
         />
       </div>
 
-      <div className="space-y-2">
-        <Label>Natureza da Verba <span className="text-red-500">*</span></Label>
-        <Controller
-          name="natureza"
-          control={control}
-          rules={{ required: "Campo obrigatório" }}
-          render={({ field }) => (
-            <Select onValueChange={field.onChange} value={field.value}>
-              <SelectTrigger className={cn("border-2 h-10", errors.natureza && "border-red-500")}><SelectValue placeholder="Selecione a natureza" /></SelectTrigger>
-              <SelectContent>{naturezasVerba.map((n) => <SelectItem key={n} value={n}>{n}</SelectItem>)}</SelectContent>
-            </Select>
-          )}
-        />
-      </div>
+
 
       <div className="col-span-2 space-y-2">
         <Label>Tabela 03 - Natureza das Rubricas (eSocial) <span className="text-red-500">*</span></Label>
@@ -940,38 +924,42 @@ export function NovaSolicitacaoPage() {
 
       <div className="space-y-2">
         <Label>Grupo Trabalhista (eSocial) <span className="text-red-500">*</span></Label>
-        <Controller name="grupoTrabalhistaIds" control={control} rules={{ validate: (v) => (Array.isArray(v) && v.length > 0) || "Selecione o grupo" }} render={({ field }) => (
-          <Select onValueChange={(value) => field.onChange(value ? [value] : [])} value={Array.isArray(field.value) ? (field.value[0] ?? "") : ""}>
-            <SelectTrigger className={cn("border-2 h-10", errors.grupoTrabalhistaIds && "border-red-500")}><SelectValue placeholder="Selecione o grupo" /></SelectTrigger>
-            <SelectContent>{gruposTrabalhistas.map((g) => <SelectItem key={g.id} value={g.id}>{g.nome}</SelectItem>)}</SelectContent>
-          </Select>
-        )} />
+        <Controller 
+          name="grupoTrabalhistaIds" 
+          control={control} 
+          rules={{ validate: (v) => (Array.isArray(v) && v.length > 0) || "Selecione o grupo" }} 
+          render={({ field }) => (
+            <MultiSelect
+              options={gruposTrabalhistas.map(g => ({ label: g.nome, value: g.id }))}
+              selected={field.value}
+              onChange={field.onChange}
+              placeholder="Selecione os grupos..."
+              error={!!errors.grupoTrabalhistaIds}
+            />
+          )} 
+        />
       </div>
 
       <div className="space-y-2">
         <Label>Categoria Trabalhista <span className="text-red-500">*</span></Label>
-        <Controller name="categoriaTrabalhistaCodigo" control={control} rules={{ required: "Selecione a categoria" }} render={({ field }) => (
-          <Select disabled={!grupoTrabalhistaPrincipalId} onValueChange={field.onChange} value={field.value}>
-            <SelectTrigger className={cn("border-2 h-10", errors.categoriaTrabalhistaCodigo && "border-red-500")}><SelectValue placeholder={grupoTrabalhistaPrincipalId ? "Selecione a categoria" : "Selecione o grupo primeiro"} /></SelectTrigger>
-            <SelectContent>{categoriasFiltradas.map((cat) => <SelectItem key={cat.codigo} value={cat.codigo}>{cat.codigo} - {cat.descricao}</SelectItem>)}</SelectContent>
-          </Select>
-        )} />
+        <Controller 
+          name="categoriaTrabalhistaCodigos" 
+          control={control} 
+          rules={{ validate: (v) => (Array.isArray(v) && v.length > 0) || "Selecione a categoria" }} 
+          render={({ field }) => (
+            <MultiSelect
+              disabled={grupoTrabalhistaIds.length === 0}
+              options={categoriasFiltradas.map(cat => ({ label: `${cat.codigo} - ${cat.descricao}`, value: cat.codigo }))}
+              selected={field.value}
+              onChange={field.onChange}
+              placeholder={grupoTrabalhistaIds.length === 0 ? "Selecione o grupo primeiro" : "Selecione as categorias..."}
+              error={!!errors.categoriaTrabalhistaCodigos}
+            />
+          )} 
+        />
       </div>
 
-      <div className="space-y-2">
-        <Label>Existem outros grupos?</Label>
-        <Controller name="existeOutrosGrupos" control={control} render={({ field }) => (
-          <RadioGroup onValueChange={field.onChange} value={field.value} className="flex gap-4 pt-2">
-            <div className="flex items-center gap-2"><RadioGroupItem value="Não" id="outros-grupos-nao" /><Label htmlFor="outros-grupos-nao" className="font-normal">Não</Label></div>
-            <div className="flex items-center gap-2"><RadioGroupItem value="Sim" id="outros-grupos-sim" /><Label htmlFor="outros-grupos-sim" className="font-normal">Sim</Label></div>
-          </RadioGroup>
-        )} />
-      </div>
 
-      <div className="space-y-2">
-        <Label>Detalhar outros grupos</Label>
-        <Controller name="outrosGruposDescricao" control={control} rules={{ validate: (v) => existeOutrosGrupos !== "Sim" || !!v?.trim() || "Informe os outros grupos" }} render={({ field }) => <Input {...field} disabled={existeOutrosGrupos !== "Sim"} className={cn("border-2 h-10", errors.outrosGruposDescricao && "border-red-500")} />} />
-      </div>
 
       <div className="col-span-2 space-y-2">
         <Label>Cargos que utilizarão a rubrica <span className="text-red-500">*</span></Label>
@@ -997,6 +985,21 @@ export function NovaSolicitacaoPage() {
     <div className="h-1 bg-amber-500 w-full" />
     <CardHeader><CardTitle className="flex items-center gap-2"><CheckCircle2 className="w-5 h-5 text-amber-500" />Etapa 3: Incidências e Regras</CardTitle></CardHeader>
     <CardContent className="grid grid-cols-2 gap-4">
+      <div className="col-span-2 space-y-2">
+        <Label>Natureza da Verba <span className="text-red-500">*</span></Label>
+        <Controller
+          name="natureza"
+          control={control}
+          rules={{ required: "Campo obrigatório" }}
+          render={({ field }) => (
+            <Select onValueChange={field.onChange} value={field.value}>
+              <SelectTrigger className={cn("border-2 h-10", errors.natureza && "border-red-500")}><SelectValue placeholder="Selecione a natureza" /></SelectTrigger>
+              <SelectContent>{naturezasVerba.map((n) => <SelectItem key={n} value={n}>{n}</SelectItem>)}</SelectContent>
+            </Select>
+          )}
+        />
+      </div>
+
       {naturezaSelecionada === "Remuneratória" && (
         <>
           <div className="space-y-2">
