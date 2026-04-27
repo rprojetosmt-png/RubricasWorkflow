@@ -95,13 +95,13 @@ export const cargosAplicaveis = [
 ];
 
 export const listaIncidenciasTributarias = [
-  { id: "irrf", nome: "IRRF" },
-  { id: "inss-rg", nome: "INSS (Regime Geral)" },
-  { id: "prev-propria", nome: "Previdência Própria" },
-  { id: "rpps", nome: "RPPS" },
+  { id: "irpf", nome: "IRPF" },
+  { id: "inss", nome: "INSS" },
+  { id: "rpps", nome: "Previdência (RPPS)" },
+  { id: "rgps", nome: "RGPS" },
   { id: "pasep", nome: "PASEP" },
-  { id: "grat-natalina", nome: "Gratificação natalina" },
-  { id: "ferias-um-terco", nome: "1/3 férias" },
+  { id: "ferias-um-terco", nome: "1/3 de Férias" },
+  { id: "grat-natalina", nome: "Gratificação Natalina" },
 ];
 
 export const baseLegalDocumentos = [
