@@ -195,7 +195,7 @@ export function RootLayout() {
             </nav>
 
             <div className="p-4 border-t border-white/10">
-              <p className="text-xs text-white/60 text-center">SEFLAG - STI</p>
+              <p className="text-xs text-white/60 text-center">SEPLAG - SITEC</p>
               <p className="text-xs text-white/60 text-center">Coordenadoria de Sistemas</p>
             </div>
           </>
