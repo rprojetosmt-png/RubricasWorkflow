@@ -70,8 +70,7 @@ import {
   gruposTrabalhistasEsocial,
   categoriasPorGrupo,
   cargosAplicaveis,
-  incidenciasTributariasPrincipais,
-  outrasIncidencias,
+  listaIncidenciasTributarias,
   baseLegalDocumentos,
 } from "../data/formOptions";
 import { MultiSelect } from "../components/MultiSelect";
@@ -102,7 +101,6 @@ interface SolicitacaoFormData {
   reterTetoRemuneratorio?: "Sim" | "Não";
   temIncidenciaTributaria?: "Sim" | "Não";
   incidenciasTributarias: string[];
-  outrasIncidencias: string[];
   baseLegalIds: string[];
   justificativaLegal: string;
   justificativa: string;
@@ -141,7 +139,6 @@ export function NovaSolicitacaoPage() {
       reterTetoRemuneratorio: undefined,
       temIncidenciaTributaria: undefined,
       incidenciasTributarias: [],
-      outrasIncidencias: [],
       baseLegalIds: [],
       justificativaLegal: "",
       justificativa: "",
@@ -224,14 +221,13 @@ export function NovaSolicitacaoPage() {
   useEffect(() => {
     if (temIncidenciaTributaria !== "Sim") {
       setValue("incidenciasTributarias", []);
-      setValue("outrasIncidencias", []);
     }
   }, [temIncidenciaTributaria, setValue]);
 
   const titulo = watch("nomeRubrica");
   const tipo = "Nova Rubrica";
   const gruposTrabalhistas = gruposTrabalhistasEsocial;
-  const tributosAplicaveis = incidenciasTributariasPrincipais;
+  const tributosAplicaveis = listaIncidenciasTributarias;
 
 
   const podeEnviar =
@@ -278,7 +274,7 @@ export function NovaSolicitacaoPage() {
     setValue("carater", "Contínuo", { shouldValidate: true });
     setValue("reterTetoRemuneratorio", "Sim", { shouldValidate: true });
     setValue("temIncidenciaTributaria", "Sim", { shouldValidate: true });
-    setValue("incidenciasTributarias", [incidenciasTributariasPrincipais[0]?.id], { shouldValidate: true });
+    setValue("incidenciasTributarias", [listaIncidenciasTributarias[0]?.id], { shouldValidate: true });
     setValue("baseLegalIds", [baseLegalDocumentos[0]?.id ?? ""], { shouldValidate: true });
     setValue("justificativaLegal", "LEI 12.345/2024", { shouldValidate: true });
     setValue("justificativa", "Solicitação de teste.", { shouldValidate: true });
@@ -1019,33 +1015,41 @@ export function NovaSolicitacaoPage() {
 
 
       <div className="col-span-2 space-y-2">
-        <Label>Terá incidência tributária? <span className="text-red-500">*</span></Label>
+        <Label>Esta rubrica possui incidências tributárias? <span className="text-red-500">*</span></Label>
         <Controller name="temIncidenciaTributaria" control={control} rules={{ required: "Selecione uma opção" }} render={({ field }) => (
           <RadioGroup onValueChange={field.onChange} value={field.value} className="flex gap-4 pt-2">
-            <div className="flex items-center gap-2"><RadioGroupItem value="Sim" id="trib-sim" /><Label htmlFor="trib-sim" className="font-normal">Sim</Label></div>
-            <div className="flex items-center gap-2"><RadioGroupItem value="Não" id="trib-nao" /><Label htmlFor="trib-nao" className="font-normal">Não</Label></div>
+            <div className="flex items-center gap-2"><RadioGroupItem value="Sim" id="incidencia-sim" /><Label htmlFor="incidencia-sim" className="font-normal">Sim</Label></div>
+            <div className="flex items-center gap-2"><RadioGroupItem value="Não" id="incidencia-nao" /><Label htmlFor="incidencia-nao" className="font-normal">Não</Label></div>
           </RadioGroup>
         )} />
       </div>
 
       {temIncidenciaTributaria === "Sim" && (
-        <>
-          <div className="col-span-2 space-y-2">
-            <Label>Tributos aplicáveis (pelo menos 1) <span className="text-red-500">*</span></Label>
-            <Controller name="incidenciasTributarias" control={control} rules={{ validate: (v) => (Array.isArray(v) && v.length > 0) || "Selecione ao menos um tributo" }} render={({ field }) => {
-              const selected = Array.isArray(field.value) ? field.value : [];
-              return <div className={cn("rounded-md border p-3 grid grid-cols-3 gap-2", errors.incidenciasTributarias && "border-red-500")}>{tributosAplicaveis.map((t) => <label key={t.id} className="flex items-center gap-2 text-sm cursor-pointer"><Checkbox checked={selected.includes(t.id)} onCheckedChange={(checked) => checked ? field.onChange([...selected, t.id]) : field.onChange(selected.filter((v: string) => v !== t.id))} /><span>{t.nome}</span></label>)}</div>;
-            }} />
-          </div>
-
-          <div className="col-span-2 space-y-2">
-            <Label>Outras incidências</Label>
-            <Controller name="outrasIncidencias" control={control} render={({ field }) => {
-              const selected = Array.isArray(field.value) ? field.value : [];
-              return <div className="rounded-md border p-3 grid grid-cols-3 gap-2">{outrasIncidencias.map((o) => <label key={o.id} className="flex items-center gap-2 text-sm cursor-pointer"><Checkbox checked={selected.includes(o.id)} onCheckedChange={(checked) => checked ? field.onChange([...selected, o.id]) : field.onChange(selected.filter((v: string) => v !== o.id))} /><span>{o.nome}</span></label>)}</div>;
-            }} />
-          </div>
-        </>
+        <div className="col-span-2 space-y-2">
+          <Label>Incidências e Tributos (marque pelo menos 1) <span className="text-red-500">*</span></Label>
+          <Controller name="incidenciasTributarias" control={control} rules={{ validate: (v) => temIncidenciaTributaria !== "Sim" || (Array.isArray(v) && v.length > 0) || "Selecione pelo menos uma incidência" }} render={({ field }) => {
+            const selected = Array.isArray(field.value) ? field.value : [];
+            return (
+              <div className={cn("grid grid-cols-3 gap-2 border-2 rounded-lg p-3", errors.incidenciasTributarias && "border-red-500")}>
+                {listaIncidenciasTributarias.map((t) => (
+                  <div key={t.id} className="flex items-center gap-2">
+                    <Checkbox
+                      id={`incidencia-${t.id}`}
+                      checked={selected.includes(t.id)}
+                      onCheckedChange={(checked) => {
+                        const next = checked
+                          ? [...selected, t.id]
+                          : selected.filter((id: string) => id !== t.id);
+                        field.onChange(next);
+                      }}
+                    />
+                    <Label htmlFor={`incidencia-${t.id}`} className="text-xs font-normal cursor-pointer">{t.nome}</Label>
+                  </div>
+                ))}
+              </div>
+            );
+          }} />
+        </div>
       )}
     </CardContent>
   </Card>

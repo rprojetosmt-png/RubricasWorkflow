@@ -94,15 +94,11 @@ export const cargosAplicaveis = [
   "Auxiliar de Serviços Gerais",
 ];
 
-export const incidenciasTributariasPrincipais = [
+export const listaIncidenciasTributarias = [
   { id: "irrf", nome: "IRRF" },
   { id: "inss-rg", nome: "INSS (Regime Geral)" },
   { id: "prev-propria", nome: "Previdência Própria" },
-];
-
-export const outrasIncidencias = [
   { id: "rpps", nome: "RPPS" },
-  { id: "irrf-outras", nome: "IRRF" },
   { id: "pasep", nome: "PASEP" },
   { id: "grat-natalina", nome: "Gratificação natalina" },
   { id: "ferias-um-terco", nome: "1/3 férias" },
