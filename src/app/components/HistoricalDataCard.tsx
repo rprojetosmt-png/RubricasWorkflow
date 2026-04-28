@@ -29,6 +29,7 @@ export interface HistoricalDataCardProps {
   readOnly?: boolean;
   sections: HistoricalSection[];
   attachments?: HistoricalAttachment[];
+  defaultExpanded?: boolean;
 }
 
 function FieldValue({ field }: { field: HistoricalField }) {
@@ -83,8 +84,9 @@ export function HistoricalDataCard({
   status,
   sections,
   attachments,
+  defaultExpanded = false,
 }: HistoricalDataCardProps) {
-  const [expanded, setExpanded] = useState(false);
+  const [expanded, setExpanded] = useState(defaultExpanded);
 
   return (
     <div className="border border-slate-200 rounded-xl bg-white shadow-sm overflow-hidden">
@@ -113,7 +115,7 @@ export function HistoricalDataCard({
         </div>
         <div className="flex items-center gap-2 shrink-0 ml-4">
           <span className="text-xs font-medium text-slate-500">
-            {expanded ? "Ocultar" : "Ver dados da solicitação"}
+            {expanded ? "Ocultar" : "Ver Detalhes"}
           </span>
           <ChevronDown
             className={cn(

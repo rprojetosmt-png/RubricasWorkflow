@@ -61,6 +61,7 @@ import { toast } from "sonner";
 import { useForm, Controller } from "react-hook-form";
 import { HistoricalDataCard } from "../components/HistoricalDataCard";
 import { RubricaEditorContainer } from "../components/rubricas/RubricaEditorContainer";
+import { AnaliseTecnicaFTER } from "../components/AnaliseTecnicaFTER";
 import {
   classificacoes,
   orgaos,
@@ -322,22 +323,6 @@ export function NovaSolicitacaoPage() {
   const [arquivosAnexados, setArquivosAnexados] = useState<File[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Estado do Formulário FTER (Análise Técnica - Etapa 2)
-  const [analiseTecnica, setAnaliseTecnica] = useState<{
-    impactoFolha?: "Sim" | "Não";
-    permiteLancamentoManual?: "Sim" | "Não";
-    geraReflexos?: "Sim" | "Não";
-    compoeCalculoRescisorio?: "Sim" | "Não";
-    riscosOperacionais: string;
-  }>({
-    riscosOperacionais: "",
-  });
-
-  const fterPreenchido =
-    !!analiseTecnica.impactoFolha &&
-    !!analiseTecnica.permiteLancamentoManual &&
-    !!analiseTecnica.geraReflexos &&
-    !!analiseTecnica.compoeCalculoRescisorio;
 
   const etapaAtual = etapas[etapaIndex];
   const etapaAtualIndex = etapaIndex + 1;
@@ -602,7 +587,7 @@ export function NovaSolicitacaoPage() {
       .slice(0, 2);
   };
 
-  const buildHistoricalDataConfig = () => {
+  const buildHistoricalDataConfig = (customTitle?: string) => {
     const orgsStr = (watch("orgaosSolicitantes") || []).map((id: string) => orgaos.find(o => o.id === id)?.nome).filter(Boolean).join(", ") || "Não informado";
     const setoresStr = (watch("setorIds") || []).map((id: string) => todosSetores.find(s => s.id === id)?.nome).filter(Boolean).join(", ") || "Não informado";
     const inicioStr = watch("vigenciaInicio") ? new Date(watch("vigenciaInicio")).toLocaleDateString("pt-BR") : "Não informado";
@@ -616,7 +601,7 @@ export function NovaSolicitacaoPage() {
 
     return {
       id: watch("codigoRubrica") || "0000",
-      title: watch("nomeRubrica") || "Nova Rubrica",
+      title: customTitle || watch("nomeRubrica") || "Nova Rubrica",
       subtitle: orgsStr,
       status: tipo,
       readOnly: true,
@@ -766,9 +751,26 @@ export function NovaSolicitacaoPage() {
         </CardContent>
       </Card>
 
-      <div className="grid grid-cols-3 gap-6 pb-20">
-        <div className="col-span-2 space-y-6">
-          {etapaIndex === 0 ? (
+      {etapaIndex === 1 ? (
+        <AnaliseTecnicaFTER 
+          dadosSolicitacao={watch()} 
+          onAprovar={(dadosFTER) => {
+            // Aqui poderíamos salvar dadosFTER no histórico ou estado
+            handleAprovarEtapa();
+          }}
+          onReprovar={(motivo) => {
+            setMotivoRejeicao(motivo);
+            handleConfirmarRejeicao();
+          }}
+          onSolicitarAjustes={(motivo) => {
+            setComentario(motivo);
+            handleAprovarEtapa(); // Ou outra lógica de "Solicitar Ajustes"
+          }}
+        />
+      ) : (
+        <div className="grid grid-cols-3 gap-6 pb-20">
+          <div className="col-span-2 space-y-6">
+            {etapaIndex === 0 ? (
             <form onSubmit={handleSubmit(onFormSubmit)} className="space-y-6">
   <Card className="border-none shadow-md overflow-hidden">
     <div className="h-1 bg-blue-600 w-full" />
@@ -1094,112 +1096,6 @@ export function NovaSolicitacaoPage() {
               {/* Visualização de Análise (Etapas > 0) */}
               {etapaIndex === 3 ? (
                 <RubricaEditorContainer />
-              ) : etapaIndex === 1 ? (
-                /* ═══ ETAPA 2: ANÁLISE DOCUMENTAL ═══ */
-                <>
-                  {/* Sessão A: Resumo Colapsável da Etapa 1 */}
-                  <Card className="border-none shadow-md overflow-hidden">
-                    <div className="h-1 bg-violet-600 w-full" />
-                    <Accordion type="single" collapsible>
-                      <AccordionItem value="resumo-etapa1" className="border-none">
-                        <AccordionTrigger className="px-6 py-4 hover:no-underline">
-                          <div className="flex items-center gap-2 text-base font-semibold text-slate-800">
-                            <FileText className="w-5 h-5 text-violet-600" />
-                            Resumo da Solicitação (Etapa 1)
-                          </div>
-                        </AccordionTrigger>
-                        <AccordionContent className="px-6 pb-6">
-                          <HistoricalDataCard {...buildHistoricalDataConfig()} />
-                        </AccordionContent>
-                      </AccordionItem>
-                    </Accordion>
-                  </Card>
-
-                  {/* Sessão B: Formulário FTER */}
-                  <Card className="border-none shadow-md overflow-hidden">
-                    <div className="h-1 bg-violet-600 w-full" />
-                    <CardHeader>
-                      <CardTitle className="flex items-center gap-2">
-                        <Scale className="w-5 h-5 text-violet-600" />
-                        Formulário de Análise Técnica (FTER)
-                      </CardTitle>
-                      <CardDescription>Preencha os campos abaixo com base na avaliação técnica da rubrica solicitada.</CardDescription>
-                    </CardHeader>
-                    <CardContent className="grid grid-cols-2 gap-6">
-                      {/* 1. Impacto na Folha */}
-                      <div className="space-y-2">
-                        <Label className="text-sm font-medium">Impacto na Folha? <span className="text-red-500">*</span></Label>
-                        <RadioGroup
-                          value={analiseTecnica.impactoFolha}
-                          onValueChange={(v) => setAnaliseTecnica((prev) => ({ ...prev, impactoFolha: v as "Sim" | "Não" }))}
-                          className="flex gap-4 pt-1"
-                        >
-                          <div className="flex items-center gap-2"><RadioGroupItem value="Sim" id="fter-impacto-sim" /><Label htmlFor="fter-impacto-sim" className="font-normal">Sim</Label></div>
-                          <div className="flex items-center gap-2"><RadioGroupItem value="Não" id="fter-impacto-nao" /><Label htmlFor="fter-impacto-nao" className="font-normal">Não</Label></div>
-                        </RadioGroup>
-                      </div>
-
-                      {/* 2. Permite Lançamento Manual */}
-                      <div className="space-y-2">
-                        <Label className="text-sm font-medium">Permite lançamento manual? <span className="text-red-500">*</span></Label>
-                        <RadioGroup
-                          value={analiseTecnica.permiteLancamentoManual}
-                          onValueChange={(v) => setAnaliseTecnica((prev) => ({ ...prev, permiteLancamentoManual: v as "Sim" | "Não" }))}
-                          className="flex gap-4 pt-1"
-                        >
-                          <div className="flex items-center gap-2"><RadioGroupItem value="Sim" id="fter-manual-sim" /><Label htmlFor="fter-manual-sim" className="font-normal">Sim</Label></div>
-                          <div className="flex items-center gap-2"><RadioGroupItem value="Não" id="fter-manual-nao" /><Label htmlFor="fter-manual-nao" className="font-normal">Não</Label></div>
-                        </RadioGroup>
-                      </div>
-
-                      {/* 3. Gera Reflexos */}
-                      <div className="space-y-2">
-                        <Label className="text-sm font-medium">Gera Reflexos? <span className="text-red-500">*</span></Label>
-                        <RadioGroup
-                          value={analiseTecnica.geraReflexos}
-                          onValueChange={(v) => setAnaliseTecnica((prev) => ({ ...prev, geraReflexos: v as "Sim" | "Não" }))}
-                          className="flex gap-4 pt-1"
-                        >
-                          <div className="flex items-center gap-2"><RadioGroupItem value="Sim" id="fter-reflexos-sim" /><Label htmlFor="fter-reflexos-sim" className="font-normal">Sim</Label></div>
-                          <div className="flex items-center gap-2"><RadioGroupItem value="Não" id="fter-reflexos-nao" /><Label htmlFor="fter-reflexos-nao" className="font-normal">Não</Label></div>
-                        </RadioGroup>
-                      </div>
-
-                      {/* 4. Compõe Cálculo Rescisório */}
-                      <div className="space-y-2">
-                        <Label className="text-sm font-medium">Compõe Cálculo Rescisório? <span className="text-red-500">*</span></Label>
-                        <RadioGroup
-                          value={analiseTecnica.compoeCalculoRescisorio}
-                          onValueChange={(v) => setAnaliseTecnica((prev) => ({ ...prev, compoeCalculoRescisorio: v as "Sim" | "Não" }))}
-                          className="flex gap-4 pt-1"
-                        >
-                          <div className="flex items-center gap-2"><RadioGroupItem value="Sim" id="fter-rescisorio-sim" /><Label htmlFor="fter-rescisorio-sim" className="font-normal">Sim</Label></div>
-                          <div className="flex items-center gap-2"><RadioGroupItem value="Não" id="fter-rescisorio-nao" /><Label htmlFor="fter-rescisorio-nao" className="font-normal">Não</Label></div>
-                        </RadioGroup>
-                      </div>
-
-                      {/* 5. Riscos Operacionais */}
-                      <div className="col-span-2 space-y-2">
-                        <Label className="text-sm font-medium">Riscos Operacionais Identificados</Label>
-                        <Textarea
-                          placeholder="Descreva os riscos operacionais identificados nesta rubrica (opcional)..."
-                          value={analiseTecnica.riscosOperacionais}
-                          onChange={(e) => setAnaliseTecnica((prev) => ({ ...prev, riscosOperacionais: e.target.value }))}
-                          rows={3}
-                          className="border-2"
-                        />
-                      </div>
-
-                      {/* Indicador de preenchimento */}
-                      {!fterPreenchido && (
-                        <div className="col-span-2 flex items-center gap-2 text-amber-600 bg-amber-50 rounded-lg p-3 border border-amber-200">
-                          <AlertTriangle className="w-4 h-4 flex-shrink-0" />
-                          <p className="text-xs">Todos os campos com <span className="text-red-500 font-bold">*</span> devem ser preenchidos antes de aprovar a etapa.</p>
-                        </div>
-                      )}
-                    </CardContent>
-                  </Card>
-                </>
               ) : (
                 <HistoricalDataCard {...buildHistoricalDataConfig()} />
               )}
@@ -1288,10 +1184,6 @@ export function NovaSolicitacaoPage() {
                         onClick={() => {
                           if (!comentario.trim()) {
                             toast.error("Preencha o parecer técnico antes de aprovar.");
-                            return;
-                          }
-                          if (etapaIndex === 1 && !fterPreenchido) {
-                            toast.error("Preencha todos os campos do Formulário de Análise Técnica (FTER) antes de aprovar.");
                             return;
                           }
                           handleAprovarEtapa();
@@ -1409,6 +1301,7 @@ export function NovaSolicitacaoPage() {
           </Card>
         </div>
       </div>
+    )}
 
       {/* Dialog: Reprovar Etapa */}
       <Dialog open={isRejectDialogOpen} onOpenChange={setIsRejectDialogOpen}>
