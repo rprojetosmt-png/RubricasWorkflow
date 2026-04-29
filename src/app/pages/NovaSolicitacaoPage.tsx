@@ -290,27 +290,56 @@ export function NovaSolicitacaoPage() {
   const handleAprovarEtapa = () => {
     const dataAgora = new Date().toISOString();
 
+    const atuais = Array.from(
+      new Set(assinaturasEtapa[etapaAtual.id] ?? [])
+    );
+
+    if (!atuais.includes(session.activeUserId)) {
+      atuais.push(session.activeUserId);
+    }
+
+    setAssinaturasEtapa((prev) => ({
+      ...prev,
+      [etapaAtual.id]: atuais,
+    }));
+
+    const faltantes = requiredSignerIds.filter((id) => !atuais.includes(id));
+    const liberarAvanco = requiredSignerIds.length === 0 || faltantes.length === 0;
+
     let atualizado = upsertHistorico(historico, etapaAtual.id, {
-      status: "aprovado",
+      status: liberarAvanco ? "aprovado" : "em_analise",
       data: dataAgora,
-      comentario: comentario.trim() || "Etapa aprovada.",
+      comentario:
+        liberarAvanco || requiredSignerIds.length === 0
+          ? comentario.trim() || "Etapa aprovada."
+          : `Assinatura registrada (${atuais.length}/${requiredSignerIds.length})`,
       usuario: usuarioAtual,
     });
 
-    const proximaEtapa = etapas[etapaIndex + 1];
-    if (proximaEtapa) {
-      atualizado = upsertHistorico(atualizado, proximaEtapa.id, {
-        status: "em_analise",
-        data: dataAgora,
-        usuario: usuarioAtual,
-      });
-      setHistorico(atualizado);
+    if (liberarAvanco) {
+      const proximaEtapa = etapas[etapaIndex + 1];
+      if (proximaEtapa) {
+        atualizado = upsertHistorico(atualizado, proximaEtapa.id, {
+          status: "em_analise",
+          data: dataAgora,
+          usuario: usuarioAtual,
+        });
+      }
       setEtapaIndex((prevIndex) => prevIndex + 1);
       setComentario("");
       toast.success("Etapa aprovada com sucesso!");
     } else {
-      // Se for a última etapa, finaliza a solicitação
-      onFormSubmit(watch());
+      setComentario("");
+      toast.info("Assinatura registrada.", {
+        description: `Faltam ${faltantes.length} assinatura(s) obrigatória(s).`,
+      });
+    }
+
+    setHistorico(atualizado);
+
+    if (!liberarAvanco && etapaIndex === 0) {
+      // Não avançar se ainda houver assinaturas pendentes.
+      return;
     }
   };
 
@@ -321,6 +350,7 @@ export function NovaSolicitacaoPage() {
   const [isRejectRubricaDialogOpen, setIsRejectRubricaDialogOpen] = useState(false);
   const [motivoRejeicaoRubrica, setMotivoRejeicaoRubrica] = useState("");
   const [historico, setHistorico] = useState<HistoricoEtapa[]>([]);
+  const [assinaturasEtapa, setAssinaturasEtapa] = useState<Record<string, string[]>>({});
   const [codigoPreview, setCodigoPreview] = useState("RUB-YYYY-000");
   const [arquivosAnexados, setArquivosAnexados] = useState<File[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -330,6 +360,31 @@ export function NovaSolicitacaoPage() {
   const etapaAtualIndex = etapaIndex + 1;
   const grupoPermitido = etapaAtual?.gruposResponsaveis.some(
     (grupo) => grupo.id === session.activeGroupId
+  );
+
+  const membrosEtapa = etapaAtual?.gruposResponsaveis
+    .flatMap((grupo) => grupo.usuarios)
+    .filter((usuario, index, arr) => arr.findIndex((u) => u.id === usuario.id) === index) ?? [];
+
+  const requiredSignerIds = (etapaAtual?.requiredSignerIds ?? []).filter((id) =>
+    membrosEtapa.some((usuario) => usuario.id === id)
+  );
+
+  const assinaturasAtuais = Array.from(
+    new Set(assinaturasEtapa[etapaAtual?.id ?? ""] ?? [])
+  );
+  const assinaturasColetadas = assinaturasAtuais.length;
+  const assinaturasObrigatorias = requiredSignerIds.length;
+  const assinaturasFaltantes = requiredSignerIds.filter((id) => !assinaturasAtuais.includes(id));
+  const assinouUsuarios = membrosEtapa.filter((usuario) => assinaturasAtuais.includes(usuario.id));
+  const obrigatoriosNomes = membrosEtapa
+    .filter((usuario) => requiredSignerIds.includes(usuario.id))
+    .map((usuario) => usuario.nome);
+  const assinouNomes = assinouUsuarios.map((usuario) => usuario.nome);
+
+  const usuarioPermitido = Boolean(
+    grupoPermitido &&
+      (requiredSignerIds.length === 0 || requiredSignerIds.includes(session.activeUserId))
   );
 
   useEffect(() => {
@@ -772,6 +827,12 @@ export function NovaSolicitacaoPage() {
             handleAprovarEtapa(); // Ou outra lógica de "Solicitar Ajustes"
           }}
           grupoPermitido={grupoPermitido}
+          usuarioPermitido={usuarioPermitido}
+          assinaturasColetadas={assinaturasColetadas}
+          assinaturasObrigatorias={assinaturasObrigatorias}
+          assinaturasFaltantes={assinaturasFaltantes}
+          obrigatoriosNomes={obrigatoriosNomes}
+          assinouNomes={assinouNomes}
         />
       ) : (
         <div className="grid grid-cols-3 gap-6 pb-20">
