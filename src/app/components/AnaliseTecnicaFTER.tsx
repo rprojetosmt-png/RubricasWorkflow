@@ -51,13 +51,15 @@ interface AnaliseTecnicaFTERProps {
   onAprovar: (dados: any) => void;
   onReprovar: (motivo: string) => void;
   onSolicitarAjustes: (motivo: string) => void;
+  grupoPermitido?: boolean;
 }
 
 export function AnaliseTecnicaFTER({ 
   dadosSolicitacao, 
   onAprovar, 
   onReprovar, 
-  onSolicitarAjustes 
+  onSolicitarAjustes,
+  grupoPermitido = true
 }: AnaliseTecnicaFTERProps) {
   const [fterData, setFterData] = useState({
     numeroSEI: "",
@@ -126,6 +128,10 @@ export function AnaliseTecnicaFTER({
     fterData.formaCalculo !== "";
 
   const handleAprovar = () => {
+    if (!grupoPermitido) {
+      toast.error("Você não tem permissão para aprovar nesta etapa.");
+      return;
+    }
     if (isValido) {
       onAprovar(fterData);
     } else {
@@ -627,20 +633,31 @@ export function AnaliseTecnicaFTER({
         </div>
       </div>
 
+      {!grupoPermitido && (
+        <div className="px-6 py-3 bg-amber-50 border-t border-amber-200 flex items-center gap-3 text-amber-800">
+          <AlertTriangle className="w-5 h-5" />
+          <div className="text-sm">
+            <span className="font-bold">Usuário sem permissão.</span> Selecione um grupo responsável por esta etapa no topo da tela para realizar ações.
+          </div>
+        </div>
+      )}
+
       {/* FOOTER ACTION BAR */}
-      <div className="h-20 bg-slate-900 border-t flex items-center justify-between px-8 shrink-0">
+      <div className="h-20 bg-white border-t-2 border-slate-200 flex items-center justify-between px-8 shrink-0 shadow-[0_-2px_8px_rgba(0,0,0,0.06)]">
         <div className="flex gap-4">
           <Button 
             variant="outline" 
-            className="border-slate-700 text-slate-300 hover:bg-slate-800 hover:text-white"
+            className="border-slate-300 text-slate-600 hover:bg-slate-100 hover:text-slate-800"
             onClick={() => setAjustesModalOpen(true)}
+            disabled={!grupoPermitido}
           >
             Solicitar Ajustes
           </Button>
           <Button 
             variant="outline" 
-            className="border-red-800 text-red-400 hover:bg-red-950 hover:text-red-300"
+            className="border-red-300 text-red-600 hover:bg-red-50 hover:text-red-700"
             onClick={() => setReprovarModalOpen(true)}
+            disabled={!grupoPermitido}
           >
             Reprovar
           </Button>
@@ -648,22 +665,22 @@ export function AnaliseTecnicaFTER({
 
         <div className="flex items-center gap-6">
           <div className="text-right hidden md:block">
-            <p className="text-[10px] uppercase font-bold text-slate-500 tracking-widest">Status da Conformidade</p>
-            <p className={cn("text-xs font-semibold", isValido ? "text-green-500" : "text-amber-500")}>
+            <p className="text-[10px] uppercase font-bold text-slate-400 tracking-widest">Status da Conformidade</p>
+            <p className={cn("text-xs font-semibold", isValido ? "text-green-600" : "text-amber-600")}>
               {isValido ? "Apto para ativação" : "Pendente de dados técnicos"}
             </p>
           </div>
           <Button 
             size="lg"
-            disabled={!isValido}
+            disabled={!isValido || !grupoPermitido}
             className={cn(
-              "px-8 h-12 font-bold shadow-xl transition-all",
-              isValido ? "bg-indigo-600 hover:bg-indigo-500 text-white shadow-indigo-500/20" : "bg-slate-800 text-slate-500 cursor-not-allowed"
+              "px-8 h-12 font-bold shadow-md transition-all",
+              isValido && grupoPermitido ? "bg-indigo-600 hover:bg-indigo-500 text-white shadow-indigo-200" : "bg-slate-100 text-slate-400 cursor-not-allowed border border-slate-200"
             )}
             onClick={handleAprovar}
           >
             <CheckCircle2 className="w-5 h-5 mr-2" />
-            Aprovar e Ativar
+            Aprovar a Etapa
           </Button>
         </div>
       </div>

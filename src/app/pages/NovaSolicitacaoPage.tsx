@@ -56,6 +56,7 @@ import {
 } from "../data/mockData";
 import { addSolicitacaoCompleta, getNextCodigo } from "../data/solicitacoesStore";
 import { getEsteiraConfig, subscribeEsteiraConfig } from "../data/esteiraStore";
+import { getSessionContext, subscribeSessionContext } from "../data/sessionStore";
 import { cn } from "../components/ui/utils";
 import { toast } from "sonner";
 import { useForm, Controller } from "react-hook-form";
@@ -253,6 +254,7 @@ export function NovaSolicitacaoPage() {
     (temIncidenciaTributaria !== "Sim" || (watch("incidenciasTributarias") || []).length > 0);
 
   const etapas = useSyncExternalStore(subscribeEsteiraConfig, getEsteiraConfig, getEsteiraConfig);
+  const session = useSyncExternalStore(subscribeSessionContext, getSessionContext, getSessionContext);
   const [etapaIndex, setEtapaIndex] = useState(0);
 
   const preencherDadosTeste = () => {
@@ -326,6 +328,9 @@ export function NovaSolicitacaoPage() {
 
   const etapaAtual = etapas[etapaIndex];
   const etapaAtualIndex = etapaIndex + 1;
+  const grupoPermitido = etapaAtual?.gruposResponsaveis.some(
+    (grupo) => grupo.id === session.activeGroupId
+  );
 
   useEffect(() => {
     let isActive = true;
@@ -766,6 +771,7 @@ export function NovaSolicitacaoPage() {
             setComentario(motivo);
             handleAprovarEtapa(); // Ou outra lógica de "Solicitar Ajustes"
           }}
+          grupoPermitido={grupoPermitido}
         />
       ) : (
         <div className="grid grid-cols-3 gap-6 pb-20">
