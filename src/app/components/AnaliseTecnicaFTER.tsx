@@ -37,6 +37,13 @@ import {
 } from "./ui/select";
 import { Checkbox } from "./ui/checkbox";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "./ui/accordion";
+import { 
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "./ui/dialog";
 import { cn } from "./ui/utils";
 import { toast } from "sonner";
 import { 
@@ -51,13 +58,27 @@ interface AnaliseTecnicaFTERProps {
   onAprovar: (dados: any) => void;
   onReprovar: (motivo: string) => void;
   onSolicitarAjustes: (motivo: string) => void;
+  grupoPermitido?: boolean;
+  usuarioPermitido?: boolean;
+  assinaturasColetadas?: number;
+  assinaturasObrigatorias?: number;
+  assinaturasFaltantes?: string[];
+  obrigatoriosNomes?: string[];
+  assinouNomes?: string[];
 }
 
 export function AnaliseTecnicaFTER({ 
   dadosSolicitacao, 
   onAprovar, 
   onReprovar, 
-  onSolicitarAjustes 
+  onSolicitarAjustes,
+  grupoPermitido = true,
+  usuarioPermitido = true,
+  assinaturasColetadas = 0,
+  assinaturasObrigatorias = 0,
+  assinaturasFaltantes = [],
+  obrigatoriosNomes = [],
+  assinouNomes = [],
 }: AnaliseTecnicaFTERProps) {
   const [fterData, setFterData] = useState({
     numeroSEI: "",
@@ -126,6 +147,10 @@ export function AnaliseTecnicaFTER({
     fterData.formaCalculo !== "";
 
   const handleAprovar = () => {
+    if (!usuarioPermitido) {
+      toast.error("Você não tem permissão para aprovar nesta etapa.");
+      return;
+    }
     if (isValido) {
       onAprovar(fterData);
     } else {
@@ -627,46 +652,123 @@ export function AnaliseTecnicaFTER({
         </div>
       </div>
 
+      {!usuarioPermitido && (
+        <div className="px-6 py-3 bg-amber-50 border-t border-amber-200 flex items-center gap-3 text-amber-800">
+          <AlertTriangle className="w-5 h-5" />
+          <div className="text-sm">
+            <span className="font-bold">Usuário sem permissão.</span> Apenas membros autorizados para esta etapa podem utilizar os controles da barra fixa.
+          </div>
+        </div>
+      )}
+
+      {assinaturasObrigatorias > 0 && (
+        <div className="px-6 py-3 bg-slate-50 border-t border-slate-200 space-y-2 text-sm text-slate-600">
+          <div className="flex items-center justify-between gap-2">
+            <span className="font-semibold">Assinaturas obrigatórias</span>
+            <span className="text-slate-500">{assinaturasColetadas}/{assinaturasObrigatorias}</span>
+          </div>
+          <p>Obrigatórios: {obrigatoriosNomes.join(", ") || "Nenhum"}</p>
+          <p>Já assinaram: {assinouNomes.length > 0 ? assinouNomes.join(", ") : "ninguém"}</p>
+          {assinaturasFaltantes.length > 0 && (
+            <p className="text-amber-700">Faltam {assinaturasFaltantes.length} assinatura(s) obrigatória(s).</p>
+          )}
+        </div>
+      )}
+
       {/* FOOTER ACTION BAR */}
-      <div className="h-20 bg-slate-900 border-t flex items-center justify-between px-8 shrink-0">
+      <div className="h-20 bg-white border-t-2 border-slate-200 flex items-center justify-between px-8 shrink-0 shadow-[0_-2px_8px_rgba(0,0,0,0.06)]">
         <div className="flex gap-4">
           <Button 
             variant="outline" 
-            className="border-slate-700 text-slate-300 hover:bg-slate-800 hover:text-white"
+            className="border-slate-300 text-slate-600 hover:bg-slate-100 hover:text-slate-800"
             onClick={() => setAjustesModalOpen(true)}
+            disabled={!usuarioPermitido}
           >
             Solicitar Ajustes
           </Button>
           <Button 
             variant="outline" 
-            className="border-red-800 text-red-400 hover:bg-red-950 hover:text-red-300"
+            className="border-red-300 text-red-600 hover:bg-red-50 hover:text-red-700"
             onClick={() => setReprovarModalOpen(true)}
+            disabled={!usuarioPermitido}
           >
-            Reprovar
+            Rejeitar Rubrica
           </Button>
         </div>
 
         <div className="flex items-center gap-6">
           <div className="text-right hidden md:block">
-            <p className="text-[10px] uppercase font-bold text-slate-500 tracking-widest">Status da Conformidade</p>
-            <p className={cn("text-xs font-semibold", isValido ? "text-green-500" : "text-amber-500")}>
+            <p className="text-[10px] uppercase font-bold text-slate-400 tracking-widest">Status da Conformidade</p>
+            <p className={cn("text-xs font-semibold", isValido ? "text-green-600" : "text-amber-600")}>
               {isValido ? "Apto para ativação" : "Pendente de dados técnicos"}
             </p>
           </div>
           <Button 
             size="lg"
-            disabled={!isValido}
+            disabled={!isValido || !usuarioPermitido}
             className={cn(
-              "px-8 h-12 font-bold shadow-xl transition-all",
-              isValido ? "bg-indigo-600 hover:bg-indigo-500 text-white shadow-indigo-500/20" : "bg-slate-800 text-slate-500 cursor-not-allowed"
+              "px-8 h-12 font-bold shadow-md transition-all",
+              isValido && usuarioPermitido ? "bg-indigo-600 hover:bg-indigo-500 text-white shadow-indigo-200" : "bg-slate-100 text-slate-400 cursor-not-allowed border border-slate-200"
             )}
             onClick={handleAprovar}
           >
             <CheckCircle2 className="w-5 h-5 mr-2" />
-            Aprovar e Ativar
+            Aprovar a Etapa
           </Button>
         </div>
       </div>
+
+      {/* Modal: Rejeitar Rubrica */}
+      <Dialog open={reprovarModalOpen} onOpenChange={setReprovarModalOpen}>
+        <DialogContent className="sm:max-w-[520px]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-red-700">
+              <AlertTriangle className="w-5 h-5" />
+              Rejeitar Rubrica
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3 py-2">
+            <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-800">
+              <strong>Atenção:</strong> Esta ação encerrará definitivamente a solicitação e ela não poderá ser retomada.
+            </div>
+            <Label htmlFor="motivo-rejeicao">Motivo da rejeição <span className="text-red-500">*</span></Label>
+            <Textarea
+              id="motivo-rejeicao"
+              placeholder="Descreva o motivo da rejeição definitiva da rubrica..."
+              value={motivoAcao}
+              onChange={(e) => setMotivoAcao(e.target.value)}
+              rows={4}
+              className="border-red-200 focus:border-red-400"
+            />
+            {motivoAcao.trim() === "" && (
+              <p className="text-xs text-red-500">O motivo é obrigatório.</p>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => {
+              setReprovarModalOpen(false);
+              setMotivoAcao("");
+            }}>
+              Cancelar
+            </Button>
+            <Button
+              className="bg-red-700 hover:bg-red-800"
+              onClick={() => {
+                if (!motivoAcao.trim()) {
+                  toast.error("Informe o motivo da rejeição");
+                  return;
+                }
+                onReprovar(motivoAcao);
+                setMotivoAcao("");
+                setReprovarModalOpen(false);
+              }}
+              disabled={!motivoAcao.trim()}
+            >
+              Confirmar rejeição da rubrica
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
