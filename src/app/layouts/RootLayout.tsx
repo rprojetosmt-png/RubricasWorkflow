@@ -9,6 +9,7 @@ import {
   ClipboardList,
   Users,
   ChevronDown,
+  Boxes,
 } from "lucide-react";
 import { cn } from "../components/ui/utils";
 import { useState, useSyncExternalStore } from "react";
@@ -161,28 +162,24 @@ export function RootLayout() {
                             Fluxo de Aprovadores
                           </Link>
                         </li>
-                        <li>
-                          <Link
-                            to="/concurso"
-                            className={cn(
-                              "pl-16 pr-3 py-2 flex items-center gap-2 text-xs transition-all",
-                              isActive("/concurso")
-                                ? "text-white bg-white/10 font-semibold"
-                                : "text-white/60 hover:text-white hover:bg-white/5"
-                            )}
-                          >
-                            <div
-                              className={cn(
-                                "w-1.5 h-1.5 rounded-full",
-                                isActive("/concurso") ? "bg-blue-300" : "bg-white/20"
-                              )}
-                            />
-                            Concurso
-                          </Link>
-                        </li>
                       </ul>
                     </li>
                   </ul>
+                </li>
+
+                <li>
+                  <Link
+                    to="/componentes"
+                    className={cn(
+                      "flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors text-sm",
+                      isActive("/componentes")
+                        ? "bg-white/20 text-white"
+                        : "text-white/90 hover:bg-white/10"
+                    )}
+                  >
+                    <Boxes className="w-4 h-4 flex-shrink-0" />
+                    <span>Componentes</span>
+                  </Link>
                 </li>
 
                 <li>
