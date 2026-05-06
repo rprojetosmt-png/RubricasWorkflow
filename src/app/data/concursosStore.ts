@@ -91,8 +91,19 @@ const jsonHeaders = {
   "Content-Type": "application/json",
 };
 
+const request = async (input: string, init?: RequestInit): Promise<Response> => {
+  try {
+    return await fetch(input, init);
+  } catch (error) {
+    if (error instanceof TypeError) {
+      throw new Error("API de concursos indisponível. Inicie o backend na porta 3001.");
+    }
+    throw error;
+  }
+};
+
 export const listConcursos = async (): Promise<Concurso[]> => {
-  const response = await fetch(`${API_BASE}/concursos`);
+  const response = await request(`${API_BASE}/concursos`);
   if (!response.ok) {
     throw new Error(await parseError(response));
   }
@@ -101,7 +112,7 @@ export const listConcursos = async (): Promise<Concurso[]> => {
 };
 
 export const getConcurso = async (id: string): Promise<Concurso> => {
-  const response = await fetch(`${API_BASE}/concursos/${id}`);
+  const response = await request(`${API_BASE}/concursos/${id}`);
   if (!response.ok) {
     throw new Error(await parseError(response));
   }
@@ -109,7 +120,7 @@ export const getConcurso = async (id: string): Promise<Concurso> => {
 };
 
 export const createConcurso = async (payload: ConcursoInput): Promise<Concurso> => {
-  const response = await fetch(`${API_BASE}/concursos`, {
+  const response = await request(`${API_BASE}/concursos`, {
     method: "POST",
     headers: jsonHeaders,
     body: JSON.stringify(payload),
@@ -123,7 +134,7 @@ export const createConcurso = async (payload: ConcursoInput): Promise<Concurso> 
 };
 
 export const updateConcurso = async (id: string, payload: ConcursoInput): Promise<Concurso> => {
-  const response = await fetch(`${API_BASE}/concursos/${id}`, {
+  const response = await request(`${API_BASE}/concursos/${id}`, {
     method: "PUT",
     headers: jsonHeaders,
     body: JSON.stringify(payload),
@@ -141,7 +152,7 @@ export const addConcursoPublicacao = async (
   id: string,
   payload: ConcursoPublicacaoInput
 ): Promise<ConcursoPublicacao[]> => {
-  const response = await fetch(`${API_BASE}/concursos/${id}/publicacoes`, {
+  const response = await request(`${API_BASE}/concursos/${id}/publicacoes`, {
     method: "POST",
     headers: jsonHeaders,
     body: JSON.stringify(payload),
