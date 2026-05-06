@@ -30,6 +30,7 @@ import { Button } from "../components/ui/button";
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "../components/ui/accordion";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "../components/ui/card";
 import { Badge } from "../components/ui/badge";
+import { Alert } from "../components/ui/alert";
 import { Textarea } from "../components/ui/textarea";
 import { Input } from "../components/ui/input";
 import { Label } from "../components/ui/label";
@@ -288,6 +289,11 @@ export function NovaSolicitacaoPage() {
   };
 
   const handleAprovarEtapa = () => {
+    if (!usuarioPermitido) {
+      toast.error("Você não tem permissão para executar esta ação nesta etapa.");
+      return;
+    }
+
     const dataAgora = new Date().toISOString();
 
     const atuais = Array.from(
@@ -521,6 +527,10 @@ export function NovaSolicitacaoPage() {
     }
   };
   const handleRejeitar = () => {
+    if (!usuarioPermitido) {
+      toast.error("Você não tem permissão para executar esta ação nesta etapa.");
+      return;
+    }
     setIsRejectDialogOpen(true);
   };
 
@@ -558,6 +568,10 @@ export function NovaSolicitacaoPage() {
   };
 
   const handleRejeitarRubrica = () => {
+    if (!usuarioPermitido) {
+      toast.error("Você não tem permissão para executar esta ação nesta etapa.");
+      return;
+    }
     setIsRejectRubricaDialogOpen(true);
   };
 
@@ -1246,6 +1260,14 @@ export function NovaSolicitacaoPage() {
                     )}
                   </div>
                   <div className="flex flex-col gap-3 pt-2">
+                    {!usuarioPermitido && (
+                      <div className="px-4 py-3 bg-amber-50 border-t border-amber-200 flex items-center gap-3 text-amber-800 rounded-lg">
+                        <AlertTriangle className="w-5 h-5" />
+                        <div className="text-sm">
+                          <span className="font-bold">Usuário sem permissão.</span> Apenas membros autorizados para esta etapa podem utilizar os controles da barra fixa.
+                        </div>
+                      </div>
+                    )}
                     <div className="flex gap-3">
                       <Button
                         onClick={() => {
@@ -1255,7 +1277,13 @@ export function NovaSolicitacaoPage() {
                           }
                           handleAprovarEtapa();
                         }}
-                        className="flex-1 h-12 bg-green-600 hover:bg-green-700 shadow-lg shadow-green-200 font-bold"
+                        disabled={!usuarioPermitido || !comentario.trim()}
+                        className={cn(
+                          "flex-1 h-12 shadow-lg font-bold",
+                          !usuarioPermitido || !comentario.trim()
+                            ? "bg-slate-400 text-slate-700 cursor-not-allowed shadow-none"
+                            : "bg-green-600 hover:bg-green-700 shadow-green-200"
+                        )}
                       >
                         <CheckCircle2 className="mr-2 w-5 h-5" />
                         Aprovar Etapa
@@ -1268,8 +1296,14 @@ export function NovaSolicitacaoPage() {
                           }
                           handleRejeitar();
                         }}
+                        disabled={!usuarioPermitido || !comentario.trim()}
                         variant="outline"
-                        className="flex-1 h-12 border-orange-500 text-orange-600 hover:bg-orange-50 font-bold"
+                        className={cn(
+                          "flex-1 h-12 font-bold",
+                          !usuarioPermitido || !comentario.trim()
+                            ? "border-slate-300 text-slate-400 hover:bg-transparent cursor-not-allowed"
+                            : "border-orange-500 text-orange-600 hover:bg-orange-50"
+                        )}
                       >
                         <XCircle className="mr-2 w-5 h-5" />
                         Reprovar Etapa
@@ -1277,8 +1311,14 @@ export function NovaSolicitacaoPage() {
                     </div>
                     <Button
                       onClick={handleRejeitarRubrica}
+                      disabled={!usuarioPermitido}
                       variant="outline"
-                      className="w-full h-12 border-red-600 text-red-600 hover:bg-red-50 font-bold"
+                      className={cn(
+                        "w-full h-12 font-bold",
+                        !usuarioPermitido
+                          ? "border-slate-300 text-slate-400 hover:bg-transparent cursor-not-allowed"
+                          : "border-red-600 text-red-600 hover:bg-red-50"
+                      )}
                     >
                       <AlertTriangle className="mr-2 w-5 h-5" />
                       Rejeitar Rubrica
