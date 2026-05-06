@@ -371,7 +371,7 @@ export function AnaliseTecnicaFTER({
 
             <div className="grid grid-cols-1 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="sei" className="text-sm font-semibold">Número do Processo (SEI) <span className="text-red-500">*</span></Label>
+                <Label htmlFor="sei" className="text-sm font-semibold">Número do processo <span className="text-red-500">*</span></Label>
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                   <Input 
