@@ -1117,29 +1117,21 @@ export function NovaSolicitacaoPage() {
 
       {temIncidenciaTributaria === "Sim" && (
         <div className="col-span-2 space-y-2">
-          <Label>Incidências e Tributos (marque pelo menos 1) <span className="text-red-500">*</span></Label>
-          <Controller name="incidenciasTributarias" control={control} rules={{ validate: (v) => temIncidenciaTributaria !== "Sim" || (Array.isArray(v) && v.length > 0) || "Selecione pelo menos uma incidência" }} render={({ field }) => {
-            const selected = Array.isArray(field.value) ? field.value : [];
-            return (
-              <div className={cn("grid grid-cols-3 gap-2 border-2 rounded-lg p-3", errors.incidenciasTributarias && "border-red-500")}>
-                {listaIncidenciasTributarias.map((t) => (
-                  <div key={t.id} className="flex items-center gap-2">
-                    <Checkbox
-                      id={`incidencia-${t.id}`}
-                      checked={selected.includes(t.id)}
-                      onCheckedChange={(checked) => {
-                        const next = checked
-                          ? [...selected, t.id]
-                          : selected.filter((id: string) => id !== t.id);
-                        field.onChange(next);
-                      }}
-                    />
-                    <Label htmlFor={`incidencia-${t.id}`} className="text-xs font-normal cursor-pointer">{t.nome}</Label>
-                  </div>
-                ))}
-              </div>
-            );
-          }} />
+          <Label>Incidências e Tributos (selecione pelo menos 1) <span className="text-red-500">*</span></Label>
+          <Controller
+            name="incidenciasTributarias"
+            control={control}
+            rules={{ validate: (v) => temIncidenciaTributaria !== "Sim" || (Array.isArray(v) && v.length > 0) || "Selecione pelo menos uma incidência" }}
+            render={({ field }) => (
+              <MultiSelect
+                options={listaIncidenciasTributarias.map(t => ({ label: t.nome, value: t.id }))}
+                selected={field.value ?? []}
+                onChange={field.onChange}
+                placeholder="Selecione as incidências..."
+                error={!!errors.incidenciasTributarias}
+              />
+            )}
+          />
         </div>
       )}
     </CardContent>
