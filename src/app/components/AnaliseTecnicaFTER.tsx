@@ -9,6 +9,7 @@ import {
   CheckCircle2, 
   XCircle, 
   Info,
+  Save,
   Building2,
   Tag,
   Users,
@@ -58,6 +59,8 @@ interface AnaliseTecnicaFTERProps {
   onAprovar: (dados: any) => void;
   onReprovar: (motivo: string) => void;
   onSolicitarAjustes: (motivo: string) => void;
+  onSalvar?: (dados: any) => void;
+  dadosSalvos?: any;
   grupoPermitido?: boolean;
   usuarioPermitido?: boolean;
   assinaturasColetadas?: number;
@@ -72,6 +75,8 @@ export function AnaliseTecnicaFTER({
   onAprovar, 
   onReprovar, 
   onSolicitarAjustes,
+  onSalvar,
+  dadosSalvos,
   grupoPermitido = true,
   usuarioPermitido = true,
   assinaturasColetadas = 0,
@@ -80,7 +85,7 @@ export function AnaliseTecnicaFTER({
   obrigatoriosNomes = [],
   assinouNomes = [],
 }: AnaliseTecnicaFTERProps) {
-  const [fterData, setFterData] = useState({
+  const estadoInicial = {
     numeroSEI: "",
     naturezaJuridica: "",
     vedacaoTeto: false,
@@ -97,7 +102,15 @@ export function AnaliseTecnicaFTER({
     comporRescisao: false,
     situacoesRescisao: [] as string[],
     proporcionalidade: "Proporcional" as "Integral" | "Proporcional",
-  });
+  };
+
+  const [fterData, setFterData] = useState(dadosSalvos ?? estadoInicial);
+  const [ultimoSalvo, setUltimoSalvo] = useState<string | null>(dadosSalvos ? JSON.stringify(dadosSalvos) : null);
+  const [salvando, setSalvando] = useState(false);
+
+  // Detecta se houve alterações desde o último salvamento
+  const isDirty = JSON.stringify(fterData) !== (ultimoSalvo ?? JSON.stringify(estadoInicial));
+  const temConteudo = fterData.numeroSEI.trim() !== "" || fterData.fundamentacaoLegal.trim() !== "" || fterData.formaCalculo !== "" || fterData.naturezaJuridica !== "";
 
   const [ajustesModalOpen, setAjustesModalOpen] = useState(false);
   const [reprovarModalOpen, setReprovarModalOpen] = useState(false);
@@ -145,6 +158,23 @@ export function AnaliseTecnicaFTER({
     fterData.numeroSEI.trim() !== "" && 
     fterData.fundamentacaoLegal.trim() !== "" && 
     fterData.formaCalculo !== "";
+
+  const handleSalvar = () => {
+    if (!usuarioPermitido) {
+      toast.error("Você não tem permissão para salvar nesta etapa.");
+      return;
+    }
+    setSalvando(true);
+    try {
+      onSalvar?.(fterData);
+      setUltimoSalvo(JSON.stringify(fterData));
+      toast.success("Rascunho salvo com sucesso", {
+        description: "Você pode retornar a qualquer momento para continuar a análise.",
+      });
+    } finally {
+      setTimeout(() => setSalvando(false), 600);
+    }
+  };
 
   const handleAprovar = () => {
     if (!usuarioPermitido) {
@@ -697,12 +727,32 @@ export function AnaliseTecnicaFTER({
         </div>
 
         <div className="flex items-center gap-6">
+          {isDirty && (
+            <div className="flex items-center gap-1.5 text-amber-600">
+              <div className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
+              <span className="text-xs font-medium">Alterações não salvas</span>
+            </div>
+          )}
           <div className="text-right hidden md:block">
             <p className="text-[10px] uppercase font-bold text-slate-400 tracking-widest">Status da Conformidade</p>
             <p className={cn("text-xs font-semibold", isValido ? "text-green-600" : "text-amber-600")}>
               {isValido ? "Apto para ativação" : "Pendente de dados técnicos"}
             </p>
           </div>
+          <Button 
+            variant="outline"
+            disabled={!usuarioPermitido || !isValido || salvando}
+            className={cn(
+              "h-12 px-6 font-semibold transition-all border-2",
+              isValido && usuarioPermitido
+                ? "border-blue-300 text-blue-700 hover:bg-blue-50 hover:border-blue-400"
+                : "border-slate-200 text-slate-400"
+            )}
+            onClick={handleSalvar}
+          >
+            <Save className={cn("w-4 h-4 mr-2", salvando && "animate-spin")} />
+            {salvando ? "Salvando..." : "Salvar Rascunho"}
+          </Button>
           <Button 
             size="lg"
             disabled={!isValido || !usuarioPermitido}

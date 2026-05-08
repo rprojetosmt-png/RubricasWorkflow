@@ -359,6 +359,7 @@ export function NovaSolicitacaoPage() {
   const [assinaturasEtapa, setAssinaturasEtapa] = useState<Record<string, string[]>>({});
   const [codigoPreview, setCodigoPreview] = useState("RUB-YYYY-000");
   const [arquivosAnexados, setArquivosAnexados] = useState<File[]>([]);
+  const [fterDadosSalvos, setFterDadosSalvos] = useState<any>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
 
@@ -829,7 +830,7 @@ export function NovaSolicitacaoPage() {
         <AnaliseTecnicaFTER 
           dadosSolicitacao={watch()} 
           onAprovar={(dadosFTER) => {
-            // Aqui poderíamos salvar dadosFTER no histórico ou estado
+            setFterDadosSalvos(dadosFTER);
             handleAprovarEtapa();
           }}
           onReprovar={(motivo) => {
@@ -838,8 +839,12 @@ export function NovaSolicitacaoPage() {
           }}
           onSolicitarAjustes={(motivo) => {
             setComentario(motivo);
-            handleAprovarEtapa(); // Ou outra lógica de "Solicitar Ajustes"
+            handleAprovarEtapa();
           }}
+          onSalvar={(dados) => {
+            setFterDadosSalvos(dados);
+          }}
+          dadosSalvos={fterDadosSalvos}
           grupoPermitido={grupoPermitido}
           usuarioPermitido={usuarioPermitido}
           assinaturasColetadas={assinaturasColetadas}
