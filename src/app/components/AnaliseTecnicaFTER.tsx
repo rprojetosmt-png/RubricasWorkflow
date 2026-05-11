@@ -323,7 +323,7 @@ export function AnaliseTecnicaFTER({
                 <div className="space-y-2">
                   <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Objetivo da Rubrica</p>
                   <p className="text-sm text-slate-700 leading-relaxed whitespace-pre-wrap italic">
-                    "{dadosSolicitacao.justificativa || "Nenhuma justificativa detalhada foi fornecida."}"
+                    {dadosSolicitacao.justificativa || "Nenhuma justificativa detalhada foi fornecida."}
                   </p>
                 </div>
                 <div className="pt-3 border-t border-slate-100 grid grid-cols-2 gap-4">
@@ -741,16 +741,16 @@ export function AnaliseTecnicaFTER({
           </div>
           <Button 
             variant="outline"
-            disabled={!usuarioPermitido || !isValido || salvando}
+            disabled={!usuarioPermitido || !temConteudo || salvando}
             className={cn(
               "h-12 px-6 font-semibold transition-all border-2",
-              isValido && usuarioPermitido
+              temConteudo && usuarioPermitido
                 ? "border-blue-300 text-blue-700 hover:bg-blue-50 hover:border-blue-400"
                 : "border-slate-200 text-slate-400"
             )}
             onClick={handleSalvar}
           >
-            <Save className={cn("w-4 h-4 mr-2", salvando && "animate-spin")} />
+            <Save className="w-4 h-4 mr-2" />
             {salvando ? "Salvando..." : "Salvar Rascunho"}
           </Button>
           <Button 
@@ -767,6 +767,55 @@ export function AnaliseTecnicaFTER({
           </Button>
         </div>
       </div>
+
+      {/* Modal: Solicitar Ajustes */}
+      <Dialog open={ajustesModalOpen} onOpenChange={(open) => { setAjustesModalOpen(open); if (!open) setMotivoAcao(""); }}>
+        <DialogContent className="sm:max-w-[520px]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-amber-700">
+              <AlertTriangle className="w-5 h-5" />
+              Solicitar Ajustes ao Solicitante
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3 py-2">
+            <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-800">
+              <strong>Atenção:</strong> A solicitação retornará ao solicitante para revisão e reenvio.
+            </div>
+            <Label htmlFor="motivo-ajustes">Descreva os ajustes necessários <span className="text-red-500">*</span></Label>
+            <Textarea
+              id="motivo-ajustes"
+              placeholder="Informe o que precisa ser corrigido ou complementado pelo solicitante..."
+              value={motivoAcao}
+              onChange={(e) => setMotivoAcao(e.target.value)}
+              rows={4}
+              className="border-amber-200 focus:border-amber-400"
+            />
+            {motivoAcao.trim() === "" && (
+              <p className="text-xs text-red-500">A descrição dos ajustes é obrigatória.</p>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setAjustesModalOpen(false); setMotivoAcao(""); }}>
+              Cancelar
+            </Button>
+            <Button
+              className="bg-amber-600 hover:bg-amber-700"
+              onClick={() => {
+                if (!motivoAcao.trim()) {
+                  toast.error("Informe os ajustes necessários");
+                  return;
+                }
+                onSolicitarAjustes(motivoAcao);
+                setMotivoAcao("");
+                setAjustesModalOpen(false);
+              }}
+              disabled={!motivoAcao.trim()}
+            >
+              Confirmar solicitação de ajustes
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Modal: Rejeitar Rubrica */}
       <Dialog open={reprovarModalOpen} onOpenChange={setReprovarModalOpen}>

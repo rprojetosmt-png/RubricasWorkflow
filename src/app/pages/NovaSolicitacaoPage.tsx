@@ -343,10 +343,7 @@ export function NovaSolicitacaoPage() {
 
     setHistorico(atualizado);
 
-    if (!liberarAvanco && etapaIndex === 0) {
-      // Não avançar se ainda houver assinaturas pendentes.
-      return;
-    }
+
   };
 
 
@@ -838,8 +835,8 @@ export function NovaSolicitacaoPage() {
             handleConfirmarRejeicao();
           }}
           onSolicitarAjustes={(motivo) => {
-            setComentario(motivo);
-            handleAprovarEtapa();
+            setMotivoRejeicao(motivo);
+            handleConfirmarRejeicao();
           }}
           onSalvar={(dados) => {
             setFterDadosSalvos(dados);
