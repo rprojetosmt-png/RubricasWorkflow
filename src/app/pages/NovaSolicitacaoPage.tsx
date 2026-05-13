@@ -357,6 +357,9 @@ export function NovaSolicitacaoPage() {
   const [codigoPreview, setCodigoPreview] = useState("RUB-YYYY-000");
   const [arquivosAnexados, setArquivosAnexados] = useState<File[]>([]);
   const [fterDadosSalvos, setFterDadosSalvos] = useState<any>(null);
+  const [isAjustesModalOpen, setIsAjustesModalOpen] = useState(false);
+  const [etapaDestinoId, setEtapaDestinoId] = useState("");
+  const [motivoAjuste, setMotivoAjuste] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
 
@@ -612,6 +615,60 @@ export function NovaSolicitacaoPage() {
     }
   };
 
+  const handleConfirmarAjuste = (destinoId: string, motivo: string) => {
+    const dataAgora = new Date().toISOString();
+    const destinoEtapa = etapas.find(e => e.id === destinoId);
+    const destinoIndex = etapas.findIndex(e => e.id === destinoId);
+
+    if (!destinoEtapa || destinoIndex === -1) return;
+
+    // 1. Registrar a ação de ajuste no histórico da etapa atual
+    let atualizado = upsertHistorico(historico, etapaAtual.id, {
+      status: "rejeitado",
+      data: dataAgora,
+      comentario: `SOLICITAÇÃO DE AJUSTE PARA ${destinoEtapa.nome.toUpperCase()}: ${motivo}`,
+      usuario: usuarioAtual,
+    });
+
+    // 2. Reset de Workflow: Limpar aprovações das etapas entre destino e atual
+    const novasAssinaturas = { ...assinaturasEtapa };
+    
+    etapas.forEach((etapa, idx) => {
+      if (idx >= destinoIndex && idx < etapaIndex) {
+        // Resetar histórico da etapa intermediária para pendente
+        atualizado = upsertHistorico(atualizado, etapa.id, {
+          status: "pendente",
+          data: undefined,
+          usuario: undefined,
+          comentario: undefined
+        });
+        
+        // Limpar assinaturas coletadas
+        delete novasAssinaturas[etapa.id];
+      }
+    });
+
+    // 3. Colocar a etapa de destino em análise com o motivo
+    atualizado = upsertHistorico(atualizado, destinoId, {
+      status: "em_analise",
+      data: dataAgora,
+      usuario: undefined,
+      comentario: `AJUSTE PENDENTE: ${motivo}`
+    });
+
+    setAssinaturasEtapa(novasAssinaturas);
+    setHistorico(atualizado);
+    setEtapaIndex(destinoIndex);
+    setIsAjustesModalOpen(false);
+    setEtapaDestinoId("");
+    setMotivoAjuste("");
+    setComentario("");
+
+    toast.info(`Solicitação devolvida para: ${destinoEtapa.nome}`, {
+      description: "As etapas posteriores foram resetadas para nova análise.",
+    });
+  };
+
   const preencherDebugEtapa1 = () => {
     const orgaoId = orgaos[0]?.id ?? "";
     const setorId = todosSetores.find((s) => s.orgaoId === orgaoId)?.id ?? "";
@@ -823,6 +880,23 @@ export function NovaSolicitacaoPage() {
         </CardContent>
       </Card>
 
+      {/* Banner de Ajuste Solicitado */}
+      {(() => {
+        const ajustePendente = historico.find(h => h.etapaId === etapaAtual.id && h.comentario?.startsWith("AJUSTE PENDENTE:"));
+        if (ajustePendente) {
+          return (
+            <Alert className="bg-amber-50 border-amber-200 text-amber-900 shadow-sm animate-in fade-in slide-in-from-top-4 duration-500">
+              <Clock className="h-4 w-4 text-amber-600" />
+              <div className="ml-2">
+                <p className="font-bold text-sm">Ajuste Solicitado</p>
+                <p className="text-xs opacity-90">{ajustePendente.comentario?.replace("AJUSTE PENDENTE: ", "")}</p>
+              </div>
+            </Alert>
+          );
+        }
+        return null;
+      })()}
+
       {etapaIndex === 1 ? (
         <AnaliseTecnicaFTER 
           dadosSolicitacao={watch()} 
@@ -834,9 +908,8 @@ export function NovaSolicitacaoPage() {
             setMotivoRejeicao(motivo);
             handleConfirmarRejeicao();
           }}
-          onSolicitarAjustes={(motivo) => {
-            setMotivoRejeicao(motivo);
-            handleConfirmarRejeicao();
+          onSolicitarAjustes={() => {
+            setIsAjustesModalOpen(true);
           }}
           onSalvar={(dados) => {
             setFterDadosSalvos(dados);
@@ -1262,7 +1335,7 @@ export function NovaSolicitacaoPage() {
                         </div>
                       </div>
                     )}
-                    <div className="flex gap-3">
+                    <div className="flex flex-col gap-3 pt-2">
                       <Button
                         onClick={() => {
                           if (!comentario.trim()) {
@@ -1282,41 +1355,64 @@ export function NovaSolicitacaoPage() {
                         <CheckCircle2 className="mr-2 w-5 h-5" />
                         Aprovar Etapa
                       </Button>
+                      
+                      <div className="flex gap-3">
+                        <Button
+                          onClick={() => {
+                            if (!comentario.trim()) {
+                              toast.error("Preencha o parecer técnico antes de solicitar ajustes.");
+                              return;
+                            }
+                            setIsAjustesModalOpen(true);
+                          }}
+                          disabled={!usuarioPermitido || !comentario.trim()}
+                          variant="outline"
+                          className={cn(
+                            "flex-1 h-12 font-bold border-amber-500 text-amber-700 hover:bg-amber-50",
+                            (!usuarioPermitido || !comentario.trim()) && "opacity-50 grayscale"
+                          )}
+                        >
+                          <Clock className="mr-2 w-5 h-5" />
+                          Solicitar Ajustes
+                        </Button>
+                        
+                        <Button
+                          onClick={() => {
+                            if (!comentario.trim()) {
+                              toast.error("Preencha o parecer técnico antes de reprovar.");
+                              return;
+                            }
+                            handleRejeitar();
+                          }}
+                          disabled={!usuarioPermitido || !comentario.trim()}
+                          variant="outline"
+                          className={cn(
+                            "flex-1 h-12 font-bold",
+                            !usuarioPermitido || !comentario.trim()
+                              ? "border-slate-300 text-slate-400 hover:bg-transparent cursor-not-allowed"
+                              : "border-orange-500 text-orange-600 hover:bg-orange-50"
+                          )}
+                        >
+                          <XCircle className="mr-2 w-5 h-5" />
+                          Reprovar Etapa
+                        </Button>
+                      </div>
+
                       <Button
-                        onClick={() => {
-                          if (!comentario.trim()) {
-                            toast.error("Preencha o parecer técnico antes de reprovar.");
-                            return;
-                          }
-                          handleRejeitar();
-                        }}
-                        disabled={!usuarioPermitido || !comentario.trim()}
+                        onClick={handleRejeitarRubrica}
+                        disabled={!usuarioPermitido}
                         variant="outline"
                         className={cn(
-                          "flex-1 h-12 font-bold",
-                          !usuarioPermitido || !comentario.trim()
+                          "w-full h-12 font-bold",
+                          !usuarioPermitido
                             ? "border-slate-300 text-slate-400 hover:bg-transparent cursor-not-allowed"
-                            : "border-orange-500 text-orange-600 hover:bg-orange-50"
+                            : "border-red-600 text-red-600 hover:bg-red-50"
                         )}
                       >
-                        <XCircle className="mr-2 w-5 h-5" />
-                        Reprovar Etapa
+                        <AlertTriangle className="mr-2 w-5 h-5" />
+                        Rejeitar Rubrica
                       </Button>
                     </div>
-                    <Button
-                      onClick={handleRejeitarRubrica}
-                      disabled={!usuarioPermitido}
-                      variant="outline"
-                      className={cn(
-                        "w-full h-12 font-bold",
-                        !usuarioPermitido
-                          ? "border-slate-300 text-slate-400 hover:bg-transparent cursor-not-allowed"
-                          : "border-red-600 text-red-600 hover:bg-red-50"
-                      )}
-                    >
-                      <AlertTriangle className="mr-2 w-5 h-5" />
-                      Rejeitar Rubrica
-                    </Button>
                   </div>
                 </CardContent>
               </Card>
@@ -1403,6 +1499,110 @@ export function NovaSolicitacaoPage() {
         </div>
       </div>
     )}
+
+      {/* Dialog: Reprovar Etapa */}
+      <Dialog open={isRejectDialogOpen} onOpenChange={setIsRejectDialogOpen}>
+        <DialogContent className="sm:max-w-[520px]">
+          <DialogHeader>
+            <DialogTitle>Reprovar etapa</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3 py-2">
+            <Label htmlFor="motivo-rejeicao">Motivo da reprovação</Label>
+            <Textarea
+              id="motivo-rejeicao"
+              placeholder="Descreva o motivo da reprovação..."
+              value={motivoRejeicao}
+              onChange={(e) => setMotivoRejeicao(e.target.value)}
+              rows={4}
+            />
+            <p className="text-xs text-slate-500">
+              Esse motivo será informado ao solicitante e a etapa retornará para revisão.
+            </p>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsRejectDialogOpen(false)}>
+              Cancelar
+            </Button>
+            <Button
+              className="bg-orange-600 hover:bg-orange-700"
+              onClick={handleConfirmarRejeicao}
+            >
+              Confirmar reprovação
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog: Solicitar Ajustes (Devolução de Workflow) */}
+      <Dialog open={isAjustesModalOpen} onOpenChange={setIsAjustesModalOpen}>
+        <DialogContent className="sm:max-w-[520px]">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-bold text-slate-800">
+              Confirmação
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <p className="text-slate-600 text-sm">Deseja realmente devolver esta solicitação para ajustes?</p>
+            <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-800">
+              <p className="font-semibold mb-1">Regra de Negócio:</p>
+              <p>Ao devolver para uma etapa anterior, todas as aprovações intermediárias serão anuladas e o fluxo deverá ser refeito linearmente.</p>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Etapa de Destino <span className="text-red-500">*</span></Label>
+              <Select value={etapaDestinoId} onValueChange={setEtapaDestinoId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione a etapa para correção..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {etapas
+                    .filter((e, idx) => idx < etapaIndex)
+                    .map((etapa) => (
+                      <SelectItem key={etapa.id} value={etapa.id}>
+                        Etapa {etapas.indexOf(etapa) + 1}: {etapa.nome}
+                      </SelectItem>
+                    ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <div className="flex justify-between items-center">
+                <Label htmlFor="motivo-ajuste">Justificativa <span className="text-red-500">*</span></Label>
+                <span className={cn("text-[10px]", motivoAjuste.length < 10 || motivoAjuste.length > 250 ? "text-red-500" : "text-slate-400")}>
+                  {motivoAjuste.length}/250
+                </span>
+              </div>
+              <Textarea
+                id="motivo-ajuste"
+                placeholder="Descreva detalhadamente o que deve ser corrigido..."
+                value={motivoAjuste}
+                onChange={(e) => setMotivoAjuste(e.target.value)}
+                rows={4}
+              />
+              <p className="text-[11px] text-slate-500">Mínimo de 10 e máximo de 250 caracteres.</p>
+            </div>
+          </div>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button 
+              variant="outline" 
+              onClick={() => setIsAjustesModalOpen(false)}
+              className="border-slate-200 text-blue-600 hover:bg-slate-50 font-semibold px-6"
+            >
+              <XCircle className="w-4 h-4 mr-2" />
+              Não
+            </Button>
+            <Button
+              className="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-6 shadow-md shadow-blue-100"
+              onClick={() => handleConfirmarAjuste(etapaDestinoId, motivoAjuste)}
+              disabled={!etapaDestinoId || motivoAjuste.length < 10 || motivoAjuste.length > 250}
+            >
+              <CheckCircle2 className="w-4 h-4 mr-2" />
+              Sim
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Dialog: Reprovar Etapa */}
       <Dialog open={isRejectDialogOpen} onOpenChange={setIsRejectDialogOpen}>

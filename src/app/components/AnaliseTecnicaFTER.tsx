@@ -58,7 +58,7 @@ interface AnaliseTecnicaFTERProps {
   dadosSolicitacao: any;
   onAprovar: (dados: any) => void;
   onReprovar: (motivo: string) => void;
-  onSolicitarAjustes: (motivo: string) => void;
+  onSolicitarAjustes: () => void;
   onSalvar?: (dados: any) => void;
   dadosSalvos?: any;
   grupoPermitido?: boolean;
@@ -112,7 +112,6 @@ export function AnaliseTecnicaFTER({
   const isDirty = JSON.stringify(fterData) !== (ultimoSalvo ?? JSON.stringify(estadoInicial));
   const temConteudo = fterData.numeroSEI.trim() !== "" || fterData.fundamentacaoLegal.trim() !== "" || fterData.formaCalculo !== "" || fterData.naturezaJuridica !== "";
 
-  const [ajustesModalOpen, setAjustesModalOpen] = useState(false);
   const [reprovarModalOpen, setReprovarModalOpen] = useState(false);
   const [motivoAcao, setMotivoAcao] = useState("");
 
@@ -711,7 +710,7 @@ export function AnaliseTecnicaFTER({
           <Button 
             variant="outline" 
             className="border-slate-300 text-slate-600 hover:bg-slate-100 hover:text-slate-800"
-            onClick={() => setAjustesModalOpen(true)}
+            onClick={onSolicitarAjustes}
             disabled={!usuarioPermitido}
           >
             Solicitar Ajustes
@@ -767,55 +766,6 @@ export function AnaliseTecnicaFTER({
           </Button>
         </div>
       </div>
-
-      {/* Modal: Solicitar Ajustes */}
-      <Dialog open={ajustesModalOpen} onOpenChange={(open) => { setAjustesModalOpen(open); if (!open) setMotivoAcao(""); }}>
-        <DialogContent className="sm:max-w-[520px]">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-amber-700">
-              <AlertTriangle className="w-5 h-5" />
-              Solicitar Ajustes ao Solicitante
-            </DialogTitle>
-          </DialogHeader>
-          <div className="space-y-3 py-2">
-            <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-800">
-              <strong>Atenção:</strong> A solicitação retornará ao solicitante para revisão e reenvio.
-            </div>
-            <Label htmlFor="motivo-ajustes">Descreva os ajustes necessários <span className="text-red-500">*</span></Label>
-            <Textarea
-              id="motivo-ajustes"
-              placeholder="Informe o que precisa ser corrigido ou complementado pelo solicitante..."
-              value={motivoAcao}
-              onChange={(e) => setMotivoAcao(e.target.value)}
-              rows={4}
-              className="border-amber-200 focus:border-amber-400"
-            />
-            {motivoAcao.trim() === "" && (
-              <p className="text-xs text-red-500">A descrição dos ajustes é obrigatória.</p>
-            )}
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => { setAjustesModalOpen(false); setMotivoAcao(""); }}>
-              Cancelar
-            </Button>
-            <Button
-              className="bg-amber-600 hover:bg-amber-700"
-              onClick={() => {
-                if (!motivoAcao.trim()) {
-                  toast.error("Informe os ajustes necessários");
-                  return;
-                }
-                onSolicitarAjustes(motivoAcao);
-                setMotivoAcao("");
-                setAjustesModalOpen(false);
-              }}
-              disabled={!motivoAcao.trim()}
-            >
-              Confirmar solicitação de ajustes
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
 
       {/* Modal: Rejeitar Rubrica */}
       <Dialog open={reprovarModalOpen} onOpenChange={setReprovarModalOpen}>
