@@ -25,6 +25,8 @@ import {
   Paperclip,
   Trash2,
   AlertTriangle,
+  X,
+  Check,
 } from "lucide-react";
 import { Button } from "../components/ui/button";
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "../components/ui/accordion";
@@ -1543,8 +1545,8 @@ export function NovaSolicitacaoPage() {
           </DialogHeader>
           <div className="space-y-4 py-2">
             <p className="text-slate-600 text-sm">Deseja realmente devolver esta solicitação para ajustes?</p>
-            <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-800">
-              <p className="font-semibold mb-1">Regra de Negócio:</p>
+            <div className="flex items-center gap-3 p-2.5 bg-orange-50 border border-orange-200 rounded-md text-[13px] text-orange-700 shadow-sm">
+              <AlertTriangle className="w-4 h-4 shrink-0 text-orange-500" />
               <p>Ao devolver para uma etapa anterior, todas as aprovações intermediárias serão anuladas e o fluxo deverá ser refeito linearmente.</p>
             </div>
 
@@ -1566,39 +1568,39 @@ export function NovaSolicitacaoPage() {
               </Select>
             </div>
 
-            <div className="space-y-2">
-              <div className="flex justify-between items-center">
-                <Label htmlFor="motivo-ajuste">Justificativa <span className="text-red-500">*</span></Label>
-                <span className={cn("text-[10px]", motivoAjuste.length < 10 || motivoAjuste.length > 250 ? "text-red-500" : "text-slate-400")}>
-                  {motivoAjuste.length}/250
-                </span>
-              </div>
+            <div className="space-y-1">
+              <Label htmlFor="motivo-ajuste">Justificativa <span className="text-red-500">*</span></Label>
               <Textarea
                 id="motivo-ajuste"
-                placeholder="Descreva detalhadamente o que deve ser corrigido..."
+                placeholder="Digite suas observações..."
                 value={motivoAjuste}
                 onChange={(e) => setMotivoAjuste(e.target.value)}
                 rows={4}
+                className="bg-slate-50/50 border-slate-200 focus:bg-white focus:ring-1 focus:ring-blue-100 transition-colors resize-none"
               />
-              <p className="text-[11px] text-slate-500">Mínimo de 10 e máximo de 250 caracteres.</p>
+              <div className="flex justify-end">
+                <span className={cn("text-[11px]", (motivoAjuste.length > 0 && motivoAjuste.length < 10) || motivoAjuste.length > 200 ? "text-red-500" : "text-slate-500")}>
+                  {motivoAjuste.length}/200
+                </span>
+              </div>
             </div>
           </div>
-          <DialogFooter className="gap-2 sm:gap-0">
+          <DialogFooter className="gap-2 sm:gap-2">
             <Button 
               variant="outline" 
               onClick={() => setIsAjustesModalOpen(false)}
-              className="border-slate-200 text-blue-600 hover:bg-slate-50 font-semibold px-6"
+              className="border-slate-200 text-blue-600 hover:bg-slate-50 font-bold px-6 shadow-sm"
             >
-              <XCircle className="w-4 h-4 mr-2" />
-              Não
+              <X className="w-4 h-4 mr-2" />
+              Fechar
             </Button>
             <Button
-              className="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-6 shadow-md shadow-blue-100"
+              className="bg-blue-600 hover:bg-blue-700 text-white font-bold px-6 shadow-md shadow-blue-100 ring-offset-2 focus:ring-2 focus:ring-blue-400"
               onClick={() => handleConfirmarAjuste(etapaDestinoId, motivoAjuste)}
-              disabled={!etapaDestinoId || motivoAjuste.length < 10 || motivoAjuste.length > 250}
+              disabled={!etapaDestinoId || motivoAjuste.length < 10 || motivoAjuste.length > 200}
             >
-              <CheckCircle2 className="w-4 h-4 mr-2" />
-              Sim
+              <Check className="w-4 h-4 mr-2" />
+              Confirmar
             </Button>
           </DialogFooter>
         </DialogContent>
