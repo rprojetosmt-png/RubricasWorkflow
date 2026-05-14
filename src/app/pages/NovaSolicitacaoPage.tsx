@@ -1545,9 +1545,9 @@ export function NovaSolicitacaoPage() {
           </DialogHeader>
           <div className="space-y-4 py-2">
             <p className="text-slate-600 text-sm">Deseja realmente devolver esta solicitação para ajustes?</p>
-            <div className="flex items-center gap-3 p-2.5 bg-orange-50 border border-orange-200 rounded-md text-[13px] text-orange-700 shadow-sm">
-              <AlertTriangle className="w-4 h-4 shrink-0 text-orange-500" />
-              <p>Ao devolver para uma etapa anterior, todas as aprovações intermediárias serão anuladas e o fluxo deverá ser refeito linearmente.</p>
+            <div className="flex items-center gap-3 p-2.5 bg-blue-50 border border-blue-200 rounded-md text-[13px] text-blue-700 shadow-sm">
+              <Info className="w-4 h-4 shrink-0 text-blue-500" />
+              <p><span className="font-bold">Atenção:</span> Ao devolver para uma etapa anterior, todas as aprovações intermediárias serão anuladas e o fluxo deverá ser refeito linearmente.</p>
             </div>
 
             <div className="space-y-2">
