@@ -364,6 +364,31 @@ export function NovaSolicitacaoPage() {
   const [motivoAjuste, setMotivoAjuste] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Lógica para encontrar o último ajuste solicitado para esta etapa
+  const lastAdjustment = useMemo(() => {
+    const currentEtapa = etapas[etapaIndex];
+    if (!currentEtapa) return null;
+
+    // Procura no histórico a ação de rejeição (ajuste) mais recente que teve como destino a etapa atual
+    const searchString = `SOLICITAÇÃO DE AJUSTE PARA ${currentEtapa.nome.toUpperCase()}:`;
+    
+    const adjustmentAction = historico
+      .filter(h => h.status === "rejeitado" && h.comentario?.startsWith(searchString))
+      .sort((a, b) => (b.data && a.data ? new Date(b.data).getTime() - new Date(a.data).getTime() : 0))[0];
+
+    if (!adjustmentAction) return null;
+
+    const etapaOrigem = etapas.find(e => e.id === adjustmentAction.etapaId);
+    
+    return {
+      etapaOrigemNome: etapaOrigem?.nome ?? "Etapa Desconhecida",
+      etapaOrigemOrdem: etapaOrigem ? etapas.indexOf(etapaOrigem) + 1 : 0,
+      usuarioNome: adjustmentAction.usuario?.nome ?? "Usuário",
+      dataHora: adjustmentAction.data ?? "",
+      justificativa: adjustmentAction.comentario.replace(searchString, "").trim()
+    };
+  }, [historico, etapaIndex, etapas]);
+
 
   const etapaAtual = etapas[etapaIndex];
   const etapaAtualIndex = etapaIndex + 1;
@@ -393,7 +418,7 @@ export function NovaSolicitacaoPage() {
 
   const usuarioPermitido = Boolean(
     grupoPermitido &&
-      (requiredSignerIds.length === 0 || requiredSignerIds.includes(session.activeUserId))
+    (requiredSignerIds.length === 0 || requiredSignerIds.includes(session.activeUserId))
   );
 
   useEffect(() => {
@@ -634,7 +659,7 @@ export function NovaSolicitacaoPage() {
 
     // 2. Reset de Workflow: Limpar aprovações das etapas entre destino e atual
     const novasAssinaturas = { ...assinaturasEtapa };
-    
+
     etapas.forEach((etapa, idx) => {
       if (idx >= destinoIndex && idx < etapaIndex) {
         // Resetar histórico da etapa intermediária para pendente
@@ -644,7 +669,7 @@ export function NovaSolicitacaoPage() {
           usuario: undefined,
           comentario: undefined
         });
-        
+
         // Limpar assinaturas coletadas
         delete novasAssinaturas[etapa.id];
       }
@@ -882,26 +907,33 @@ export function NovaSolicitacaoPage() {
         </CardContent>
       </Card>
 
-      {/* Banner de Ajuste Solicitado */}
-      {(() => {
-        const ajustePendente = historico.find(h => h.etapaId === etapaAtual.id && h.comentario?.startsWith("AJUSTE PENDENTE:"));
-        if (ajustePendente) {
-          return (
-            <Alert className="bg-amber-50 border-amber-200 text-amber-900 shadow-sm animate-in fade-in slide-in-from-top-4 duration-500">
-              <Clock className="h-4 w-4 text-amber-600" />
-              <div className="ml-2">
-                <p className="font-bold text-sm">Ajuste Solicitado</p>
-                <p className="text-xs opacity-90">{ajustePendente.comentario?.replace("AJUSTE PENDENTE: ", "")}</p>
+      {/* Card de Alerta Estruturado: Ajuste Solicitado */}
+      {lastAdjustment && (
+        <div className="bg-orange-50 border-l-4 border-orange-500 p-5 rounded-r-lg shadow-sm mb-6 animate-in fade-in slide-in-from-top-4 duration-500">
+          <div className="flex-1 space-y-1">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
+              <h4 className="text-orange-800 font-bold text-sm uppercase tracking-wider">
+                ⚠️ AJUSTE SOLICITADO PELA ETAPA {lastAdjustment.etapaOrigemOrdem}: {lastAdjustment.etapaOrigemNome}
+              </h4>
+              <p className="text-[11px] text-slate-500 font-medium">
+                Solicitado por: <span className="text-slate-800">{lastAdjustment.usuarioNome}</span> em {new Date(lastAdjustment.dataHora).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+              </p>
+            </div>
+            <div className="mt-4 pt-4 border-t border-orange-200/50">
+              <p className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">Justificativa:</p>
+              <div className="bg-white/60 p-3 rounded border border-orange-100/50">
+                <p className="text-sm text-slate-700 leading-relaxed whitespace-pre-wrap italic">
+                  {lastAdjustment.justificativa}
+                </p>
               </div>
-            </Alert>
-          );
-        }
-        return null;
-      })()}
+            </div>
+          </div>
+        </div>
+      )}
 
       {etapaIndex === 1 ? (
-        <AnaliseTecnicaFTER 
-          dadosSolicitacao={watch()} 
+        <AnaliseTecnicaFTER
+          dadosSolicitacao={watch()}
           onAprovar={(dadosFTER) => {
             setFterDadosSalvos(dadosFTER);
             handleAprovarEtapa();
@@ -929,578 +961,578 @@ export function NovaSolicitacaoPage() {
         <div className="grid grid-cols-3 gap-6 pb-20">
           <div className="col-span-2 space-y-6">
             {etapaIndex === 0 ? (
-            <form onSubmit={handleSubmit(onFormSubmit)} className="space-y-6">
-  <Card className="border-none shadow-md overflow-hidden">
-    <div className="h-1 bg-blue-600 w-full" />
-    <CardHeader className="flex flex-row items-center justify-between gap-3">
-      <CardTitle className="flex items-center gap-2">
-        <FileText className="w-5 h-5 text-blue-600" />
-        Etapa 1: Identificação da Rubrica
-      </CardTitle>
-      <Button type="button" variant="outline" onClick={preencherDadosTeste} className="border-blue-200 text-blue-700 hover:bg-blue-50 gap-2">
-        <Plus className="w-4 h-4" />
-        Preencher dados fictícios
-      </Button>
-    </CardHeader>
-    <CardContent className="grid grid-cols-2 gap-4">
-      <div className="space-y-2">
-        <Label>Código da Rubrica <span className="text-red-500">*</span></Label>
-        <Controller
-          name="codigoRubrica"
-          control={control}
-          rules={{ required: "Campo obrigatório" }}
-          render={({ field }) => (
-            <Input 
-              {...field} 
-              placeholder="Ex: 8055" 
-              className={cn("border-2 h-10 font-mono uppercase", errors.codigoRubrica && "border-red-500")} 
-            />
-          )}
-        />
-      </div>
-
-      <div className="space-y-2">
-        <Label>Nome da Rubrica <span className="text-red-500">*</span></Label>
-        <Controller
-          name="nomeRubrica"
-          control={control}
-          rules={{ required: "Campo obrigatório", maxLength: { value: 50, message: "Máximo de 50 caracteres" } }}
-          render={({ field }) => <Input {...field} maxLength={50} placeholder="Ex: Adicional de Tempo de Serviço" className={cn("border-2 h-10", errors.nomeRubrica && "border-red-500")} />}
-        />
-        <p className="text-xs text-slate-500">Máximo de 50 caracteres.</p>
-      </div>
-
-      <div className="space-y-2">
-        <Label>Classificação <span className="text-red-500">*</span></Label>
-        <Controller
-          name="classificacao"
-          control={control}
-          rules={{ required: "Campo obrigatório" }}
-          render={({ field }) => (
-            <Select onValueChange={field.onChange} value={field.value}>
-              <SelectTrigger className={cn("border-2 h-10", errors.classificacao && "border-red-500")}><SelectValue placeholder="Selecione..." /></SelectTrigger>
-              <SelectContent>{classificacoes.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
-            </Select>
-          )}
-        />
-      </div>
-
-
-
-      <div className="col-span-2 space-y-2">
-        <Label>Tabela 03 - Natureza das Rubricas (eSocial) <span className="text-red-500">*</span></Label>
-        <Controller
-          name="naturezaEsocial"
-          control={control}
-          rules={{ required: "Campo obrigatório" }}
-          render={({ field }) => (
-            <Select onValueChange={field.onChange} value={field.value}>
-              <SelectTrigger className={cn("border-2 h-10", errors.naturezaEsocial && "border-red-500")}><SelectValue placeholder="Selecione o código eSocial" /></SelectTrigger>
-              <SelectContent>{naturezaRubricaEsocial.map((n) => <SelectItem key={n.codigo} value={n.codigo}>{n.codigo} - {n.descricao}</SelectItem>)}</SelectContent>
-            </Select>
-          )}
-        />
-      </div>
-
-      <div className="space-y-2">
-        <Label>Vigência - Data de início <span className="text-red-500">*</span></Label>
-        <Controller
-          name="vigenciaInicio"
-          control={control}
-          rules={{ required: "Campo obrigatório" }}
-          render={({ field }) => <Input type="date" value={field.value ? format(field.value, "yyyy-MM-dd") : ""} onChange={(e) => field.onChange(e.target.value ? new Date(`${e.target.value}T00:00:00`) : undefined)} className={cn("border-2 h-10", errors.vigenciaInicio && "border-red-500")} />}
-        />
-        {temRetroatividade && <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded px-2 py-1">Atenção: data de início anterior ao mês atual (retroatividade).</p>}
-      </div>
-
-      <div className="space-y-2">
-        <Label>Vigência - Data fim (opcional)</Label>
-        <Controller
-          name="vigenciaFim"
-          control={control}
-          render={({ field }) => <Input type="date" value={field.value ? format(field.value, "yyyy-MM-dd") : ""} onChange={(e) => field.onChange(e.target.value ? new Date(`${e.target.value}T00:00:00`) : undefined)} className="border-2 h-10" />}
-        />
-      </div>
-
-      <div className="col-span-2 space-y-2">
-        <Label>Projeto/Atividade (PAOE) <span className="text-red-500">*</span></Label>
-        <Controller
-          name="paoe"
-          control={control}
-          rules={{ required: "Campo obrigatório" }}
-          render={({ field }) => (
-            <Select onValueChange={field.onChange} value={field.value}>
-              <SelectTrigger className={cn("border-2 h-10", errors.paoe && "border-red-500")}><SelectValue placeholder="Selecione a ação..." /></SelectTrigger>
-              <SelectContent>{listaPAOE.map((p) => <SelectItem key={p} value={p}>{p}</SelectItem>)}</SelectContent>
-            </Select>
-          )}
-        />
-      </div>
-    </CardContent>
-  </Card>
-
-  <Card className="border-none shadow-md overflow-hidden">
-    <div className="h-1 bg-cyan-600 w-full" />
-    <CardHeader><CardTitle className="flex items-center gap-2"><User className="w-5 h-5 text-cyan-600" />Etapa 2: Abrangência e Público</CardTitle></CardHeader>
-    <CardContent className="grid grid-cols-2 gap-4">
-      <div className="col-span-2 space-y-2">
-        <Label>Órgãos Solicitantes <span className="text-red-500">*</span></Label>
-        <Controller 
-          name="orgaosSolicitantes" 
-          control={control} 
-          rules={{ validate: (v) => (Array.isArray(v) && v.length > 0) || "Selecione pelo menos um órgão" }} 
-          render={({ field }) => (
-            <MultiSelect
-              options={orgaos.map(o => ({ label: o.nome, value: o.id }))}
-              selected={field.value}
-              onChange={field.onChange}
-              placeholder="Selecione os órgãos..."
-              error={!!errors.orgaosSolicitantes}
-            />
-          )} 
-        />
-      </div>
-
-      <div className="space-y-2">
-        <Label>Setores <span className="text-red-500">*</span></Label>
-        <Controller name="setorIds" control={control} rules={{ validate: (v) => (Array.isArray(v) && v.length > 0) || "Selecione um setor" }} render={({ field }) => (
-          <Select disabled={selectedOrgaos.length === 0} onValueChange={(value) => field.onChange(value ? [value] : [])} value={Array.isArray(field.value) ? (field.value[0] ?? "") : ""}>
-            <SelectTrigger className={cn("border-2 h-10", errors.setorIds && "border-red-500")}><SelectValue placeholder={selectedOrgaos.length === 0 ? "Selecione o órgão primeiro" : "Selecione o setor"} /></SelectTrigger>
-            <SelectContent>{setoresFiltrados.map((s) => <SelectItem key={s.id} value={s.id}>{s.nome}</SelectItem>)}</SelectContent>
-          </Select>
-        )} />
-      </div>
-
-
-
-      <div className="space-y-2">
-        <Label>Grupo Trabalhista (eSocial) <span className="text-red-500">*</span></Label>
-        <Controller 
-          name="grupoTrabalhistaIds" 
-          control={control} 
-          rules={{ validate: (v) => (Array.isArray(v) && v.length > 0) || "Selecione o grupo" }} 
-          render={({ field }) => (
-            <MultiSelect
-              options={gruposTrabalhistas.map(g => ({ label: g.nome, value: g.id }))}
-              selected={field.value}
-              onChange={field.onChange}
-              placeholder="Selecione os grupos..."
-              error={!!errors.grupoTrabalhistaIds}
-            />
-          )} 
-        />
-      </div>
-
-      <div className="space-y-2">
-        <Label>Categoria Trabalhista <span className="text-red-500">*</span></Label>
-        <Controller 
-          name="categoriaTrabalhistaCodigos" 
-          control={control} 
-          rules={{ validate: (v) => (Array.isArray(v) && v.length > 0) || "Selecione a categoria" }} 
-          render={({ field }) => (
-            <MultiSelect
-              disabled={grupoTrabalhistaIds.length === 0}
-              options={categoriasFiltradas.map(cat => ({ label: `${cat.codigo} - ${cat.descricao}`, value: cat.codigo }))}
-              selected={field.value}
-              onChange={field.onChange}
-              placeholder={grupoTrabalhistaIds.length === 0 ? "Selecione o grupo primeiro" : "Selecione as categorias..."}
-              error={!!errors.categoriaTrabalhistaCodigos}
-            />
-          )} 
-        />
-      </div>
-
-
-
-      <div className="col-span-2 space-y-2">
-        <Label>Cargos que utilizarão a rubrica <span className="text-red-500">*</span></Label>
-        <Controller 
-          name="cargosAplicaveis" 
-          control={control} 
-          rules={{ validate: (v) => (Array.isArray(v) && v.length > 0) || "Selecione pelo menos um cargo" }} 
-          render={({ field }) => (
-            <MultiSelect
-              options={cargosAplicaveis.map(c => ({ label: c, value: c }))}
-              selected={field.value}
-              onChange={field.onChange}
-              placeholder="Selecione os cargos..."
-              error={!!errors.cargosAplicaveis}
-            />
-          )} 
-        />
-      </div>
-    </CardContent>
-  </Card>
-
-  <Card className="border-none shadow-md overflow-hidden">
-    <div className="h-1 bg-amber-500 w-full" />
-    <CardHeader><CardTitle className="flex items-center gap-2"><CheckCircle2 className="w-5 h-5 text-amber-500" />Etapa 3: Incidências e Regras</CardTitle></CardHeader>
-    <CardContent className="grid grid-cols-2 gap-4">
-      <div className="col-span-2 space-y-2">
-        <Label>Natureza da Verba <span className="text-red-500">*</span></Label>
-        <Controller
-          name="natureza"
-          control={control}
-          rules={{ required: "Campo obrigatório" }}
-          render={({ field }) => (
-            <Select onValueChange={field.onChange} value={field.value}>
-              <SelectTrigger className={cn("border-2 h-10", errors.natureza && "border-red-500")}><SelectValue placeholder="Selecione a natureza" /></SelectTrigger>
-              <SelectContent>{naturezasVerba.map((n) => <SelectItem key={n} value={n}>{n}</SelectItem>)}</SelectContent>
-            </Select>
-          )}
-        />
-      </div>
-
-      {naturezaSelecionada === "Remuneratória" && (
-        <>
-          <div className="space-y-2">
-            <Label>Caráter <span className="text-red-500">*</span></Label>
-            <Controller name="carater" control={control} rules={{ required: "Selecione o caráter" }} render={({ field }) => (
-              <RadioGroup onValueChange={field.onChange} value={field.value} className="flex flex-col gap-2 pt-2">
-                <div className="flex items-center gap-2"><RadioGroupItem value="Contínuo" id="carater-continuo" /><Label htmlFor="carater-continuo" className="font-normal">Contínuo (incide previdência)</Label></div>
-                <div className="flex items-center gap-2"><RadioGroupItem value="Temporário" id="carater-temp" /><Label htmlFor="carater-temp" className="font-normal">Temporário (não incide)</Label></div>
-              </RadioGroup>
-            )} />
-          </div>
-
-          <div className="space-y-2">
-            <Label>Reter teto remuneratório? <span className="text-red-500">*</span></Label>
-            <Controller name="reterTetoRemuneratorio" control={control} rules={{ required: "Selecione uma opção" }} render={({ field }) => (
-              <RadioGroup onValueChange={field.onChange} value={field.value} className="flex gap-4 pt-2">
-                <div className="flex items-center gap-2"><RadioGroupItem value="Sim" id="teto-sim" /><Label htmlFor="teto-sim" className="font-normal">Sim</Label></div>
-                <div className="flex items-center gap-2"><RadioGroupItem value="Não" id="teto-nao" /><Label htmlFor="teto-nao" className="font-normal">Não</Label></div>
-              </RadioGroup>
-            )} />
-          </div>
-        </>
-      )}
-
-
-
-      <div className="col-span-2 space-y-2">
-        <Label>Esta rubrica possui incidências tributárias? <span className="text-red-500">*</span></Label>
-        <Controller name="temIncidenciaTributaria" control={control} rules={{ required: "Selecione uma opção" }} render={({ field }) => (
-          <RadioGroup onValueChange={field.onChange} value={field.value} className="flex gap-4 pt-2">
-            <div className="flex items-center gap-2"><RadioGroupItem value="Sim" id="incidencia-sim" /><Label htmlFor="incidencia-sim" className="font-normal">Sim</Label></div>
-            <div className="flex items-center gap-2"><RadioGroupItem value="Não" id="incidencia-nao" /><Label htmlFor="incidencia-nao" className="font-normal">Não</Label></div>
-          </RadioGroup>
-        )} />
-      </div>
-
-      {temIncidenciaTributaria === "Sim" && (
-        <div className="col-span-2 space-y-2">
-          <Label>Incidências e Tributos (selecione pelo menos 1) <span className="text-red-500">*</span></Label>
-          <Controller
-            name="incidenciasTributarias"
-            control={control}
-            rules={{ validate: (v) => temIncidenciaTributaria !== "Sim" || (Array.isArray(v) && v.length > 0) || "Selecione pelo menos uma incidência" }}
-            render={({ field }) => (
-              <MultiSelect
-                options={listaIncidenciasTributarias.map(t => ({ label: t.nome, value: t.id }))}
-                selected={field.value ?? []}
-                onChange={field.onChange}
-                placeholder="Selecione as incidências..."
-                error={!!errors.incidenciasTributarias}
-              />
-            )}
-          />
-        </div>
-      )}
-    </CardContent>
-  </Card>
-
-  <Card className="border-none shadow-md overflow-hidden">
-    <div className="h-1 bg-indigo-600 w-full" />
-    <CardHeader><CardTitle className="flex items-center gap-2"><FileText className="w-5 h-5 text-indigo-600" />Etapa 4: Amparo Legal e Formalização</CardTitle></CardHeader>
-    <CardContent className="space-y-4">
-      <div className="space-y-2">
-        <Label>Base Legal (obrigatório) <span className="text-red-500">*</span></Label>
-        <Controller name="baseLegalIds" control={control} rules={{ validate: (v) => (Array.isArray(v) && v.length > 0) || "Selecione ao menos um documento" }} render={({ field }) => {
-          const selected = Array.isArray(field.value) ? field.value : [];
-          return <div className={cn("rounded-md border p-3 space-y-2", errors.baseLegalIds && "border-red-500")}>{baseLegalDocumentos.map((doc) => <div key={doc.id} className="flex items-center justify-between gap-3"><label className="flex items-center gap-2 text-sm cursor-pointer"><Checkbox checked={selected.includes(doc.id)} onCheckedChange={(checked) => checked ? field.onChange([...selected, doc.id]) : field.onChange(selected.filter((v: string) => v !== doc.id))} /><span>{doc.titulo}</span></label><Button type="button" variant="link" className="h-auto p-0">Visualizar PDF</Button></div>)}</div>;
-        }} />
-        <p className="text-xs text-slate-500">Lista do módulo de Documentos Legais. Upload direto não é permitido.</p>
-        {baseLegalSelecionada.length === 0 && <Link to="/documentos-legais" className="text-sm text-blue-700 underline">Cadastrar novo documento</Link>}
-      </div>
-
-      <div className="space-y-2">
-        <Label>Justificativa da criação da rubrica</Label>
-        <Controller name="justificativaLegal" control={control} render={({ field }) => <Textarea {...field} className="border-2 min-h-24" placeholder="Descreva o motivo da criação da rubrica" />} />
-      </div>
-
-      <div className="rounded-lg border bg-slate-50 p-3 space-y-2">
-        <Label className="flex items-center gap-2 text-sm"><Controller name="aceiteTermos" control={control} rules={{ required: true }} render={({ field }) => <Checkbox checked={field.value} onCheckedChange={field.onChange} />} />Termo de compromisso <span className="text-red-500">*</span></Label>
-        <p className="text-xs text-slate-600">Declaro que as informações são verdadeiras e assumo responsabilidade pelo conteúdo enviado.</p>
-      </div>
-
-      <div className="flex gap-4 pt-2">
-        <Button type="submit" disabled={!podeEnviar} className={cn("flex-1 h-11", podeEnviar ? "bg-blue-600 hover:bg-blue-700" : "bg-slate-400 cursor-not-allowed")}>Enviar Solicitação<ArrowRight className="ml-2 w-4 h-4" /></Button>
-        <Link to="/" className="flex-1"><Button type="button" variant="outline" className="w-full h-11">Cancelar</Button></Link>
-      </div>
-    </CardContent>
-  </Card>
-</form>
-
-          ) : (
-            <div className="space-y-6">
-              {/* Visualização de Análise (Etapas > 0) */}
-              {etapaIndex === 3 ? (
-                <RubricaEditorContainer />
-              ) : (
-                <HistoricalDataCard {...buildHistoricalDataConfig()} />
-              )}
-
-              {/* Card Documentos Anexados */}
-              <Card className="border-none shadow-md">
-                <CardHeader>
-                  <CardTitle className="text-lg">Documentos Anexados</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  {arquivosAnexados.length === 0 ? (
-                    <p className="text-sm text-slate-400 italic">Nenhum documento anexado.</p>
-                  ) : (
-                    arquivosAnexados.map((file, idx) => (
-                      <div key={idx} className="flex items-center justify-between p-3 bg-slate-50 rounded-xl border border-slate-100 group hover:border-blue-200 transition-colors">
-                        <div className="flex items-center gap-3">
-                          <div className="p-2 bg-blue-100 rounded-lg text-blue-600">
-                            <FileText className="w-5 h-5" />
-                          </div>
-                          <div>
-                            <span className="text-sm font-medium text-slate-700">{file.name}</span>
-                            <p className="text-xs text-slate-400">{(file.size / 1024).toFixed(1)} KB</p>
-                          </div>
-                        </div>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="text-slate-400 hover:text-red-500 hover:bg-red-50"
-                          onClick={() => setArquivosAnexados((prev) => prev.filter((_, i) => i !== idx))}
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      </div>
-                    ))
-                  )}
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    multiple
-                    className="hidden"
-                    onChange={(e) => {
-                      const files = Array.from(e.target.files || []);
-                      setArquivosAnexados((prev) => [...prev, ...files]);
-                      if (fileInputRef.current) fileInputRef.current.value = "";
-                    }}
-                  />
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="w-full border-dashed border-slate-300 text-slate-600 hover:border-blue-400 hover:text-blue-600 hover:bg-blue-50 gap-2"
-                    onClick={() => fileInputRef.current?.click()}
-                  >
-                    <Paperclip className="w-4 h-4" />
-                    Anexar documento
-                  </Button>
-                </CardContent>
-              </Card>
-
-              {/* Card Parecer Técnico (ex-Ações) */}
-              <Card className="border-none shadow-md">
-                <CardHeader className="pb-3 border-b border-slate-50">
-                  <div className="flex flex-col gap-1">
-                    <CardTitle className="text-lg">Parecer Técnico</CardTitle>
-                    <CardDescription className="flex items-center gap-1.5 text-xs font-semibold text-slate-500 uppercase tracking-tight">
-                      <Users className="w-3.5 h-3.5" />
-                      Responsabilidade: {etapaAtual.gruposResponsaveis.map((g) => g.nome).join(", ")}
-                    </CardDescription>
-                  </div>
-                </CardHeader>
-                <CardContent className="space-y-4 pt-5">
-                  <div className="space-y-2">
-                    <Textarea
-                      placeholder="Descreva o parecer técnico desta etapa... *"
-                      value={comentario}
-                      onChange={(e) => setComentario(e.target.value)}
-                      rows={4}
-                      className="border-slate-200 focus:border-blue-500 focus:ring-blue-100"
-                    />
-                    {comentario.trim() === "" && (
-                      <p className="text-xs text-red-500">O parecer técnico é obrigatório para aprovar ou reprovar a etapa.</p>
-                    )}
-                  </div>
-                  <div className="flex flex-col gap-3 pt-2">
-                    {!usuarioPermitido && (
-                      <div className="px-4 py-3 bg-amber-50 border-t border-amber-200 flex items-center gap-3 text-amber-800 rounded-lg">
-                        <AlertTriangle className="w-5 h-5" />
-                        <div className="text-sm">
-                          <span className="font-bold">Usuário sem permissão.</span> Apenas membros autorizados para esta etapa podem utilizar os controles da barra fixa.
-                        </div>
-                      </div>
-                    )}
-                    <div className="flex flex-col gap-3 pt-2">
-                      <Button
-                        onClick={() => {
-                          if (!comentario.trim()) {
-                            toast.error("Preencha o parecer técnico antes de aprovar.");
-                            return;
-                          }
-                          handleAprovarEtapa();
-                        }}
-                        disabled={!usuarioPermitido || !comentario.trim()}
-                        className={cn(
-                          "flex-1 h-12 shadow-lg font-bold",
-                          !usuarioPermitido || !comentario.trim()
-                            ? "bg-slate-400 text-slate-700 cursor-not-allowed shadow-none"
-                            : "bg-green-600 hover:bg-green-700 shadow-green-200"
+              <form onSubmit={handleSubmit(onFormSubmit)} className="space-y-6">
+                <Card className="border-none shadow-md overflow-hidden">
+                  <div className="h-1 bg-blue-600 w-full" />
+                  <CardHeader className="flex flex-row items-center justify-between gap-3">
+                    <CardTitle className="flex items-center gap-2">
+                      <FileText className="w-5 h-5 text-blue-600" />
+                      Etapa 1: Identificação da Rubrica
+                    </CardTitle>
+                    <Button type="button" variant="outline" onClick={preencherDadosTeste} className="border-blue-200 text-blue-700 hover:bg-blue-50 gap-2">
+                      <Plus className="w-4 h-4" />
+                      Preencher dados fictícios
+                    </Button>
+                  </CardHeader>
+                  <CardContent className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>Código da Rubrica <span className="text-red-500">*</span></Label>
+                      <Controller
+                        name="codigoRubrica"
+                        control={control}
+                        rules={{ required: "Campo obrigatório" }}
+                        render={({ field }) => (
+                          <Input
+                            {...field}
+                            placeholder="Ex: 8055"
+                            className={cn("border-2 h-10 font-mono uppercase", errors.codigoRubrica && "border-red-500")}
+                          />
                         )}
-                      >
-                        <CheckCircle2 className="mr-2 w-5 h-5" />
-                        Aprovar Etapa
-                      </Button>
-                      
-                      <div className="flex gap-3">
-                        <Button
-                          onClick={() => {
-                            if (!comentario.trim()) {
-                              toast.error("Preencha o parecer técnico antes de solicitar ajustes.");
-                              return;
-                            }
-                            setIsAjustesModalOpen(true);
-                          }}
-                          disabled={!usuarioPermitido || !comentario.trim()}
-                          variant="outline"
-                          className={cn(
-                            "flex-1 h-12 font-bold border-amber-500 text-amber-700 hover:bg-amber-50",
-                            (!usuarioPermitido || !comentario.trim()) && "opacity-50 grayscale"
-                          )}
-                        >
-                          <Clock className="mr-2 w-5 h-5" />
-                          Solicitar Ajustes
-                        </Button>
-                        
-                        <Button
-                          onClick={() => {
-                            if (!comentario.trim()) {
-                              toast.error("Preencha o parecer técnico antes de reprovar.");
-                              return;
-                            }
-                            handleRejeitar();
-                          }}
-                          disabled={!usuarioPermitido || !comentario.trim()}
-                          variant="outline"
-                          className={cn(
-                            "flex-1 h-12 font-bold",
-                            !usuarioPermitido || !comentario.trim()
-                              ? "border-slate-300 text-slate-400 hover:bg-transparent cursor-not-allowed"
-                              : "border-orange-500 text-orange-600 hover:bg-orange-50"
-                          )}
-                        >
-                          <XCircle className="mr-2 w-5 h-5" />
-                          Reprovar Etapa
-                        </Button>
-                      </div>
-
-                      <Button
-                        onClick={handleRejeitarRubrica}
-                        disabled={!usuarioPermitido}
-                        variant="outline"
-                        className={cn(
-                          "w-full h-12 font-bold",
-                          !usuarioPermitido
-                            ? "border-slate-300 text-slate-400 hover:bg-transparent cursor-not-allowed"
-                            : "border-red-600 text-red-600 hover:bg-red-50"
-                        )}
-                      >
-                        <AlertTriangle className="mr-2 w-5 h-5" />
-                        Rejeitar Rubrica
-                      </Button>
+                      />
                     </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-          )}
-        </div>
 
-        <div className="space-y-6">
+                    <div className="space-y-2">
+                      <Label>Nome da Rubrica <span className="text-red-500">*</span></Label>
+                      <Controller
+                        name="nomeRubrica"
+                        control={control}
+                        rules={{ required: "Campo obrigatório", maxLength: { value: 50, message: "Máximo de 50 caracteres" } }}
+                        render={({ field }) => <Input {...field} maxLength={50} placeholder="Ex: Adicional de Tempo de Serviço" className={cn("border-2 h-10", errors.nomeRubrica && "border-red-500")} />}
+                      />
+                      <p className="text-xs text-slate-500">Máximo de 50 caracteres.</p>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label>Classificação <span className="text-red-500">*</span></Label>
+                      <Controller
+                        name="classificacao"
+                        control={control}
+                        rules={{ required: "Campo obrigatório" }}
+                        render={({ field }) => (
+                          <Select onValueChange={field.onChange} value={field.value}>
+                            <SelectTrigger className={cn("border-2 h-10", errors.classificacao && "border-red-500")}><SelectValue placeholder="Selecione..." /></SelectTrigger>
+                            <SelectContent>{classificacoes.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
+                          </Select>
+                        )}
+                      />
+                    </div>
 
 
-          <Card className="border-none shadow-md">
-            <CardHeader className="pb-3 border-b border-slate-100">
-              <CardTitle className="text-lg">Histórico de Atividades</CardTitle>
-            </CardHeader>
-            <CardContent className="pt-6">
-              {historico.length === 0 ? (
-                <div className="text-sm text-slate-500">
-                  Ainda não há atividades registradas.
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  {historico
-                    .filter((h) => h.status !== "pendente")
-                    .sort((a, b) => {
-                      if (!a.data || !b.data) return 0;
-                      return new Date(b.data).getTime() - new Date(a.data).getTime();
-                    })
-                    .map((hist, index) => {
-                      const etapa = etapas.find((e) => e.id === hist.etapaId);
-                      if (!etapa) return null;
 
-                      return (
-                        <div key={index} className="relative">
-                          {index !== historico.length - 1 && (
-                            <div className="absolute left-5 top-10 bottom-0 w-0.5 bg-slate-200" />
+                    <div className="col-span-2 space-y-2">
+                      <Label>Tabela 03 - Natureza das Rubricas (eSocial) <span className="text-red-500">*</span></Label>
+                      <Controller
+                        name="naturezaEsocial"
+                        control={control}
+                        rules={{ required: "Campo obrigatório" }}
+                        render={({ field }) => (
+                          <Select onValueChange={field.onChange} value={field.value}>
+                            <SelectTrigger className={cn("border-2 h-10", errors.naturezaEsocial && "border-red-500")}><SelectValue placeholder="Selecione o código eSocial" /></SelectTrigger>
+                            <SelectContent>{naturezaRubricaEsocial.map((n) => <SelectItem key={n.codigo} value={n.codigo}>{n.codigo} - {n.descricao}</SelectItem>)}</SelectContent>
+                          </Select>
+                        )}
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label>Vigência - Data de início <span className="text-red-500">*</span></Label>
+                      <Controller
+                        name="vigenciaInicio"
+                        control={control}
+                        rules={{ required: "Campo obrigatório" }}
+                        render={({ field }) => <Input type="date" value={field.value ? format(field.value, "yyyy-MM-dd") : ""} onChange={(e) => field.onChange(e.target.value ? new Date(`${e.target.value}T00:00:00`) : undefined)} className={cn("border-2 h-10", errors.vigenciaInicio && "border-red-500")} />}
+                      />
+                      {temRetroatividade && <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded px-2 py-1">Atenção: data de início anterior ao mês atual (retroatividade).</p>}
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label>Vigência - Data fim (opcional)</Label>
+                      <Controller
+                        name="vigenciaFim"
+                        control={control}
+                        render={({ field }) => <Input type="date" value={field.value ? format(field.value, "yyyy-MM-dd") : ""} onChange={(e) => field.onChange(e.target.value ? new Date(`${e.target.value}T00:00:00`) : undefined)} className="border-2 h-10" />}
+                      />
+                    </div>
+
+                    <div className="col-span-2 space-y-2">
+                      <Label>Projeto/Atividade (PAOE) <span className="text-red-500">*</span></Label>
+                      <Controller
+                        name="paoe"
+                        control={control}
+                        rules={{ required: "Campo obrigatório" }}
+                        render={({ field }) => (
+                          <Select onValueChange={field.onChange} value={field.value}>
+                            <SelectTrigger className={cn("border-2 h-10", errors.paoe && "border-red-500")}><SelectValue placeholder="Selecione a ação..." /></SelectTrigger>
+                            <SelectContent>{listaPAOE.map((p) => <SelectItem key={p} value={p}>{p}</SelectItem>)}</SelectContent>
+                          </Select>
+                        )}
+                      />
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card className="border-none shadow-md overflow-hidden">
+                  <div className="h-1 bg-cyan-600 w-full" />
+                  <CardHeader><CardTitle className="flex items-center gap-2"><User className="w-5 h-5 text-cyan-600" />Etapa 2: Abrangência e Público</CardTitle></CardHeader>
+                  <CardContent className="grid grid-cols-2 gap-4">
+                    <div className="col-span-2 space-y-2">
+                      <Label>Órgãos Solicitantes <span className="text-red-500">*</span></Label>
+                      <Controller
+                        name="orgaosSolicitantes"
+                        control={control}
+                        rules={{ validate: (v) => (Array.isArray(v) && v.length > 0) || "Selecione pelo menos um órgão" }}
+                        render={({ field }) => (
+                          <MultiSelect
+                            options={orgaos.map(o => ({ label: o.nome, value: o.id }))}
+                            selected={field.value}
+                            onChange={field.onChange}
+                            placeholder="Selecione os órgãos..."
+                            error={!!errors.orgaosSolicitantes}
+                          />
+                        )}
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label>Setores <span className="text-red-500">*</span></Label>
+                      <Controller name="setorIds" control={control} rules={{ validate: (v) => (Array.isArray(v) && v.length > 0) || "Selecione um setor" }} render={({ field }) => (
+                        <Select disabled={selectedOrgaos.length === 0} onValueChange={(value) => field.onChange(value ? [value] : [])} value={Array.isArray(field.value) ? (field.value[0] ?? "") : ""}>
+                          <SelectTrigger className={cn("border-2 h-10", errors.setorIds && "border-red-500")}><SelectValue placeholder={selectedOrgaos.length === 0 ? "Selecione o órgão primeiro" : "Selecione o setor"} /></SelectTrigger>
+                          <SelectContent>{setoresFiltrados.map((s) => <SelectItem key={s.id} value={s.id}>{s.nome}</SelectItem>)}</SelectContent>
+                        </Select>
+                      )} />
+                    </div>
+
+
+
+                    <div className="space-y-2">
+                      <Label>Grupo Trabalhista (eSocial) <span className="text-red-500">*</span></Label>
+                      <Controller
+                        name="grupoTrabalhistaIds"
+                        control={control}
+                        rules={{ validate: (v) => (Array.isArray(v) && v.length > 0) || "Selecione o grupo" }}
+                        render={({ field }) => (
+                          <MultiSelect
+                            options={gruposTrabalhistas.map(g => ({ label: g.nome, value: g.id }))}
+                            selected={field.value}
+                            onChange={field.onChange}
+                            placeholder="Selecione os grupos..."
+                            error={!!errors.grupoTrabalhistaIds}
+                          />
+                        )}
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label>Categoria Trabalhista <span className="text-red-500">*</span></Label>
+                      <Controller
+                        name="categoriaTrabalhistaCodigos"
+                        control={control}
+                        rules={{ validate: (v) => (Array.isArray(v) && v.length > 0) || "Selecione a categoria" }}
+                        render={({ field }) => (
+                          <MultiSelect
+                            disabled={grupoTrabalhistaIds.length === 0}
+                            options={categoriasFiltradas.map(cat => ({ label: `${cat.codigo} - ${cat.descricao}`, value: cat.codigo }))}
+                            selected={field.value}
+                            onChange={field.onChange}
+                            placeholder={grupoTrabalhistaIds.length === 0 ? "Selecione o grupo primeiro" : "Selecione as categorias..."}
+                            error={!!errors.categoriaTrabalhistaCodigos}
+                          />
+                        )}
+                      />
+                    </div>
+
+
+
+                    <div className="col-span-2 space-y-2">
+                      <Label>Cargos que utilizarão a rubrica <span className="text-red-500">*</span></Label>
+                      <Controller
+                        name="cargosAplicaveis"
+                        control={control}
+                        rules={{ validate: (v) => (Array.isArray(v) && v.length > 0) || "Selecione pelo menos um cargo" }}
+                        render={({ field }) => (
+                          <MultiSelect
+                            options={cargosAplicaveis.map(c => ({ label: c, value: c }))}
+                            selected={field.value}
+                            onChange={field.onChange}
+                            placeholder="Selecione os cargos..."
+                            error={!!errors.cargosAplicaveis}
+                          />
+                        )}
+                      />
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card className="border-none shadow-md overflow-hidden">
+                  <div className="h-1 bg-amber-500 w-full" />
+                  <CardHeader><CardTitle className="flex items-center gap-2"><CheckCircle2 className="w-5 h-5 text-amber-500" />Etapa 3: Incidências e Regras</CardTitle></CardHeader>
+                  <CardContent className="grid grid-cols-2 gap-4">
+                    <div className="col-span-2 space-y-2">
+                      <Label>Natureza da Verba <span className="text-red-500">*</span></Label>
+                      <Controller
+                        name="natureza"
+                        control={control}
+                        rules={{ required: "Campo obrigatório" }}
+                        render={({ field }) => (
+                          <Select onValueChange={field.onChange} value={field.value}>
+                            <SelectTrigger className={cn("border-2 h-10", errors.natureza && "border-red-500")}><SelectValue placeholder="Selecione a natureza" /></SelectTrigger>
+                            <SelectContent>{naturezasVerba.map((n) => <SelectItem key={n} value={n}>{n}</SelectItem>)}</SelectContent>
+                          </Select>
+                        )}
+                      />
+                    </div>
+
+                    {naturezaSelecionada === "Remuneratória" && (
+                      <>
+                        <div className="space-y-2">
+                          <Label>Caráter <span className="text-red-500">*</span></Label>
+                          <Controller name="carater" control={control} rules={{ required: "Selecione o caráter" }} render={({ field }) => (
+                            <RadioGroup onValueChange={field.onChange} value={field.value} className="flex flex-col gap-2 pt-2">
+                              <div className="flex items-center gap-2"><RadioGroupItem value="Contínuo" id="carater-continuo" /><Label htmlFor="carater-continuo" className="font-normal">Contínuo (incide previdência)</Label></div>
+                              <div className="flex items-center gap-2"><RadioGroupItem value="Temporário" id="carater-temp" /><Label htmlFor="carater-temp" className="font-normal">Temporário (não incide)</Label></div>
+                            </RadioGroup>
+                          )} />
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label>Reter teto remuneratório? <span className="text-red-500">*</span></Label>
+                          <Controller name="reterTetoRemuneratorio" control={control} rules={{ required: "Selecione uma opção" }} render={({ field }) => (
+                            <RadioGroup onValueChange={field.onChange} value={field.value} className="flex gap-4 pt-2">
+                              <div className="flex items-center gap-2"><RadioGroupItem value="Sim" id="teto-sim" /><Label htmlFor="teto-sim" className="font-normal">Sim</Label></div>
+                              <div className="flex items-center gap-2"><RadioGroupItem value="Não" id="teto-nao" /><Label htmlFor="teto-nao" className="font-normal">Não</Label></div>
+                            </RadioGroup>
+                          )} />
+                        </div>
+                      </>
+                    )}
+
+
+
+                    <div className="col-span-2 space-y-2">
+                      <Label>Esta rubrica possui incidências tributárias? <span className="text-red-500">*</span></Label>
+                      <Controller name="temIncidenciaTributaria" control={control} rules={{ required: "Selecione uma opção" }} render={({ field }) => (
+                        <RadioGroup onValueChange={field.onChange} value={field.value} className="flex gap-4 pt-2">
+                          <div className="flex items-center gap-2"><RadioGroupItem value="Sim" id="incidencia-sim" /><Label htmlFor="incidencia-sim" className="font-normal">Sim</Label></div>
+                          <div className="flex items-center gap-2"><RadioGroupItem value="Não" id="incidencia-nao" /><Label htmlFor="incidencia-nao" className="font-normal">Não</Label></div>
+                        </RadioGroup>
+                      )} />
+                    </div>
+
+                    {temIncidenciaTributaria === "Sim" && (
+                      <div className="col-span-2 space-y-2">
+                        <Label>Incidências e Tributos (selecione pelo menos 1) <span className="text-red-500">*</span></Label>
+                        <Controller
+                          name="incidenciasTributarias"
+                          control={control}
+                          rules={{ validate: (v) => temIncidenciaTributaria !== "Sim" || (Array.isArray(v) && v.length > 0) || "Selecione pelo menos uma incidência" }}
+                          render={({ field }) => (
+                            <MultiSelect
+                              options={listaIncidenciasTributarias.map(t => ({ label: t.nome, value: t.id }))}
+                              selected={field.value ?? []}
+                              onChange={field.onChange}
+                              placeholder="Selecione as incidências..."
+                              error={!!errors.incidenciasTributarias}
+                            />
                           )}
-                          <div className="flex gap-3">
-                            <Avatar className="w-10 h-10 border-2 border-white shadow-sm">
-                              <AvatarFallback
-                                className="text-xs"
-                                style={{ backgroundColor: etapa.cor + "20" }}
-                              >
-                                {hist.usuario ? getInitials(hist.usuario.nome) : "SYS"}
-                              </AvatarFallback>
-                            </Avatar>
-                            <div className="flex-1 pb-4">
-                              <div className="flex items-start justify-between mb-1">
-                                <p className="text-sm font-medium text-slate-900">
-                                  {etapa.nome}
-                                </p>
-                                {getStatusIcon(hist.status, "w-4 h-4")}
-                              </div>
-                              {hist.usuario && (
-                                <p className="text-xs text-slate-600 mb-1">
-                                  {hist.usuario.nome}
-                                </p>
-                              )}
-                              {hist.data && (
-                                <p className="text-xs text-slate-500">
-                                  {new Date(hist.data).toLocaleDateString("pt-BR", {
-                                    day: "2-digit",
-                                    month: "long",
-                                    year: "numeric",
-                                    hour: "2-digit",
-                                    minute: "2-digit",
-                                  })}
-                                </p>
-                              )}
-                              {hist.comentario && (
-                                <div className="mt-2 p-2 bg-slate-50 rounded text-xs text-slate-700 border border-slate-200">
-                                  <MessageSquare className="w-3 h-3 inline mr-1" />
-                                  {hist.comentario}
-                                </div>
-                              )}
+                        />
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+
+                <Card className="border-none shadow-md overflow-hidden">
+                  <div className="h-1 bg-indigo-600 w-full" />
+                  <CardHeader><CardTitle className="flex items-center gap-2"><FileText className="w-5 h-5 text-indigo-600" />Etapa 4: Amparo Legal e Formalização</CardTitle></CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="space-y-2">
+                      <Label>Base Legal (obrigatório) <span className="text-red-500">*</span></Label>
+                      <Controller name="baseLegalIds" control={control} rules={{ validate: (v) => (Array.isArray(v) && v.length > 0) || "Selecione ao menos um documento" }} render={({ field }) => {
+                        const selected = Array.isArray(field.value) ? field.value : [];
+                        return <div className={cn("rounded-md border p-3 space-y-2", errors.baseLegalIds && "border-red-500")}>{baseLegalDocumentos.map((doc) => <div key={doc.id} className="flex items-center justify-between gap-3"><label className="flex items-center gap-2 text-sm cursor-pointer"><Checkbox checked={selected.includes(doc.id)} onCheckedChange={(checked) => checked ? field.onChange([...selected, doc.id]) : field.onChange(selected.filter((v: string) => v !== doc.id))} /><span>{doc.titulo}</span></label><Button type="button" variant="link" className="h-auto p-0">Visualizar PDF</Button></div>)}</div>;
+                      }} />
+                      <p className="text-xs text-slate-500">Lista do módulo de Documentos Legais. Upload direto não é permitido.</p>
+                      {baseLegalSelecionada.length === 0 && <Link to="/documentos-legais" className="text-sm text-blue-700 underline">Cadastrar novo documento</Link>}
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label>Justificativa da criação da rubrica</Label>
+                      <Controller name="justificativaLegal" control={control} render={({ field }) => <Textarea {...field} className="border-2 min-h-24" placeholder="Descreva o motivo da criação da rubrica" />} />
+                    </div>
+
+                    <div className="rounded-lg border bg-slate-50 p-3 space-y-2">
+                      <Label className="flex items-center gap-2 text-sm"><Controller name="aceiteTermos" control={control} rules={{ required: true }} render={({ field }) => <Checkbox checked={field.value} onCheckedChange={field.onChange} />} />Termo de compromisso <span className="text-red-500">*</span></Label>
+                      <p className="text-xs text-slate-600">Declaro que as informações são verdadeiras e assumo responsabilidade pelo conteúdo enviado.</p>
+                    </div>
+
+                    <div className="flex gap-4 pt-2">
+                      <Button type="submit" disabled={!podeEnviar} className={cn("flex-1 h-11", podeEnviar ? "bg-blue-600 hover:bg-blue-700" : "bg-slate-400 cursor-not-allowed")}>Enviar Solicitação<ArrowRight className="ml-2 w-4 h-4" /></Button>
+                      <Link to="/" className="flex-1"><Button type="button" variant="outline" className="w-full h-11">Cancelar</Button></Link>
+                    </div>
+                  </CardContent>
+                </Card>
+              </form>
+
+            ) : (
+              <div className="space-y-6">
+                {/* Visualização de Análise (Etapas > 0) */}
+                {etapaIndex === 3 ? (
+                  <RubricaEditorContainer />
+                ) : (
+                  <HistoricalDataCard {...buildHistoricalDataConfig()} />
+                )}
+
+                {/* Card Documentos Anexados */}
+                <Card className="border-none shadow-md">
+                  <CardHeader>
+                    <CardTitle className="text-lg">Documentos Anexados</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    {arquivosAnexados.length === 0 ? (
+                      <p className="text-sm text-slate-400 italic">Nenhum documento anexado.</p>
+                    ) : (
+                      arquivosAnexados.map((file, idx) => (
+                        <div key={idx} className="flex items-center justify-between p-3 bg-slate-50 rounded-xl border border-slate-100 group hover:border-blue-200 transition-colors">
+                          <div className="flex items-center gap-3">
+                            <div className="p-2 bg-blue-100 rounded-lg text-blue-600">
+                              <FileText className="w-5 h-5" />
+                            </div>
+                            <div>
+                              <span className="text-sm font-medium text-slate-700">{file.name}</span>
+                              <p className="text-xs text-slate-400">{(file.size / 1024).toFixed(1)} KB</p>
                             </div>
                           </div>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="text-slate-400 hover:text-red-500 hover:bg-red-50"
+                            onClick={() => setArquivosAnexados((prev) => prev.filter((_, i) => i !== idx))}
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
                         </div>
-                      );
-                    })}
-                </div>
-              )}
-            </CardContent>
-          </Card>
+                      ))
+                    )}
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      multiple
+                      className="hidden"
+                      onChange={(e) => {
+                        const files = Array.from(e.target.files || []);
+                        setArquivosAnexados((prev) => [...prev, ...files]);
+                        if (fileInputRef.current) fileInputRef.current.value = "";
+                      }}
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="w-full border-dashed border-slate-300 text-slate-600 hover:border-blue-400 hover:text-blue-600 hover:bg-blue-50 gap-2"
+                      onClick={() => fileInputRef.current?.click()}
+                    >
+                      <Paperclip className="w-4 h-4" />
+                      Anexar documento
+                    </Button>
+                  </CardContent>
+                </Card>
+
+                {/* Card Parecer Técnico (ex-Ações) */}
+                <Card className="border-none shadow-md">
+                  <CardHeader className="pb-3 border-b border-slate-50">
+                    <div className="flex flex-col gap-1">
+                      <CardTitle className="text-lg">Parecer Técnico</CardTitle>
+                      <CardDescription className="flex items-center gap-1.5 text-xs font-semibold text-slate-500 uppercase tracking-tight">
+                        <Users className="w-3.5 h-3.5" />
+                        Responsabilidade: {etapaAtual.gruposResponsaveis.map((g) => g.nome).join(", ")}
+                      </CardDescription>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="space-y-4 pt-5">
+                    <div className="space-y-2">
+                      <Textarea
+                        placeholder="Descreva o parecer técnico desta etapa... *"
+                        value={comentario}
+                        onChange={(e) => setComentario(e.target.value)}
+                        rows={4}
+                        className="border-slate-200 focus:border-blue-500 focus:ring-blue-100"
+                      />
+                      {comentario.trim() === "" && (
+                        <p className="text-xs text-red-500">O parecer técnico é obrigatório para aprovar ou reprovar a etapa.</p>
+                      )}
+                    </div>
+                    <div className="flex flex-col gap-3 pt-2">
+                      {!usuarioPermitido && (
+                        <div className="px-4 py-3 bg-amber-50 border-t border-amber-200 flex items-center gap-3 text-amber-800 rounded-lg">
+                          <AlertTriangle className="w-5 h-5" />
+                          <div className="text-sm">
+                            <span className="font-bold">Usuário sem permissão.</span> Apenas membros autorizados para esta etapa podem utilizar os controles da barra fixa.
+                          </div>
+                        </div>
+                      )}
+                      <div className="flex flex-col gap-3 pt-2">
+                        <Button
+                          onClick={() => {
+                            if (!comentario.trim()) {
+                              toast.error("Preencha o parecer técnico antes de aprovar.");
+                              return;
+                            }
+                            handleAprovarEtapa();
+                          }}
+                          disabled={!usuarioPermitido || !comentario.trim()}
+                          className={cn(
+                            "flex-1 h-12 shadow-lg font-bold",
+                            !usuarioPermitido || !comentario.trim()
+                              ? "bg-slate-400 text-slate-700 cursor-not-allowed shadow-none"
+                              : "bg-green-600 hover:bg-green-700 shadow-green-200"
+                          )}
+                        >
+                          <CheckCircle2 className="mr-2 w-5 h-5" />
+                          Aprovar Etapa
+                        </Button>
+
+                        <div className="flex gap-3">
+                          <Button
+                            onClick={() => {
+                              if (!comentario.trim()) {
+                                toast.error("Preencha o parecer técnico antes de solicitar ajustes.");
+                                return;
+                              }
+                              setIsAjustesModalOpen(true);
+                            }}
+                            disabled={!usuarioPermitido || !comentario.trim()}
+                            variant="outline"
+                            className={cn(
+                              "flex-1 h-12 font-bold border-amber-500 text-amber-700 hover:bg-amber-50",
+                              (!usuarioPermitido || !comentario.trim()) && "opacity-50 grayscale"
+                            )}
+                          >
+                            <Clock className="mr-2 w-5 h-5" />
+                            Solicitar Ajustes
+                          </Button>
+
+                          <Button
+                            onClick={() => {
+                              if (!comentario.trim()) {
+                                toast.error("Preencha o parecer técnico antes de reprovar.");
+                                return;
+                              }
+                              handleRejeitar();
+                            }}
+                            disabled={!usuarioPermitido || !comentario.trim()}
+                            variant="outline"
+                            className={cn(
+                              "flex-1 h-12 font-bold",
+                              !usuarioPermitido || !comentario.trim()
+                                ? "border-slate-300 text-slate-400 hover:bg-transparent cursor-not-allowed"
+                                : "border-orange-500 text-orange-600 hover:bg-orange-50"
+                            )}
+                          >
+                            <XCircle className="mr-2 w-5 h-5" />
+                            Reprovar Etapa
+                          </Button>
+                        </div>
+
+                        <Button
+                          onClick={handleRejeitarRubrica}
+                          disabled={!usuarioPermitido}
+                          variant="outline"
+                          className={cn(
+                            "w-full h-12 font-bold",
+                            !usuarioPermitido
+                              ? "border-slate-300 text-slate-400 hover:bg-transparent cursor-not-allowed"
+                              : "border-red-600 text-red-600 hover:bg-red-50"
+                          )}
+                        >
+                          <AlertTriangle className="mr-2 w-5 h-5" />
+                          Rejeitar Rubrica
+                        </Button>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            )}
+          </div>
+
+          <div className="space-y-6">
+
+
+            <Card className="border-none shadow-md">
+              <CardHeader className="pb-3 border-b border-slate-100">
+                <CardTitle className="text-lg">Histórico de Atividades</CardTitle>
+              </CardHeader>
+              <CardContent className="pt-6">
+                {historico.length === 0 ? (
+                  <div className="text-sm text-slate-500">
+                    Ainda não há atividades registradas.
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {historico
+                      .filter((h) => h.status !== "pendente")
+                      .sort((a, b) => {
+                        if (!a.data || !b.data) return 0;
+                        return new Date(b.data).getTime() - new Date(a.data).getTime();
+                      })
+                      .map((hist, index) => {
+                        const etapa = etapas.find((e) => e.id === hist.etapaId);
+                        if (!etapa) return null;
+
+                        return (
+                          <div key={index} className="relative">
+                            {index !== historico.length - 1 && (
+                              <div className="absolute left-5 top-10 bottom-0 w-0.5 bg-slate-200" />
+                            )}
+                            <div className="flex gap-3">
+                              <Avatar className="w-10 h-10 border-2 border-white shadow-sm">
+                                <AvatarFallback
+                                  className="text-xs"
+                                  style={{ backgroundColor: etapa.cor + "20" }}
+                                >
+                                  {hist.usuario ? getInitials(hist.usuario.nome) : "SYS"}
+                                </AvatarFallback>
+                              </Avatar>
+                              <div className="flex-1 pb-4">
+                                <div className="flex items-start justify-between mb-1">
+                                  <p className="text-sm font-medium text-slate-900">
+                                    {etapa.nome}
+                                  </p>
+                                  {getStatusIcon(hist.status, "w-4 h-4")}
+                                </div>
+                                {hist.usuario && (
+                                  <p className="text-xs text-slate-600 mb-1">
+                                    {hist.usuario.nome}
+                                  </p>
+                                )}
+                                {hist.data && (
+                                  <p className="text-xs text-slate-500">
+                                    {new Date(hist.data).toLocaleDateString("pt-BR", {
+                                      day: "2-digit",
+                                      month: "long",
+                                      year: "numeric",
+                                      hour: "2-digit",
+                                      minute: "2-digit",
+                                    })}
+                                  </p>
+                                )}
+                                {hist.comentario && (
+                                  <div className="mt-2 p-2 bg-slate-50 rounded text-xs text-slate-700 border border-slate-200">
+                                    <MessageSquare className="w-3 h-3 inline mr-1" />
+                                    {hist.comentario}
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
         </div>
-      </div>
-    )}
+      )}
 
       {/* Dialog: Reprovar Etapa */}
       <Dialog open={isRejectDialogOpen} onOpenChange={setIsRejectDialogOpen}>
@@ -1586,8 +1618,8 @@ export function NovaSolicitacaoPage() {
             </div>
           </div>
           <DialogFooter className="gap-2 sm:gap-2">
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               onClick={() => setIsAjustesModalOpen(false)}
               className="border-slate-200 text-blue-600 hover:bg-slate-50 font-bold px-6 shadow-sm"
             >
