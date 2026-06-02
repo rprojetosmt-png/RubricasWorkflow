@@ -1,25 +1,23 @@
-import React, { useState, useEffect } from "react";
-import { 
-  FileText, 
-  Scale, 
-  Settings2, 
-  ShieldCheck, 
-  AlertTriangle, 
-  ChevronDown, 
-  CheckCircle2, 
-  XCircle, 
+import React, { useState, useRef } from "react";
+import {
+  FileText,
+  Scale,
+  AlertTriangle,
+  CheckCircle2,
+  XCircle,
   Info,
   Save,
   Building2,
   Tag,
   Users,
-  Search,
   History,
   Calendar,
   Briefcase,
   Landmark,
   CircleDollarSign,
-  Fingerprint
+  Fingerprint,
+  Paperclip,
+  Trash2,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "./ui/card";
 import { Label } from "./ui/label";
@@ -27,17 +25,6 @@ import { Input } from "./ui/input";
 import { Textarea } from "./ui/textarea";
 import { Button } from "./ui/button";
 import { Badge } from "./ui/badge";
-import { Switch } from "./ui/switch";
-import { RadioGroup, RadioGroupItem } from "./ui/radio-group";
-import { 
-  Select, 
-  SelectContent, 
-  SelectItem, 
-  SelectTrigger, 
-  SelectValue 
-} from "./ui/select";
-import { Checkbox } from "./ui/checkbox";
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "./ui/accordion";
 import { 
   Dialog,
   DialogContent,
@@ -85,41 +72,17 @@ export function AnaliseTecnicaFTER({
   obrigatoriosNomes = [],
   assinouNomes = [],
 }: AnaliseTecnicaFTERProps) {
-  const estadoInicial = {
-    numeroSEI: "",
-    naturezaJuridica: "",
-    vedacaoTeto: false,
-    vedacaoIncorporacao: false,
-    fundamentacaoLegal: "",
-    tipoRubrica: "Vencimento",
-    formaCalculo: "",
-    unidadeMedida: "",
-    periodicidade: "",
-    incidenciaINSS: false,
-    incidenciaIRRF: false,
-    incidenciaFGTS: false,
-    incidenciaRPPS: false,
-    comporRescisao: false,
-    situacoesRescisao: [] as string[],
-    proporcionalidade: "Proporcional" as "Integral" | "Proporcional",
-  };
-
-  const [fterData, setFterData] = useState(dadosSalvos ?? estadoInicial);
-  const [ultimoSalvo, setUltimoSalvo] = useState<string | null>(dadosSalvos ? JSON.stringify(dadosSalvos) : null);
+  const [sigadocNumero, setSigadocNumero] = useState(dadosSalvos?.numeroSigadoc ?? "");
+  const [ultimoSalvo, setUltimoSalvo] = useState<string | null>(dadosSalvos?.numeroSigadoc ?? null);
   const [salvando, setSalvando] = useState(false);
-
-  // Detecta se houve alterações desde o último salvamento
-  const isDirty = JSON.stringify(fterData) !== (ultimoSalvo ?? JSON.stringify(estadoInicial));
-  const temConteudo = fterData.numeroSEI.trim() !== "" || fterData.fundamentacaoLegal.trim() !== "" || fterData.formaCalculo !== "" || fterData.naturezaJuridica !== "";
-
+  const [arquivosAnexados, setArquivosAnexados] = useState<File[]>([]);
+  const [parecerTexto, setParecerTexto] = useState("");
   const [reprovarModalOpen, setReprovarModalOpen] = useState(false);
   const [motivoAcao, setMotivoAcao] = useState("");
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const naturezasJuridicas = ["Remuneratória", "Indenizatória", "Eventual", "Transitória"];
-  const formasCalculo = ["Valor Fixo", "Percentual", "Fórmula", "Informado Manualmente"];
-  const unidadesMedida = ["Moeda", "Horas", "Dias", "Pontos"];
-  const periodicidades = ["Mensal", "13º", "Férias", "Eventual"];
-  const situacoesRescisaoOpcoes = ["Exoneração", "Aposentadoria", "Falecimento", "Demissão"];
+  const isDirty = sigadocNumero !== (ultimoSalvo ?? "");
+  const temConteudo = sigadocNumero.trim() !== "";
 
   // Resolução de nomes para exibição na íntegra
   const nomesOrgaos = (dadosSolicitacao.orgaosSolicitantes || [])
@@ -141,22 +104,7 @@ export function AnaliseTecnicaFTER({
       return codigo;
     });
 
-  // Lógica Condicional: Natureza Indenizatória sugere desligar incidências
-  useEffect(() => {
-    if (fterData.naturezaJuridica === "Indenizatória") {
-      if (fterData.incidenciaINSS || fterData.incidenciaRPPS) {
-        toast.warning("Rubricas Indenizatórias geralmente não possuem incidência de INSS/RPPS.", {
-          description: "Verifique se deseja manter estas incidências ligadas.",
-          duration: 5000,
-        });
-      }
-    }
-  }, [fterData.naturezaJuridica]);
-
-  const isValido = 
-    fterData.numeroSEI.trim() !== "" && 
-    fterData.fundamentacaoLegal.trim() !== "" && 
-    fterData.formaCalculo !== "";
+  const isValido = sigadocNumero.trim() !== "" && parecerTexto.trim() !== "";
 
   const handleSalvar = () => {
     if (!usuarioPermitido) {
@@ -165,8 +113,8 @@ export function AnaliseTecnicaFTER({
     }
     setSalvando(true);
     try {
-      onSalvar?.(fterData);
-      setUltimoSalvo(JSON.stringify(fterData));
+      onSalvar?.({ numeroSigadoc: sigadocNumero, parecerTexto, documentosAnexados: arquivosAnexados.map((file) => file.name) });
+      setUltimoSalvo(sigadocNumero);
       toast.success("Rascunho salvo com sucesso", {
         description: "Você pode retornar a qualquer momento para continuar a análise.",
       });
@@ -181,9 +129,13 @@ export function AnaliseTecnicaFTER({
       return;
     }
     if (isValido) {
-      onAprovar(fterData);
+      onAprovar({ numeroSigadoc: sigadocNumero, parecerTexto, documentosAnexados: arquivosAnexados.map((file) => file.name) });
     } else {
-      toast.error("Preencha todos os campos obrigatórios (*)");
+      if (!sigadocNumero.trim()) {
+        toast.error("Informe o número do Sigadoc antes de aprovar.");
+      } else {
+        toast.error("Preencha o parecer técnico antes de aprovar.");
+      }
     }
   };
 
@@ -380,304 +332,109 @@ export function AnaliseTecnicaFTER({
           </div>
         </div>
 
-        {/* PAINEL DIREITO: Configuração Técnica (FTER) */}
-        <div className="flex-1 bg-white overflow-y-auto p-6 flex flex-col">
-          <div className="mb-6 space-y-4">
-            <div className="flex items-center justify-between">
-              <div className="space-y-1">
-                <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
-                  <Settings2 className="w-5 h-5 text-indigo-600" />
-                  Configuração Técnica FTER
-                </h3>
-                <p className="text-sm text-slate-500 italic">Preencha os parâmetros de enquadramento da folha.</p>
+        <div className="flex-1 bg-white overflow-y-auto p-6 flex flex-col space-y-6">
+          <Card className="border-none shadow-md">
+            <CardHeader className="pb-3">
+              <div className="flex flex-col gap-1">
+                <CardTitle className="text-lg">Número Sigadoc</CardTitle>
+                <CardDescription>
+                  Informe o número de protocolo vinculado à análise jurídica.
+                </CardDescription>
               </div>
-              <div className="flex items-center gap-2">
-                <Badge variant="outline" className={cn("px-3 py-1", isValido ? "border-green-200 bg-green-50 text-green-700" : "border-amber-200 bg-amber-50 text-amber-700")}>
-                  {isValido ? "Pronto para Aprovação" : "Aguardando campos obrigatórios"}
-                </Badge>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 gap-4">
+            </CardHeader>
+            <CardContent className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="sei" className="text-sm font-semibold">Número do processo <span className="text-red-500">*</span></Label>
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                  <Input 
-                    id="sei"
-                    placeholder="00000.000000/2024-00" 
-                    className="pl-10 h-11 border-2 focus:border-indigo-500"
-                    value={fterData.numeroSEI}
-                    onChange={(e) => setFterData(prev => ({ ...prev, numeroSEI: e.target.value }))}
-                  />
-                </div>
+                <Label htmlFor="sigadoc" className="text-sm font-semibold">Número do protocolo</Label>
+                <Input
+                  id="sigadoc"
+                  placeholder="Ex.: SIGADOC-2026/000000"
+                  className="h-11 border-2 focus:border-blue-500"
+                  value={sigadocNumero}
+                  onChange={(e) => setSigadocNumero(e.target.value)}
+                />
               </div>
-            </div>
-          </div>
+              <p className="text-sm text-slate-500">Este número será utilizado para rastrear a análise documental no SIGADOC.</p>
+            </CardContent>
+          </Card>
 
-          <Accordion type="multiple" defaultValue={["enquadramento", "calculo"]} className="space-y-4">
-            {/* SEÇÃO 1: ENQUADRAMENTO LEGAL */}
-            <AccordionItem value="enquadramento" className="border-none">
-              <Card className="border shadow-none overflow-hidden">
-                <AccordionTrigger className="px-5 py-4 hover:bg-slate-50/50 transition-colors hover:no-underline">
-                  <div className="flex items-center gap-2 text-base font-bold text-slate-800">
-                    <Scale className="w-5 h-5 text-slate-500" />
-                    1. Enquadramento Legal (Bloco B)
-                  </div>
-                </AccordionTrigger>
-                <AccordionContent className="px-5 pb-5 pt-2">
-                  <div className="grid grid-cols-2 gap-6">
-                    <div className="space-y-3">
-                      <Label className="text-xs font-bold uppercase text-slate-500">Natureza Jurídica <span className="text-red-500">*</span></Label>
-                      <Select 
-                        value={fterData.naturezaJuridica} 
-                        onValueChange={(v) => setFterData(prev => ({ ...prev, naturezaJuridica: v }))}
-                      >
-                        <SelectTrigger className="border-2 h-10">
-                          <SelectValue placeholder="Selecione..." />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {naturezasJuridicas.map(n => <SelectItem key={n} value={n}>{n}</SelectItem>)}
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    <div className="space-y-3">
-                      <Label className="text-xs font-bold uppercase text-slate-500">Vedações Aplicáveis</Label>
-                      <div className="flex flex-col gap-3 pt-1">
-                        <div className="flex items-center space-x-2">
-                          <Checkbox 
-                            id="ved-teto" 
-                            checked={fterData.vedacaoTeto}
-                            onCheckedChange={(v) => setFterData(prev => ({ ...prev, vedacaoTeto: v as boolean }))}
-                          />
-                          <Label htmlFor="ved-teto" className="text-sm font-normal cursor-pointer">Sujeita ao Teto Remuneratório</Label>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <Checkbox 
-                            id="ved-inc" 
-                            checked={fterData.vedacaoIncorporacao}
-                            onCheckedChange={(v) => setFterData(prev => ({ ...prev, vedacaoIncorporacao: v as boolean }))}
-                          />
-                          <Label htmlFor="ved-inc" className="text-sm font-normal cursor-pointer">Vedada Incorporação Definitiva</Label>
-                        </div>
+          <Card className="border-none shadow-md">
+            <CardHeader>
+              <CardTitle className="text-lg">Documentos Anexados</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {arquivosAnexados.length === 0 ? (
+                <p className="text-sm text-slate-400 italic">Nenhum documento anexado.</p>
+              ) : (
+                arquivosAnexados.map((file, idx) => (
+                  <div key={idx} className="flex items-center justify-between p-3 bg-slate-50 rounded-xl border border-slate-100 group hover:border-blue-200 transition-colors">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 bg-blue-100 rounded-lg text-blue-600">
+                        <FileText className="w-5 h-5" />
+                      </div>
+                      <div>
+                        <span className="text-sm font-medium text-slate-700">{file.name}</span>
+                        <p className="text-xs text-slate-400">{(file.size / 1024).toFixed(1)} KB</p>
                       </div>
                     </div>
-
-                    <div className="col-span-2 space-y-3">
-                      <Label className="text-xs font-bold uppercase text-slate-500">Fundamentação Legal (Parecer Técnico) <span className="text-red-500">*</span></Label>
-                      <Textarea 
-                        placeholder="Descreva a base legal consolidada para esta rubrica..." 
-                        className="border-2 min-h-[100px]"
-                        value={fterData.fundamentacaoLegal}
-                        onChange={(e) => setFterData(prev => ({ ...prev, fundamentacaoLegal: e.target.value }))}
-                      />
-                    </div>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="text-slate-400 hover:text-red-500 hover:bg-red-50"
+                      onClick={() => setArquivosAnexados((prev) => prev.filter((_, i) => i !== idx))}
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
                   </div>
-                </AccordionContent>
-              </Card>
-            </AccordionItem>
+                ))
+              )}
+              <input
+                ref={fileInputRef}
+                type="file"
+                multiple
+                className="hidden"
+                onChange={(e) => {
+                  const files = Array.from(e.target.files || []);
+                  setArquivosAnexados((prev) => [...prev, ...files]);
+                  if (fileInputRef.current) fileInputRef.current.value = "";
+                }}
+              />
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full border-dashed border-slate-300 text-slate-600 hover:border-blue-400 hover:text-blue-600 hover:bg-blue-50 gap-2"
+                onClick={() => fileInputRef.current?.click()}
+              >
+                <Paperclip className="w-4 h-4" />
+                Anexar documento
+              </Button>
+            </CardContent>
+          </Card>
 
-            {/* SEÇÃO 2: REGRAS DE CÁLCULO */}
-            <AccordionItem value="calculo" className="border-none">
-              <Card className="border shadow-none overflow-hidden">
-                <AccordionTrigger className="px-5 py-4 hover:bg-slate-50/50 transition-colors hover:no-underline">
-                  <div className="flex items-center gap-2 text-base font-bold text-slate-800">
-                    <Settings2 className="w-5 h-5 text-slate-500" />
-                    2. Regras de Cálculo e Operacionalização (Bloco D)
-                  </div>
-                </AccordionTrigger>
-                <AccordionContent className="px-5 pb-5 pt-2">
-                  <div className="grid grid-cols-2 gap-6">
-                    <div className="col-span-2 space-y-3">
-                      <Label className="text-xs font-bold uppercase text-slate-500">Tipo de Rubrica</Label>
-                      <RadioGroup 
-                        value={fterData.tipoRubrica} 
-                        onValueChange={(v) => setFterData(prev => ({ ...prev, tipoRubrica: v }))}
-                        className="flex gap-6 pt-1"
-                      >
-                        <div className="flex items-center space-x-2">
-                          <RadioGroupItem value="Vencimento" id="tipo-venc" />
-                          <Label htmlFor="tipo-venc" className="font-normal">Vencimento</Label>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <RadioGroupItem value="Desconto" id="tipo-desc" />
-                          <Label htmlFor="tipo-desc" className="font-normal">Desconto</Label>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <RadioGroupItem value="Informativa" id="tipo-info" />
-                          <Label htmlFor="tipo-info" className="font-normal">Informativa</Label>
-                        </div>
-                      </RadioGroup>
-                    </div>
-
-                    <div className="space-y-3">
-                      <Label className="text-xs font-bold uppercase text-slate-500">Forma de Cálculo <span className="text-red-500">*</span></Label>
-                      <Select 
-                        value={fterData.formaCalculo} 
-                        onValueChange={(v) => setFterData(prev => ({ ...prev, formaCalculo: v }))}
-                      >
-                        <SelectTrigger className="border-2 h-10">
-                          <SelectValue placeholder="Selecione..." />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {formasCalculo.map(f => <SelectItem key={f} value={f}>{f}</SelectItem>)}
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    <div className="space-y-3">
-                      <Label className="text-xs font-bold uppercase text-slate-500">Unidade de Medida</Label>
-                      <Select 
-                        value={fterData.unidadeMedida} 
-                        onValueChange={(v) => setFterData(prev => ({ ...prev, unidadeMedida: v }))}
-                      >
-                        <SelectTrigger className="border-2 h-10">
-                          <SelectValue placeholder="Selecione..." />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {unidadesMedida.map(u => <SelectItem key={u} value={u}>{u}</SelectItem>)}
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    <div className="space-y-3">
-                      <Label className="text-xs font-bold uppercase text-slate-500">Periodicidade</Label>
-                      <Select 
-                        value={fterData.periodicidade} 
-                        onValueChange={(v) => setFterData(prev => ({ ...prev, periodicidade: v }))}
-                      >
-                        <SelectTrigger className="border-2 h-10">
-                          <SelectValue placeholder="Selecione..." />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {periodicidades.map(p => <SelectItem key={p} value={p}>{p}</SelectItem>)}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-                </AccordionContent>
-              </Card>
-            </AccordionItem>
-
-            {/* SEÇÃO 3: INCIDÊNCIAS TRIBUTÁRIAS */}
-            <AccordionItem value="incidencias" className="border-none">
-              <Card className="border shadow-none overflow-hidden">
-                <AccordionTrigger className="px-5 py-4 hover:bg-slate-50/50 transition-colors hover:no-underline">
-                  <div className="flex items-center gap-2 text-base font-bold text-slate-800">
-                    <ShieldCheck className="w-5 h-5 text-slate-500" />
-                    3. Incidências Tributárias (Grid)
-                  </div>
-                </AccordionTrigger>
-                <AccordionContent className="px-5 pb-5 pt-2">
-                  <div className="grid grid-cols-2 gap-y-4 gap-x-8">
-                    {[
-                      { id: "inc-inss", label: "INSS (Previdência Geral)", key: "incidenciaINSS" },
-                      { id: "inc-irrf", label: "IRRF (Imposto de Renda)", key: "incidenciaIRRF" },
-                      { id: "inc-fgts", label: "FGTS", key: "incidenciaFGTS" },
-                      { id: "inc-rpps", label: "RPPS (Previdência Própria)", key: "incidenciaRPPS", highlight: true },
-                    ].map((item) => (
-                      <div key={item.id} className={cn(
-                        "flex items-center justify-between p-3 rounded-lg border",
-                        item.highlight ? "bg-amber-50/50 border-amber-200" : "bg-slate-50/30 border-slate-100"
-                      )}>
-                        <div className="space-y-0.5">
-                          <Label htmlFor={item.id} className="text-sm font-medium cursor-pointer">
-                            {item.label}
-                            {item.highlight && <span className="text-amber-600 font-bold ml-1">*</span>}
-                          </Label>
-                          {item.highlight && <p className="text-[10px] text-amber-600 font-medium">Campo Crítico de Conformidade</p>}
-                        </div>
-                        <Switch 
-                          id={item.id} 
-                          checked={(fterData as any)[item.key]}
-                          onCheckedChange={(v) => setFterData(prev => ({ ...prev, [item.key]: v }))}
-                        />
-                      </div>
-                    ))}
-                  </div>
-                </AccordionContent>
-              </Card>
-            </AccordionItem>
-
-            {/* SEÇÃO 4: RESCISÃO */}
-            <AccordionItem value="rescisao" className="border-none">
-              <Card className="border shadow-none overflow-hidden">
-                <AccordionTrigger className="px-5 py-4 hover:bg-slate-50/50 transition-colors hover:no-underline">
-                  <div className="flex items-center gap-2 text-base font-bold text-slate-800">
-                    <AlertTriangle className="w-5 h-5 text-slate-500" />
-                    4. Regras de Rescisão (Bloco E)
-                  </div>
-                </AccordionTrigger>
-                <AccordionContent className="px-5 pb-5 pt-2">
-                  <div className="space-y-6">
-                    <div className="flex items-center justify-between p-4 bg-slate-50 rounded-lg border border-slate-200">
-                      <div className="space-y-1">
-                        <Label className="text-sm font-bold">Compor cálculo rescisório?</Label>
-                        <p className="text-xs text-slate-500">Define se a rubrica será considerada na liquidação do vínculo.</p>
-                      </div>
-                      <Switch 
-                        checked={fterData.comporRescisao}
-                        onCheckedChange={(v) => setFterData(prev => ({ ...prev, comporRescisao: v }))}
-                      />
-                    </div>
-
-                    {fterData.comporRescisao && (
-                      <div className="grid grid-cols-2 gap-6 animate-in fade-in slide-in-from-top-2 duration-300">
-                        <div className="space-y-3">
-                          <Label className="text-xs font-bold uppercase text-slate-500">Situações Aplicáveis</Label>
-                          <div className="grid grid-cols-2 gap-2">
-                            {situacoesRescisaoOpcoes.map(sit => (
-                              <div key={sit} className="flex items-center space-x-2">
-                                <Checkbox 
-                                  id={`sit-${sit}`} 
-                                  checked={fterData.situacoesRescisao.includes(sit)}
-                                  onCheckedChange={(checked) => {
-                                    setFterData(prev => ({
-                                      ...prev,
-                                      situacoesRescisao: checked 
-                                        ? [...prev.situacoesRescisao, sit]
-                                        : prev.situacoesRescisao.filter(s => s !== sit)
-                                    }));
-                                  }}
-                                />
-                                <Label htmlFor={`sit-${sit}`} className="text-xs font-normal cursor-pointer">{sit}</Label>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-
-                        <div className="space-y-3">
-                          <Label className="text-xs font-bold uppercase text-slate-500">Proporcionalidade</Label>
-                          <RadioGroup 
-                            value={fterData.proporcionalidade} 
-                            onValueChange={(v) => setFterData(prev => ({ ...prev, proporcionalidade: v as any }))}
-                            className="flex flex-col gap-3 pt-1"
-                          >
-                            <div className="flex items-center space-x-2">
-                              <RadioGroupItem value="Integral" id="prop-int" />
-                              <Label htmlFor="prop-int" className="text-sm font-normal">Sempre Integral</Label>
-                            </div>
-                            <div className="flex items-center space-x-2">
-                              <RadioGroupItem value="Proporcional" id="prop-prop" />
-                              <Label htmlFor="prop-prop" className="text-sm font-normal">Proporcional aos dias trabalhados</Label>
-                            </div>
-                          </RadioGroup>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </AccordionContent>
-              </Card>
-            </AccordionItem>
-          </Accordion>
-
-          <div className="mt-auto pt-8 flex items-center justify-between border-t border-slate-100">
-            <div className="flex items-center gap-2 text-xs text-slate-400">
-              <Info className="w-4 h-4" />
-              Campos marcados com <span className="text-red-500 font-bold">*</span> são de preenchimento obrigatório.
-            </div>
-          </div>
+          <Card className="border-none shadow-md">
+            <CardHeader className="pb-3 border-b border-slate-50">
+              <div className="flex flex-col gap-1">
+                <CardTitle className="text-lg">Parecer Técnico</CardTitle>
+                <CardDescription className="flex items-center gap-1.5 text-xs font-semibold text-slate-500 uppercase tracking-tight">
+                  <Users className="w-3.5 h-3.5" />
+                  Responsabilidade: Departamento Pessoal
+                </CardDescription>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-4 pt-5">
+              <div className="space-y-2">
+                <Textarea
+                  placeholder="Descreva o parecer técnico desta etapa... *"
+                  value={parecerTexto}
+                  onChange={(e) => setParecerTexto(e.target.value)}
+                  rows={4}
+                  className="border-slate-200 focus:border-blue-500 focus:ring-blue-100"
+                />
+                {parecerTexto.trim() === "" && (
+                  <p className="text-xs text-red-500">O parecer técnico é obrigatório para aprovar ou reprovar a etapa.</p>
+                )}
+              </div>
+            </CardContent>
+          </Card>
         </div>
       </div>
 
