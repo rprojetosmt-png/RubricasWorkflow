@@ -414,21 +414,23 @@ export function AnaliseTecnicaFTER({
             <CardHeader className="pb-3 border-b border-slate-50">
               <div className="flex flex-col gap-1">
                 <CardTitle className="text-lg">Parecer Técnico</CardTitle>
-                <CardDescription className="flex items-center gap-1.5 text-xs font-semibold text-slate-500 uppercase tracking-tight">
-                  <Users className="w-3.5 h-3.5" />
-                  Responsabilidade: Departamento Pessoal
-                </CardDescription>
               </div>
             </CardHeader>
             <CardContent className="space-y-4 pt-5">
               <div className="space-y-2">
                 <Textarea
-                  placeholder="Descreva o parecer técnico desta etapa... *"
+                  placeholder="Digite suas observações..."
                   value={parecerTexto}
-                  onChange={(e) => setParecerTexto(e.target.value)}
+                  onChange={(e) => setParecerTexto(e.target.value.slice(0, 500))}
+                  maxLength={500}
                   rows={4}
                   className="border-slate-200 focus:border-blue-500 focus:ring-blue-100"
                 />
+                <div className="flex justify-end">
+                  <span className="text-xs text-slate-500 font-medium">
+                    {parecerTexto.length}/500
+                  </span>
+                </div>
                 {parecerTexto.trim() === "" && (
                   <p className="text-xs text-red-500">O parecer técnico é obrigatório para aprovar ou reprovar a etapa.</p>
                 )}
